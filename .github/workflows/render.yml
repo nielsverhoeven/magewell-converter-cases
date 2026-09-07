@@ -1,0 +1,125 @@
+name: render
+
+# Renders every discovered coupon/model, runs the 4-tier test suite (smoke -> render -> mesh
+# checks -> goldens), and uploads the results. On a v* tag it also runs the release gate
+# (fails on any WARNING: unmeasured port) and attaches artefacts to a GitHub Release.
+# See .claude/knowledge/architecture.md §8 (export policy) and §9 (test policy), and
+# scripts/README.md for the underlying scripts/build.py command shapes.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+      - 'hotfix/**'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - develop
+      - main
+      - 'release/**'
+      - 'hotfix/**'
+  workflow_dispatch:
+
+concurrency:
+  group: render-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned OpenSCAD nightly snapshot — Linux x86_64 AppImage, newest build with the
+  # OpenSCAD-2025.09 prefix (closest available Linux build to the pinned Windows dev nightly,
+  # "2025.09.07", per .claude/knowledge/architecture.md §2/§12 Q1) as of the date this workflow
+  # was authored (2026-09-07). Source: https://files.openscad.org/snapshots/
+  OPENSCAD_APPIMAGE_URL: https://files.openscad.org/snapshots/OpenSCAD-2025.09.12.ai27378-x86_64.AppImage
+  # sha256 of the file at OPENSCAD_APPIMAGE_URL, from the matching .sha256 file at the same
+  # snapshots URL (fetched directly, not by downloading the ~100 MB AppImage). If this is ever
+  # blanked out (e.g. after re-pinning OPENSCAD_APPIMAGE_URL without re-checking the sum), the
+  # verification step below skips the check but still prints the sha256 it computed so it can be
+  # pinned back in.
+  OPENSCAD_SHA256: 54aed756e9dbd5ea059c6ed4741ab803100d31f8239712a9887dbebe1fbd2850
+  # Headless Qt needs an offscreen platform plugin when no X server is present — without this,
+  # OpenSCAD's CLI export can fail to initialize on a bare ubuntu-latest runner.
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write  # only needed for the tag-triggered release step
+    steps:
+      - name: Checkout (with BOSL2 submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Install pinned OpenSCAD nightly (AppImage)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/openscad.AppImage "$OPENSCAD_APPIMAGE_URL"
+          chmod +x /tmp/openscad.AppImage
+
+          computed_sha256="$(sha256sum /tmp/openscad.AppImage | cut -d' ' -f1)"
+          echo "Downloaded OpenSCAD AppImage sha256: $computed_sha256"
+
+          if [ -n "${OPENSCAD_SHA256}" ]; then
+            if [ "$computed_sha256" != "$OPENSCAD_SHA256" ]; then
+              echo "::error::sha256 mismatch: expected $OPENSCAD_SHA256, got $computed_sha256"
+              exit 1
+            fi
+            echo "sha256 verified against pinned OPENSCAD_SHA256."
+          else
+            echo "::warning::OPENSCAD_SHA256 is empty — skipping checksum verification. Pin the value printed above."
+          fi
+
+          # AppImages need FUSE to mount themselves; GitHub-hosted runners don't have it. The
+          # --appimage-extract-and-run flag makes the AppImage runtime extract-and-exec instead,
+          # but it must be the FIRST argument passed to the AppImage — scripts/build.py always
+          # inserts --backend=Manifold as the first OpenSCAD argument, so we can't rely on it to
+          # place this flag correctly. Instead, point MCC_OPENSCAD at a tiny wrapper that always
+          # injects the flag ahead of whatever build.py passes through.
+          cat > /tmp/openscad-wrapper.sh <<'WRAP'
+          #!/usr/bin/env bash
+          exec /tmp/openscad.AppImage --appimage-extract-and-run "$@"
+          WRAP
+          chmod +x /tmp/openscad-wrapper.sh
+
+          echo "MCC_OPENSCAD=/tmp/openscad-wrapper.sh" >> "$GITHUB_ENV"
+
+      - name: Verify OpenSCAD is runnable
+        run: '"$MCC_OPENSCAD" --version'
+
+      - name: Build (smoke -> render --all -> check --all -> golden)
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            python scripts/build.py all --release
+          else
+            python scripts/build.py all
+          fi
+
+      - name: Upload exports
+        uses: actions/upload-artifact@v4
+        with:
+          name: exports
+          path: exports/**
+          if-no-files-found: warn
+
+      - name: Create GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            exports/**/*.stl
+            exports/**/*.3mf
+            exports/**/*.manifest.json

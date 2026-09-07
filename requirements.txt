@@ -1,0 +1,8 @@
+# Runtime dependencies for scripts/build.py (Python 3.11+).
+# Keep this the single source of truth for the tooling venv — see .claude/knowledge/testing.md
+# and README.md "Setup" for how to build the venv.
+
+trimesh>=4.0
+numpy>=1.26
+scipy>=1.11      # trimesh needs this for some checks (e.g. convex hull / watertight repair paths)
+networkx>=3.2     # required by trimesh's Trimesh.split()
