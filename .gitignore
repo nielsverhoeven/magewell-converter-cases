@@ -1,0 +1,29 @@
+# Build output — never committed (architecture.md §8: "Binary artefacts never in the working
+# tree"). Release STL/3MF are built by CI from tags and attached to GitHub Releases instead.
+exports/
+
+# Local Python tooling venv (scripts/build.py). See README.md "Setup".
+.venv/
+__pycache__/
+*.pyc
+
+# OpenSCAD intermediate CSG evaluation output (scripts/build.py `smoke`).
+*.csg
+
+# Rendered/measured artefacts, wherever they land (belt-and-braces alongside exports/).
+*.stl
+*.3mf
+*.summary.json
+*.manifest.json
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Local Claude Code settings (machine-specific permissions), never shared.
+.claude/settings.local.json
+
+# --- Negations: third-party reference assets in knowledge/ are tracked even though their
+# extensions match the binary-artefact globs above (architecture.md: knowledge/ is sourced,
+# stable domain research, not build output). ---
+!knowledge/**/assets/**

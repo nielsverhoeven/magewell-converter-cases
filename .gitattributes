@@ -1,0 +1,15 @@
+# Force LF line endings for text sources regardless of the checkout platform (this repo is
+# developed on Windows and built in CI on Linux — OpenSCAD, git diffs, and the Python tooling
+# all assume LF).
+*.scad text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+
+# Binary/large formats — never diffed as text.
+*.stl  binary
+*.3mf  binary
+*.pdf  binary
+
+# Vector/CAD text formats — keep them diffable text, not binary.
+*.stp  text
+*.dxf  text
