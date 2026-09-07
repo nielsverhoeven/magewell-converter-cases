@@ -43,10 +43,14 @@ only; **simplified Git Flow: `feature/*` → `main` via PR, releases via annotat
    OpenGL/X/Qt runtime libraries for the AppImage.
 2. ~~Mini-DIN-8 fix-up~~ **DONE**: `panel:"none"` on every `minidin8` port; `MINIDIN8` removed from
    `MCC_PANEL_PARTS` and the dispatcher; `test_ports.scad` asserts it.
-3. **Constants fix-up**: ~~splitter default → `DONGLE-75x40x20`~~ **DONE**. Still open: retire the
-   floor `mcc_tripod_boss()` in favour of a captive side-bolt feature (`mcc_captive_side_bolt()` —
-   6.6 mm clearance bore, head recess, retaining groove) — may wait for the shell milestone but must
-   not be used from the floor.
+3. ~~Constants fix-up~~ **DONE 2026-09-08**: splitter default `DONGLE-75x40x20`; captive side bolt
+   implemented (`mcc_captive_side_bolt_boss/_cut`, keep-out, `side-bolt` coupon, `side_bolt` port
+   record in all 8 devices, floor `mcc_case_tripod_insert_*` replaces the through-bolt boss). The
+   D-13 flush reconciliation (`MCC_GAP_FAR` 16 derived, `proud` 0, support web, strip keep-out,
+   T1-29/T1-31) is the last code step of this branch.
+3c. **Architecture is current** (rev 4 / layout rev 3): D-09…D-13 recorded; envelopes compact
+   194.9 × 159.9 × 51, plus 211.5 × 166.4 × 51, 6 thumbscrews both; new non-blocking risk R20
+   (intake vent area below the thermal heuristic → taller intake band when `vents.scad` is written).
 3b. ~~Branching docs~~ **DONE 2026-09-08**: CONTRIBUTING, `git-flow` skill, PR template, CHANGELOG,
    README, ticket-source, CI triggers and CLAUDE.md all describe `feature/* → main`, releases via
    tags; the `gitflow.*` git config was removed.
@@ -63,10 +67,12 @@ only; **simplified Git Flow: `feature/*` → `main` via PR, releases via annotat
 6. ~~`build.py all` green → open the PR~~ **DONE**: PR #1 `feature/repo-setup` → `main` is open and
    CI-green; merge once the items above land.
 7. **Next milestone** (new feature branch): `lib/mcc/shell.scad`, `cradle.scad`, `mounts.scad`,
-   `vents.scad`, `models/<slug>/case.scad` for the 8 priority devices — but only after the coupons
-   (`neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`, `tolerance-ladder`) are printed on
-   the X1C and measured, and after the user measures: the side 1/4"-20 hole position (X, Z) per SKU,
-   and the chosen dongle splitter's dimensions.
+   `vents.scad`, `models/<slug>/case.scad` for the 8 priority devices — but only after the six
+   coupons (`neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`, `tolerance-ladder`,
+   `side-bolt`) are printed on the X1C and measured (forms in `models/coupons/README.md`), and after
+   the user measures: the side 1/4"-20 hole position (X from the short end, Z from the bottom —
+   R17: |v| ≤ 1.7 mm for the ⌀18 pad — and which side) per SKU, the thread depth, the chosen dongle
+   splitter's dimensions, and confirms the DIN 6799 size-5 E-clip figures.
 
 ## Known gaps / open questions carried over
 
