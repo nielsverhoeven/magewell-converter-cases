@@ -99,6 +99,19 @@ MCC_INSERT_M3 = [
     ["len",    5.7],
 ];
 
+// 1/4"-20 heat-set insert for the case's OWN floor mounting feature (case -> tripod/cheeseplate;
+// architecture.md §6 floor rule, D-09 -- NOT the device-retention side bolt below, which threads
+// directly into the device's metal body and needs no insert). No 1/4"-20 insert figures exist
+// anywhere in knowledge/components/fasteners-and-hardware.md (checked -- that file sources only
+// the M3 RX-M3x5.7/RX-M3S inserts above); the figures below are typical brass 1/4"-20 heat-set
+// insert dimensions (generic hardware-catalog range, not project-sourced). confidence: assumed.
+MCC_INSERT_1_4_20 = [
+    ["hole_d",     8.8],  // assumed -- mid of the typical 8.6-9.0 mm print/drill hole range.
+    ["od",         9.5],  // assumed -- typical brass 1/4"-20 heat-set insert sleeve OD.
+    ["len",        12.7], // assumed -- typical brass 1/4"-20 heat-set insert length.
+    ["confidence", "assumed"],
+];
+
 MCC_BOSS_MIN_RATIO = 1.8;  // heat-set boss OD >= this * insert OD. architecture.md:348 (Tier-1 assert
                             // table) / architecture.md:207 "OD ... to ~7 mm total" design rule.
 
@@ -114,6 +127,96 @@ MCC_M3_CLR_D = 3.4; // generic M3 clearance hole, mm. assumed — standard M3 cl
                      // ISO 273 "medium" fit, 3.2-3.6 mm) rounded to match d-series-cutout.md:52's own
                      // "Recommendation: Ø3.5 mm clearance hole" guidance minus FDM hole-shrink undersize.
 MCC_M4_CLR_D = 4.5;  // generic M4 clearance hole, mm. assumed — standard ISO 273 "medium" M4 clearance.
+
+// -----------------------------------------------------------------------------------------
+// Section: Captive side bolt (D-09) — device retention through the far (-Y) wall
+// .claude/knowledge/layout-patch-wall.md §7.1 / §11. A captive 1/4"-20 slotted screw runs through
+// a boss in the far wall into the device's side thread, held captive by a DIN 6799 E-clip in a
+// pocket inside the boss; a compliant EPDM pad on the boss face provides the preload.
+// architecture.md §6 far-wall rule / §13 D1-D2. Every figure here is `assumed` (none of this
+// hardware is sourced/measured yet — architecture.md R16-R19, measurement list M1/M2/M4/M5) unless
+// the comment says otherwise.
+// -----------------------------------------------------------------------------------------
+
+// --- captive side bolt (D-09) ---
+
+MCC_GAP_FAR = 6.0; // clearance gap between the far (-Y) wall's inner face and the device flank, mm.
+                    // assumed — layout-patch-wall.md §1 "MCC_GAP_FAR = 6.0 (assumed, §5 airflow
+                    // duct)"; feeds the far-wall intake duct (§5) as well as this boss stack.
+
+MCC_SIDE_BOLT_HEAD_D     = 10.0; // slotted screw head diameter, mm. assumed (M5) —
+                                  // layout-patch-wall.md §7.1 "Head diameter / height ... 10.0 /
+                                  // 4.5 mm assumed. Nearest metric standard is ISO 1207/DIN 84
+                                  // cheese head M6 (dk 10.0, k 3.9)".
+MCC_SIDE_BOLT_HEAD_H     = 4.5;  // slotted screw head height, mm. assumed (M5), same source.
+MCC_SIDE_BOLT_HEAD_REC_D = 12.0; // head recess (counterbore) diameter, mm. layout-patch-wall.md
+                                  // §7.1 axial stack "[0, 6.0] Slotted head recess 12.0". assumed.
+MCC_SIDE_BOLT_HEAD_REC_H = 6.0;  // head recess depth, mm. Same table; = head height + 1.5 so the
+                                  // head sits >= 1 mm below the outer surface (drop rule). assumed.
+
+MCC_SIDE_BOLT_WEB_T = 3.0; // retaining web thickness behind the head recess, mm — the shoulder the
+                            // E-clip lands on. layout-patch-wall.md §7.1 axial stack "[6.0, 9.0]
+                            // Retaining web, shank clearance bore ... web_t = 3.0". assumed.
+
+// DIN 6799, nominal size 5 (the size normally listed for a 6-7 mm shaft, matching the 6.35 mm
+// 1/4"-20 shank / MCC_TRIPOD_CLR_D). NOT VERIFIED: DIN 6799 is not in knowledge/** and these
+// figures were not read from the standard (architecture.md R16). Confirm before ordering (M4).
+// layout-patch-wall.md §7.1 "E-clip | DIN 6799, nominal size 5 ... Groove d 5.0, groove width 0.8,
+// clip OD ~11.0, thickness 0.7". confidence: assumed throughout.
+MCC_SIDE_BOLT_CLIP = [
+    ["groove_d", 5.0],
+    ["groove_w", 0.8],
+    ["od",       11.0],
+    ["t",        0.7],
+];
+
+MCC_SIDE_BOLT_POCKET_D = 13.0; // E-clip clearance pocket diameter, mm. assumed —
+                                // layout-patch-wall.md §7.1 axial stack "[9.0, 17.0] E-clip
+                                // clearance pocket 13.0".
+MCC_SIDE_BOLT_POCKET_H = 8.0;  // E-clip clearance pocket depth, mm. assumed, same table;
+                                // = engagement 6.0 + clip thickness 0.7 + 1.3 mm margin.
+
+MCC_SIDE_BOLT_ENGAGE = 6.0; // thread engagement length into the device's side thread, mm. assumed
+                             // (M2 — the device's thread depth is unmeasured) —
+                             // layout-patch-wall.md §7.1 axial stack "[19.0, 25.05] Thread
+                             // engagement into the device ... e = 6.0".
+
+MCC_SIDE_BOLT_BOSS_OD = 20.0; // captive-bolt boss outer diameter, mm. layout-patch-wall.md §7.1
+                               // "boss_od = pocket_d + 2*3.5 = 20.0". assumed (derives from the
+                               // assumed pocket diameter above).
+
+MCC_SIDE_BOLT_PAD_T  = 2.0;  // compliant EPDM pad thickness on the boss face, mm (compressed
+                              // working thickness). assumed — layout-patch-wall.md §1 "Compliant
+                              // pad 2.0 mm: EPDM anti-slip pad,
+                              // knowledge/components/fasteners-and-hardware.md:186 (Ø12x2.5mm
+                              // listed; 2.0mm used as the compressed working thickness, assumed)".
+MCC_SIDE_BOLT_PAD_OD  = 18.0; // compliant pad outer diameter, mm. assumed — layout-patch-wall.md
+                               // §7.1 "Compliant pad (EPDM annulus, OD 18 / ID 8)".
+MCC_SIDE_BOLT_PAD_ID  = 8.0;  // compliant pad inner diameter, mm. assumed, same source.
+
+// Derived quantities — formulas, not magic numbers, per layout-patch-wall.md §7.1 ("all of these
+// are formulas, not magic numbers, and belong in constants.scad"). Kept here (not recomputed
+// inline in fasteners.scad) so a change to any input above updates every derived figure in one
+// place.
+MCC_SIDE_BOLT_PROUD = max(0, (MCC_SIDE_BOLT_HEAD_REC_H + MCC_SIDE_BOLT_WEB_T + MCC_SIDE_BOLT_POCKET_H)
+                             - (MCC_WALL + MCC_GAP_FAR - MCC_SIDE_BOLT_PAD_T));
+                     // how far the boss stands proud of the far wall's outer face, mm.
+                     // layout-patch-wall.md §7.1 "MCC_SIDE_BOLT_PROUD = max(0, boss_len -
+                     // (MCC_WALL + MCC_GAP_FAR - pad_t)) = max(0, 17.0 - 7.0) = 10.0". See R18.
+
+MCC_SIDE_BOLT_SCREW_LEN = 19.05; // screw length under the head, mm (stock 3/4" UNC).
+                                  // layout-patch-wall.md §7.1 "screw_len_under_head = ... = 19.0 ->
+                                  // stock 3/4" = 19.05". assumed.
+
+MCC_SIDE_BOLT_GROOVE_POS = MCC_SIDE_BOLT_WEB_T + MCC_SIDE_BOLT_ENGAGE + 1.0;
+                     // retaining-groove position on the shank, mm from the under-head face.
+                     // layout-patch-wall.md §7.1 "groove_pos = web_t + e + 1.0 = 10.0". assumed —
+                     // on a fully-threaded stock screw this lands in the threads (see R16).
+
+MCC_SIDE_BOLT_KEEPOUT_D = MCC_SIDE_BOLT_BOSS_OD + 2 * 2.0;
+                     // far-wall keep-out disc diameter for vents/ribs/lid bosses, mm.
+                     // layout-patch-wall.md §7.1 "keepout_d = boss_od + 2*2.0 = 24.0". Also
+                     // exposed parametrically as mcc_side_bolt_keepout() in fasteners.scad.
 
 // Ghost-rendering visibility flag (architecture.md:304 "gated behind MCC_SHOW_GHOST (default false)").
 // Belt 2 of the two-belt ghost-exclusion rule; belt 1 is the `%` modifier used wherever ghost

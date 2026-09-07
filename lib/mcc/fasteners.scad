@@ -1,8 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/fasteners.scad
-//   L1. Heat-set insert bosses/bores, captive thumbscrew holes, the 1/4"-20 tripod boss, and a
-//   generic M4 clearance hole. knowledge/components/fasteners-and-hardware.md §1-2.
-//   `use`d by lib/mcc/mcc.scad.
+//   L1. Heat-set insert bosses/bores, captive thumbscrew holes, the captive side bolt (D-09,
+//   device retention through the far wall — .claude/knowledge/layout-patch-wall.md §7.1), the
+//   case's own 1/4"-20 floor mounting insert, and a generic M4 clearance hole.
+//   knowledge/components/fasteners-and-hardware.md §1-2. `use`d by lib/mcc/mcc.scad.
 // Includes:
 //   include <mcc/mcc.scad>
 //////////////////////////////////////////////////////////////////////
@@ -97,25 +98,233 @@ module mcc_captive_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = 8, lid_t) {
     }
 }
 
-// Module: mcc_tripod_boss()
+// -----------------------------------------------------------------------------------------
+// Captive side bolt (D-09) — device retention through the far (-Y) wall into the device's side
+// thread. .claude/knowledge/layout-patch-wall.md §7.1; constants in constants.scad's "captive side
+// bolt (D-09)" section. Both modules share the local frame described there: Z=0 at the lug's OUTER
+// (free/tip) face, +Z runs INTO the case (through the wall, the MCC_GAP_FAR duct, to the compliant
+// pad); shell.scad rotates this frame onto the far wall's outward normal.
+// -----------------------------------------------------------------------------------------
+
+// Module: mcc_captive_side_bolt_boss()
 // Usage:
-//   mcc_tripod_boss(h, [od=]);
+//   mcc_captive_side_bolt_boss([proud=], [wall_t=], [gap_far=], [pad_t=], [od=], [blend_a=]);
 // Description:
-//   Additive boss (base at Z=0, top at Z=h) with a through-hole clearance for a 1/4"-20 tripod
-//   bolt. architecture.md:116 "the literal 1/4"-20 thread, which is modelled by a named constant".
+//   ADDITIVE. A ⌀od cylinder spanning Z=[0, proud+wall_t+gap_far-pad_t] mm — the full captive-bolt
+//   boss, from its free tip through the proud lug, the wall, and the MCC_GAP_FAR duct, up to the
+//   compliant-pad face (layout-patch-wall.md §7.1's axial stack). The exposed "proud" portion
+//   (Z=[0,proud]) is a horizontal cantilever once shell.scad orients this onto the far wall (R18);
+//   a small root fillet is unioned in at Z=proud (the wall plane), flaring the boss diameter by
+//   2*3mm over a run governed by `blend_a`, so the join between the flat wall and the round boss
+//   ramps rather than stepping — layout-patch-wall.md §7.1 "the lug ... a ≤45° conical blend on
+//   its underside". Whether this alone is enough to print without slicer supports (vs. needing a
+//   teardrop cross-section or support material) is exactly what the side-bolt coupon
+//   (models/coupons/side-bolt.scad) exists to verify physically.
 // Arguments:
-//   h  = boss height, mm (required).
-//   od = boss outer diameter override, mm. Default: MCC_TRIPOD_CLR_D + 6 (assumed 3 mm minimum
-//        wall each side — no sourced figure for this specific boss; smallest-reasonable-choice
-//        placeholder pending a physical load test).
-module mcc_tripod_boss(h, od = undef) {
-    _od = is_undef(od) ? MCC_TRIPOD_CLR_D + 6 : od;
-    assert((_od - MCC_TRIPOD_CLR_D) / 2 >= 3,
-        str("mcc: tripod boss wall below 3 mm minimum (od=", _od, ")"));
+//   proud   = how far the boss stands proud of the wall's outer face, mm. Default: MCC_SIDE_BOLT_PROUD.
+//   wall_t  = far-wall thickness, mm. Default: MCC_WALL.
+//   gap_far = clearance gap the boss crosses beyond the wall, mm. Default: MCC_GAP_FAR.
+//   pad_t   = compliant pad thickness subtracted off the far end, mm. Default: MCC_SIDE_BOLT_PAD_T.
+//   od      = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
+//   blend_a = root-fillet angle from the boss axis, degrees. Default: 45 (self-supporting ceiling).
+module mcc_captive_side_bolt_boss(
+    proud   = MCC_SIDE_BOLT_PROUD,
+    wall_t  = MCC_WALL,
+    gap_far = MCC_GAP_FAR,
+    pad_t   = MCC_SIDE_BOLT_PAD_T,
+    od      = MCC_SIDE_BOLT_BOSS_OD,
+    blend_a = 45
+) {
+    h = proud + wall_t + gap_far - pad_t;
+    assert(h > MCC_EPS,
+        str("mcc: captive_side_bolt_boss total height ", h, " <= 0 (proud=", proud, " wall_t=", wall_t,
+            " gap_far=", gap_far, " pad_t=", pad_t, ")"));
+    assert(blend_a > 0 && blend_a <= 90,
+        str("mcc: captive_side_bolt_boss blend_a=", blend_a, " must be in (0, 90]"));
+
+    // Root fillet at the wall-plane transition: a modest 3 mm radial flare, tapering away over a
+    // <=blend_a-degree run. 3 mm is a smallest-reasonable-choice fillet allowance (not itself
+    // sourced) — tune/confirm against the coupon print.
+    flare_r   = 3.0;
+    blend_run = min(proud, flare_r / tan(blend_a));
+
+    union() {
+        cyl(h = h, d = od, circum = true, anchor = BOTTOM, $fn = 64);
+        if (blend_run > MCC_EPS)
+            translate([0, 0, proud - blend_run])
+                cyl(h = blend_run, d1 = od, d2 = od + 2 * flare_r, circum = true, anchor = BOTTOM, $fn = 64);
+    }
+}
+
+// Module: mcc_captive_side_bolt_cut()
+// Usage:
+//   mcc_captive_side_bolt_cut([proud=], [wall_t=], [gap_far=], [pad_t=], [head_d=], [head_h=],
+//                              [head_rec_h=], [shank_d=], [web_t=], [clip_pocket_d=], [pocket_h=],
+//                              [engage=]);
+// Description:
+//   SUBTRACTIVE. Union of the head recess (counterbore), the full-depth shank clearance bore, and
+//   the E-clip clearance pocket, in the same local frame as mcc_captive_side_bolt_boss() — meant to
+//   be `difference()`d after that boss has been unioned into the shell (layout-patch-wall.md §7.1
+//   module contract). Runs Z=[-MCC_EPS, proud+wall_t+gap_far+MCC_EPS] so it also pierces the wall
+//   proper cleanly at both ends. Every bore $fn=64, circum=true (architecture.md §3 `$fn` policy).
+//   The boss OD (for the wall-around-the-pocket check) and the E-clip OD/groove position (for the
+//   pocket-depth and clip-travel checks) are read from MCC_SIDE_BOLT_BOSS_OD / MCC_SIDE_BOLT_CLIP /
+//   MCC_SIDE_BOLT_GROOVE_POS rather than taken as parameters — they check this cut against the
+//   *default* boss geometry; a caller overriding the boss's own `od` is responsible for re-checking
+//   this assert by hand.
+//   Tier-1 asserts (named per architecture.md §9 / layout-patch-wall.md §9; the geometric
+//   device-position half of T1-24/T1-27 lives in shell.scad, not here):
+//     T1-25  head_rec_h >= head_h + 1.0                          (head fully recessed)
+//     —      web_t >= 2.0                                        (E-clip shoulder minimum material)
+//     T1-26  clip_pocket_d >= clip_od + 1.0
+//     T1-26  (boss_od - clip_pocket_d) / 2 >= 3.0                 (wall around the pocket)
+//     T1-26  head_rec_h + web_t + pocket_h <= proud+wall_t+gap_far-pad_t   (pocket fits the boss)
+//     T1-26  groove_pos - web_t >= engage + 0.5                   (clip travels far enough to free
+//                                                                   the device without dropping it
+//                                                                   inside the case)
+// Arguments:
+//   proud, wall_t, gap_far, pad_t = same meaning/defaults as mcc_captive_side_bolt_boss().
+//   head_d        = slotted screw head diameter, mm. Default: MCC_SIDE_BOLT_HEAD_D.
+//   head_h        = slotted screw head height, mm. Default: MCC_SIDE_BOLT_HEAD_H.
+//   head_rec_h    = head recess depth, mm. Default: MCC_SIDE_BOLT_HEAD_REC_H.
+//   shank_d       = shank clearance bore diameter, mm. Default: MCC_TRIPOD_CLR_D (6.6).
+//   web_t         = retaining web thickness, mm. Default: MCC_SIDE_BOLT_WEB_T.
+//   clip_pocket_d = E-clip clearance pocket diameter, mm. Default: MCC_SIDE_BOLT_POCKET_D.
+//   pocket_h      = E-clip clearance pocket depth, mm. Default: MCC_SIDE_BOLT_POCKET_H.
+//   engage        = thread engagement length into the device, mm. Default: MCC_SIDE_BOLT_ENGAGE.
+module mcc_captive_side_bolt_cut(
+    proud         = MCC_SIDE_BOLT_PROUD,
+    wall_t        = MCC_WALL,
+    gap_far       = MCC_GAP_FAR,
+    pad_t         = MCC_SIDE_BOLT_PAD_T,
+    head_d        = MCC_SIDE_BOLT_HEAD_D,
+    head_h        = MCC_SIDE_BOLT_HEAD_H,
+    head_rec_h    = MCC_SIDE_BOLT_HEAD_REC_H,
+    shank_d       = MCC_TRIPOD_CLR_D,
+    web_t         = MCC_SIDE_BOLT_WEB_T,
+    clip_pocket_d = MCC_SIDE_BOLT_POCKET_D,
+    pocket_h      = MCC_SIDE_BOLT_POCKET_H,
+    engage        = MCC_SIDE_BOLT_ENGAGE
+) {
+    total_h    = proud + wall_t + gap_far - pad_t;
+    boss_od    = MCC_SIDE_BOLT_BOSS_OD;
+    clip_od    = struct_val(MCC_SIDE_BOLT_CLIP, "od");
+    groove_pos = MCC_SIDE_BOLT_GROOVE_POS;
+    head_rec_d = head_d + 2 * MCC_CLR_SLIDE; // radial clearance for a hand-turned slotted head.
+
+    assert(head_rec_h >= head_h + 1.0,
+        str("mcc: side_bolt_cut T1-25 head_rec_h=", head_rec_h, " must be >= head_h+1.0 (", head_h + 1.0, ")"));
+    assert(web_t >= 2.0,
+        str("mcc: side_bolt_cut web_t=", web_t, " below the 2.0 mm minimum retaining-shoulder material"));
+    assert(clip_pocket_d >= clip_od + 1.0,
+        str("mcc: side_bolt_cut T1-26 clip_pocket_d=", clip_pocket_d, " must be >= clip od+1.0 (", clip_od + 1.0, ")"));
+    assert((boss_od - clip_pocket_d) / 2 >= 3.0,
+        str("mcc: side_bolt_cut T1-26 wall around clip pocket = ", (boss_od - clip_pocket_d) / 2, " below 3.0 mm minimum"));
+    assert(head_rec_h + web_t + pocket_h <= total_h,
+        str("mcc: side_bolt_cut T1-26 head_rec_h+web_t+pocket_h=", head_rec_h + web_t + pocket_h,
+            " exceeds the boss's own length ", total_h));
+    assert(groove_pos - web_t >= engage + 0.5,
+        str("mcc: side_bolt_cut T1-26 clip travel=", groove_pos - web_t, " must be >= engage+0.5 (", engage + 0.5, ")"));
+
+    union() {
+        translate([0, 0, -MCC_EPS])
+            cyl(h = head_rec_h + MCC_EPS, d = head_rec_d, circum = true, anchor = BOTTOM, $fn = 64);
+        translate([0, 0, -MCC_EPS])
+            cyl(h = total_h + 2 * MCC_EPS, d = shank_d, circum = true, anchor = BOTTOM, $fn = 64);
+        translate([0, 0, head_rec_h + web_t])
+            cyl(h = pocket_h, d = clip_pocket_d, circum = true, anchor = BOTTOM, $fn = 64);
+    }
+}
+
+// Function: mcc_side_bolt_keepout()
+// Usage:
+//   d = mcc_side_bolt_keepout([od=]);
+// Description:
+//   Pure function: the far-wall keep-out disc diameter around the boss, for shell.scad/vents.scad/
+//   cradle.scad/mounts.scad to assert non-intersection against (T1-23, T1-27 — vent slots, cradle
+//   far-flank ribs, lid-fastener bosses, and the splitter bay must all clear this disc).
+//   layout-patch-wall.md §7.1 "keepout_d = boss_od + 2*2.0 = 24.0".
+// Arguments:
+//   od = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
+function mcc_side_bolt_keepout(od = MCC_SIDE_BOLT_BOSS_OD) = od + 2 * 2.0;
+
+// Module: mcc_side_bolt_envelope()
+// Usage:
+//   mcc_side_bolt_envelope([proud=], [wall_t=], [gap_far=], [pad_t=], [od=]);
+// Description:
+//   Ghosted (%) review-only visualization of the mcc_side_bolt_keepout() disc, swept the full
+//   length of the boss (layout-patch-wall.md §7.1 "the same disc swept through the duct"), in the
+//   same local frame as mcc_captive_side_bolt_boss() so a caller can place both identically.
+//   Mirrors the mcc_fan_envelope()/mcc_splitter_envelope() reservation-box pattern (fan.scad,
+//   poe_splitter.scad) in spirit, but this feature's real non-intersection checks use the plain ⌀
+//   from mcc_side_bolt_keepout() against other features' own geometry, not a CSG-intersected solid
+//   — this box is for visual review only, so (unlike the fan/splitter envelopes) it is `%`-ghosted
+//   and gated behind MCC_SHOW_GHOST like every other ghost in this repo (architecture.md §3
+//   "Ghosts" — both belts: `%` is the mechanism, the flag is the review signal).
+// Arguments:
+//   proud, wall_t, gap_far, pad_t, od = same meaning/defaults as mcc_captive_side_bolt_boss().
+module mcc_side_bolt_envelope(
+    proud   = MCC_SIDE_BOLT_PROUD,
+    wall_t  = MCC_WALL,
+    gap_far = MCC_GAP_FAR,
+    pad_t   = MCC_SIDE_BOLT_PAD_T,
+    od      = MCC_SIDE_BOLT_BOSS_OD
+) {
+    h = proud + wall_t + gap_far - pad_t;
+    if (MCC_SHOW_GHOST) {
+        %cyl(h = h, d = mcc_side_bolt_keepout(od), circum = true, anchor = BOTTOM, $fn = 64);
+    }
+}
+
+// Module: mcc_case_tripod_insert_bore()
+// Usage:
+//   mcc_case_tripod_insert_bore();
+// Description:
+//   Negative (subtractive) blind bore for the CASE's own 1/4"-20 heat-set insert in the floor —
+//   mounts the case itself on a tripod/cheeseplate (architecture.md §6 floor rule). This is NOT the
+//   device-retention side bolt above, which threads directly into the device's metal body and needs
+//   no insert. Local frame matches mcc_heat_set_bore(): the open face is at Z=0, extending blind
+//   into -Z by MCC_INSERT_1_4_20's len + 1 mm. Replaces mcc_tripod_boss() (deviation D2,
+//   architecture.md §13): that module was a clearance-hole boss for the withdrawn floor
+//   through-bolt; the floor's remaining 1/4"-20 feature is threaded, per D-09.
+module mcc_case_tripod_insert_bore() {
+    insert_hole_d = struct_val(MCC_INSERT_1_4_20, "hole_d");
+    insert_len    = struct_val(MCC_INSERT_1_4_20, "len");
+    depth = insert_len + 1;
+    translate([0, 0, MCC_EPS - depth / 2])
+        cyl(h = depth + 2 * MCC_EPS, d = insert_hole_d, circum = true, $fn = 64);
+}
+
+// Module: mcc_case_tripod_insert_boss()
+// Usage:
+//   mcc_case_tripod_insert_boss(h, [od=]);
+// Description:
+//   Additive boss (base at Z=0, top at Z=h) with an integral blind bore for the case's own
+//   1/4"-20 heat-set insert, opening at the top. Same pattern as mcc_heat_set_boss(), fixed to
+//   MCC_INSERT_1_4_20 (there is exactly one part here, unlike the M3 family). Asserts the
+//   OD/insert-OD ratio and the minimum 2 mm wall around the bore, same rule as mcc_heat_set_boss()
+//   (architecture.md:348).
+// Arguments:
+//   h  = boss height, mm (required — must be >= MCC_INSERT_1_4_20.len + 1).
+//   od = boss outer diameter override, mm. Default: MCC_BOSS_MIN_RATIO * insert OD.
+module mcc_case_tripod_insert_boss(h, od = undef) {
+    insert_od     = struct_val(MCC_INSERT_1_4_20, "od");
+    insert_hole_d = struct_val(MCC_INSERT_1_4_20, "hole_d");
+    insert_len    = struct_val(MCC_INSERT_1_4_20, "len");
+    _od   = is_undef(od) ? MCC_BOSS_MIN_RATIO * insert_od : od;
+    depth = insert_len + 1;
+
+    assert(_od >= MCC_BOSS_MIN_RATIO * insert_od,
+        str("mcc: case_tripod_insert_boss od=", _od, " below minimum ", MCC_BOSS_MIN_RATIO, "x insert OD (", insert_od, ")"));
+    wall = (_od - insert_hole_d) / 2;
+    assert(wall >= 2,
+        str("mcc: case_tripod_insert_boss wall=", wall, " below minimum 2 mm around the bore"));
+    assert(h >= depth,
+        str("mcc: case_tripod_insert_boss h=", h, " shorter than required bore depth ", depth));
+
     difference() {
         cyl(h = h, d = _od, circum = true, anchor = BOTTOM, $fn = 64);
-        translate([0, 0, -MCC_EPS])
-            cyl(h = h + 2 * MCC_EPS, d = MCC_TRIPOD_CLR_D, circum = true, anchor = BOTTOM, $fn = 64);
+        translate([0, 0, h]) mcc_case_tripod_insert_bore();
     }
 }
 
