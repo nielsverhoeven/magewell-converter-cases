@@ -47,7 +47,7 @@ only; **simplified Git Flow: `feature/*` → `main` via PR, releases via annotat
    implemented (`mcc_captive_side_bolt_boss/_cut`, keep-out, `side-bolt` coupon, `side_bolt` port
    record in all 8 devices, floor `mcc_case_tripod_insert_*` replaces the through-bolt boss). The
    D-13 flush reconciliation (`MCC_GAP_FAR` 16 derived, `proud` 0, support web, strip keep-out,
-   T1-29/T1-31) is the last code step of this branch.
+   T1-29/T1-31) is **DONE 2026-09-08** — `build.py all` green: smoke 5/5, render 6/6, check 8/8, goldens 6/6.
 3c. **Architecture is current** (rev 4 / layout rev 3): D-09…D-13 recorded; envelopes compact
    194.9 × 159.9 × 51, plus 211.5 × 166.4 × 51, 6 thumbscrews both; new non-blocking risk R20
    (intake vent area below the thermal heuristic → taller intake band when `vents.scad` is written).

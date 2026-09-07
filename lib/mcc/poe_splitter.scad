@@ -28,11 +28,14 @@ function mcc_splitter_spec(name) =
 //   applied at BOTH ends along the long (X) axis. architecture.md:234-238 reservation rule — this
 //   is the placeholder envelope architecture.md:485-486 flags as pending a final part choice.
 // Arguments:
-//   name = splitter name, key into MCC_SPLITTERS. Default: "DONGLE-75x40x20" (user decision
-//          2026-09-07 — the "GAT-USBC" placeholder does not fit the single-patch-wall layout at
-//          all, architecture.md §11 R11; "DONGLE-75x40x20" is the smaller dongle-class default
-//          that does).
-module mcc_splitter_envelope(name = "DONGLE-75x40x20") {
+//   name = splitter name, key into MCC_SPLITTERS. Default: MCC_SPLITTER_DEFAULT
+//          ("DONGLE-75x40x20", constants.scad — user decision 2026-09-07: the "GAT-USBC"
+//          placeholder does not fit the single-patch-wall layout at all, architecture.md §11 R11;
+//          "DONGLE-75x40x20" is the smaller dongle-class default that does). D-12
+//          (layout-patch-wall.md §4/§11) derives MCC_END_ZONE_NEG_EXTRA_SPLITTER from the same
+//          named constant, so this module and the end-zone term it feeds can never disagree about
+//          which part is the default.
+module mcc_splitter_envelope(name = MCC_SPLITTER_DEFAULT) {
     spec        = mcc_splitter_spec(name);
     size        = struct_val(spec, "size");
     cable_allow = struct_val(spec, "cable_allow");
@@ -53,10 +56,10 @@ module mcc_splitter_envelope(name = "DONGLE-75x40x20") {
 //   generic cable-tie width table (fasteners-and-hardware.md:219-221), which covers stock tie
 //   widths, not slot geometry.
 // Arguments:
-//   name    = splitter name, key into MCC_SPLITTERS. Default: "DONGLE-75x40x20" (matches
+//   name    = splitter name, key into MCC_SPLITTERS. Default: MCC_SPLITTER_DEFAULT (matches
 //             mcc_splitter_envelope()'s default — see the rationale there).
 //   floor_t = floor thickness at the tie-down location, mm. Default: MCC_FLOOR_T.
-module mcc_splitter_tiedown(name = "DONGLE-75x40x20", floor_t = MCC_FLOOR_T) {
+module mcc_splitter_tiedown(name = MCC_SPLITTER_DEFAULT, floor_t = MCC_FLOOR_T) {
     spec   = mcc_splitter_spec(name);
     size   = struct_val(spec, "size");
     slot_l = 4;   // zip-tie slot length (along the splitter's long/X axis), mm.

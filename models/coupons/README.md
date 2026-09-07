@@ -18,7 +18,7 @@ Printer: **Bambu Lab X1 Carbon**, 256×256×256 mm, enclosed, 0.4 mm nozzle, ASA
 | `tg-ladder.scad` | Which tongue-and-groove per-side clearance slides freely without slop | `lib/mcc/constants.scad` : `MCC_CLR_TG` |
 | `insert-boss.scad` | Which M3 heat-set insert bore diameter seats with firm hand pressure in ASA without splitting the boss | `lib/mcc/constants.scad` : `MCC_INSERT_M3` → `hole_d` entry |
 | `tolerance-ladder.scad` | Which round peg/hole per-side clearance is a free slide vs. a firm press fit | `lib/mcc/constants.scad` : `MCC_CLR_SLIDE` (slide), `MCC_CLR_PRESS` (press) |
-| `side-bolt.scad` | The captive 1/4"-20 side bolt (D-09): the real slotted screw seats with its head recessed, a DIN 6799 E-clip snaps into the pocket and holds the screw captive, the screw reaches its engagement length into a nut behind the EPDM pad, and the ASA retaining web/root fillet survive real clamp load | `lib/mcc/constants.scad` : `MCC_SIDE_BOLT_HEAD_D`/`_HEAD_H`/`_HEAD_REC_D`/`_HEAD_REC_H`, `MCC_SIDE_BOLT_WEB_T`, `MCC_SIDE_BOLT_CLIP`, `MCC_SIDE_BOLT_POCKET_D`/`_POCKET_H`, `MCC_SIDE_BOLT_ENGAGE`, `MCC_SIDE_BOLT_PAD_OD`/`_PAD_ID`, `MCC_SIDE_BOLT_SCREW_LEN` |
+| `side-bolt.scad` | The captive 1/4"-20 side bolt (D-09, **flush per D-13**): the real slotted screw seats with its head recessed, a DIN 6799 E-clip snaps into the pocket and holds the screw captive, the screw reaches its engagement length into a nut behind the EPDM pad, and the ASA **central support web** (root fillet retired by D-13) carries real clamp load down to the coupon's own base plate without cracking or needing slicer supports | `lib/mcc/constants.scad` : `MCC_SIDE_BOLT_HEAD_D`/`_HEAD_H`/`_HEAD_REC_D`/`_HEAD_REC_H`, `MCC_SIDE_BOLT_WEB_T`, `MCC_SIDE_BOLT_CLIP`, `MCC_SIDE_BOLT_POCKET_D`/`_POCKET_H`, `MCC_SIDE_BOLT_ENGAGE`, `MCC_SIDE_BOLT_PAD_OD`/`_PAD_ID`, `MCC_SIDE_BOLT_SCREW_LEN`, `MCC_GAP_FAR`, `MCC_SIDE_BOLT_PROUD`, `MCC_SIDE_BOLT_SUPPORT_WEB_T`, `MCC_SIDE_BOLT_AXIS_Z` |
 
 ## Render
 
@@ -68,7 +68,7 @@ about the other.
 | `tg-ladder` | **Flat, base plate down.** | Base is a simple flat plate; tongues/grooves project upward, no bridging. Brim recommended — base footprint is 230×36 mm, the longest single dimension of any coupon here. |
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |
 | `tolerance-ladder` | **Flat, base plate down**, pegs facing up. | Peg/hole axis vertical for both the printed pegs and the through-holes in the base — true circles, no bridging. |
-| `side-bolt` | **Print flat on the base**, wall slab vertical, lug self-supporting. As modeled: the small base pad is the bed-contact face; the wall slab rises vertically off it and the boss/lug protrudes horizontally off the wall — the same orientation the far wall prints in on a full case. No rotation needed. | Matches how `shell.scad` will eventually orient this feature (a horizontal boss off a vertical wall); the boss's own root fillet (`mcc_captive_side_bolt_boss()`'s `blend_a`) is what this print actually tests for self-support — if it still needs slicer supports in practice, that is exactly the finding to record below. |
+| `side-bolt` | **Print flat on the base**, wall slab vertical, boss/support-web horizontal off the wall, self-supporting. As modeled: the small base pad is the bed-contact face and stands in for the case's interior floor; the wall slab rises vertically off it and the boss protrudes horizontally off the wall at the real (unscaled) axis height above the base — the same orientation the far wall prints in on a full case. No rotation needed. | Matches how `shell.scad` will eventually orient this feature (a horizontal boss off a vertical wall). Since D-13 the boss is flush and a **central vertical support web** (`mcc_captive_side_bolt_boss()`'s `support_web_t`/`web_to_floor_h`) — not a root fillet — carries the cantilever down to the base plate; whether that web alone prints clean without slicer supports is exactly what this coupon exists to verify. |
 
 ## Print settings (ASA, Bambu Studio) — print-check §4
 
@@ -165,21 +165,25 @@ number under a stale `confidence: "drawing"` still reads as unverified.
 - Hold a 1/4"-20 nut behind the pad face (simulating the device's thread) and drive the screw in:
   does it reach its full `engage` (6.0 mm assumed) length of thread engagement before the head
   bottoms out in its recess?
-- Inspect the retaining web (behind the head recess) and the root fillet at the wall/lug junction
-  after repeated screw-in/screw-out cycles: any cracking, splitting, or visible stress whitening in
-  the ASA?
-- Does the lug print without needing slicer-added support material in the recommended orientation
-  (flat on the base, wall vertical, lug horizontal)? If not, note whether increasing `blend_a`'s
-  root fillet, or simply enabling supports for this one feature, is the more practical fix.
+- Inspect the retaining web (behind the head recess) and the **central support web** (D-13 — runs
+  from the boss down to the base plate, replacing the old root fillet) after repeated
+  screw-in/screw-out cycles: any cracking, splitting, or visible stress whitening in the ASA,
+  especially at the web-to-boss and web-to-base junctions?
+- Does the boss print without needing slicer-added support material in the recommended orientation
+  (flat on the base, wall vertical, boss horizontal)? The support web (`support_web_t`/
+  `web_to_floor_h`) is exactly what this print is testing for self-support — if it still needs
+  slicer supports in practice, note whether a thicker `MCC_SIDE_BOLT_SUPPORT_WEB_T` or simply
+  enabling supports for this one feature is the more practical fix.
 - **Good** = head fully recessed, clip snaps in and retains the screw, full `engage` reached before
-  the head bottoms out, no cracking, and the lug either prints clean or the support requirement is
-  recorded as an accepted trade-off.
+  the head bottoms out, no cracking at either web, and the boss either prints clean or the support
+  requirement is recorded as an accepted trade-off.
 - Record: which hardware was actually used (exact screw/clip/nut/pad part numbers if sourced),
   fit/retention quality, any cracking, and the support-material finding.
 - Update: `lib/mcc/constants.scad` → the `MCC_SIDE_BOLT_*` block (head ⌀/height once a real screw
   is sourced, per M5; `MCC_SIDE_BOLT_CLIP` once DIN 6799 is confirmed, per M4; `MCC_SIDE_BOLT_ENGAGE`
-  once the device's thread depth is measured, per M2) and bump `confidence` from `"assumed"` toward
-  `"measured"` as each figure is confirmed.
+  once the device's thread depth is measured, per M2; `MCC_SIDE_BOLT_AXIS_Z` once the device's side
+  hole `v` is measured, per M1 — this coupon renders at the current `pos [0,0]` placeholder) and
+  bump `confidence` from `"assumed"` toward `"measured"` as each figure is confirmed.
 
 ## print-log.md
 

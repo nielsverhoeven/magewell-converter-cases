@@ -108,51 +108,90 @@ module mcc_captive_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = 8, lid_t) {
 
 // Module: mcc_captive_side_bolt_boss()
 // Usage:
-//   mcc_captive_side_bolt_boss([proud=], [wall_t=], [gap_far=], [pad_t=], [od=], [blend_a=]);
+//   mcc_captive_side_bolt_boss([proud=], [wall_t=], [gap_far=], [pad_t=], [od=], [support_web_t=],
+//                              [web_to_floor_h=]);
 // Description:
 //   ADDITIVE. A ⌀od cylinder spanning Z=[0, proud+wall_t+gap_far-pad_t] mm — the full captive-bolt
-//   boss, from its free tip through the proud lug, the wall, and the MCC_GAP_FAR duct, up to the
-//   compliant-pad face (layout-patch-wall.md §7.1's axial stack). The exposed "proud" portion
-//   (Z=[0,proud]) is a horizontal cantilever once shell.scad orients this onto the far wall (R18);
-//   a small root fillet is unioned in at Z=proud (the wall plane), flaring the boss diameter by
-//   2*3mm over a run governed by `blend_a`, so the join between the flat wall and the round boss
-//   ramps rather than stepping — layout-patch-wall.md §7.1 "the lug ... a ≤45° conical blend on
-//   its underside". Whether this alone is enough to print without slicer supports (vs. needing a
-//   teardrop cross-section or support material) is exactly what the side-bolt coupon
-//   (models/coupons/side-bolt.scad) exists to verify physically.
+//   boss, from its free tip through the proud lug (if any), the wall, and the MCC_GAP_FAR duct, up
+//   to the compliant-pad face (layout-patch-wall.md §7.1's axial stack). At the default (flush,
+//   D-13) `proud=0`, the segment Z=[wall_t, h] is a horizontal ⌀20 cylinder cantilevered off the
+//   inside of the wall — printed floor-down, its lower half is an unsupported overhang, and a pure
+//   <=45° conical blend alone would need a ⌀48 root (collides with the vent band, the cradle
+//   far-flank ribs and the lid-fastener boss), so it is REJECTED in favour of a central vertical
+//   support web: a `support_web_t`-thick fin at the boss's own X, spanning Z=[proud+wall_t, h] (the
+//   wall-inner-face-to-pad-face run) and running from the boss's own underside down to the interior
+//   floor (`web_to_floor_h` below the axis) — layout-patch-wall.md §7.1 "Blend and support rule".
+//   That caps the largest unsupported horizontal span at (od-support_web_t)/2 (T1-31, <=10 mm, the
+//   §5 "no unsupported horizontal span over 10 mm" shell rule). The web is additive-only and unions
+//   into wall, floor and boss alike once shell.scad places this feature — matching the module
+//   contract in layout-patch-wall.md §7.1. Also carries T1-29 (the flush-rule assert: when
+//   `proud==0`, the fixed head/web/pocket axial stack must still fit inside `wall_t+gap_far-pad_t`)
+//   so a drifted MCC_GAP_FAR fails loudly here even before mcc_captive_side_bolt_cut() is applied.
+//   `proud > 0` (the pre-D-13 lug variant) keeps working for tests/coupon overrides — the support
+//   web is still added over its own Z=[proud+wall_t, h] span, but the exposed lug segment
+//   Z=[0,proud] no longer gets a root-fillet blend (D-13 replaced that mechanism; the lug path is
+//   retained only so `-D proud=<n>` still renders a valid, assert-passing part).
 // Arguments:
-//   proud   = how far the boss stands proud of the wall's outer face, mm. Default: MCC_SIDE_BOLT_PROUD.
-//   wall_t  = far-wall thickness, mm. Default: MCC_WALL.
-//   gap_far = clearance gap the boss crosses beyond the wall, mm. Default: MCC_GAP_FAR.
-//   pad_t   = compliant pad thickness subtracted off the far end, mm. Default: MCC_SIDE_BOLT_PAD_T.
-//   od      = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
-//   blend_a = root-fillet angle from the boss axis, degrees. Default: 45 (self-supporting ceiling).
+//   proud          = how far the boss stands proud of the wall's outer face, mm.
+//                    Default: MCC_SIDE_BOLT_PROUD (0, flush — D-13).
+//   wall_t         = far-wall thickness, mm. Default: MCC_WALL.
+//   gap_far        = clearance gap the boss crosses beyond the wall, mm. Default: MCC_GAP_FAR (16).
+//   pad_t          = compliant pad thickness subtracted off the far end, mm. Default: MCC_SIDE_BOLT_PAD_T.
+//   od             = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
+//   support_web_t  = central support-web thickness (in X, the boss's own axis direction), mm.
+//                    Default: MCC_SIDE_BOLT_SUPPORT_WEB_T (= MCC_WALL, 3.0).
+//   web_to_floor_h = distance from the boss axis down to the interior floor, mm — how far the
+//                    support web has to reach. Default: MCC_SIDE_BOLT_AXIS_Z - MCC_FLOOR_T (22.5,
+//                    `assumed` — layout-patch-wall.md §1/§7.1, the connector-centreline axis height
+//                    at the still-unmeasured `pos [0,0]` placeholder).
 module mcc_captive_side_bolt_boss(
-    proud   = MCC_SIDE_BOLT_PROUD,
-    wall_t  = MCC_WALL,
-    gap_far = MCC_GAP_FAR,
-    pad_t   = MCC_SIDE_BOLT_PAD_T,
-    od      = MCC_SIDE_BOLT_BOSS_OD,
-    blend_a = 45
+    proud          = MCC_SIDE_BOLT_PROUD,
+    wall_t         = MCC_WALL,
+    gap_far        = MCC_GAP_FAR,
+    pad_t          = MCC_SIDE_BOLT_PAD_T,
+    od             = MCC_SIDE_BOLT_BOSS_OD,
+    support_web_t  = MCC_SIDE_BOLT_SUPPORT_WEB_T,
+    web_to_floor_h = MCC_SIDE_BOLT_AXIS_Z - MCC_FLOOR_T
 ) {
     h = proud + wall_t + gap_far - pad_t;
     assert(h > MCC_EPS,
         str("mcc: captive_side_bolt_boss total height ", h, " <= 0 (proud=", proud, " wall_t=", wall_t,
             " gap_far=", gap_far, " pad_t=", pad_t, ")"));
-    assert(blend_a > 0 && blend_a <= 90,
-        str("mcc: captive_side_bolt_boss blend_a=", blend_a, " must be in (0, 90]"));
+    assert(support_web_t > 0 && support_web_t < od,
+        str("mcc: captive_side_bolt_boss support_web_t=", support_web_t, " must be in (0, od=", od, ")"));
+    // T1-31 (layout-patch-wall.md §7.1/§9, architecture.md §5 "no unsupported horizontal span over
+    // 10 mm"): the largest unsupported horizontal step under the boss, either side of the web.
+    assert((od - support_web_t) / 2 <= 10.0,
+        str("mcc: captive_side_bolt_boss T1-31 unsupported span=", (od - support_web_t) / 2,
+            " exceeds the 10.0 mm self-supporting limit (od=", od, " support_web_t=", support_web_t, ")"));
+    // T1-29 (flush rule, D-13): when this call is the flush default (proud=0), the FIXED
+    // head-recess/retaining-web/E-clip-pocket axial stack (constants.scad, not this module's own
+    // parameters — mcc_captive_side_bolt_boss() doesn't take them) must still fit inside
+    // wall_t+gap_far-pad_t. At the rev-3 defaults this is an EQUALITY (19 == 19): zero slack, by
+    // design — a taller measured head (M5) must raise MCC_GAP_FAR, not shave the recess.
+    assert(proud > 0 ||
+           (MCC_SIDE_BOLT_HEAD_REC_H + MCC_SIDE_BOLT_WEB_T + MCC_SIDE_BOLT_POCKET_H + pad_t) <= (wall_t + gap_far),
+        str("mcc: captive_side_bolt_boss T1-29 flush rule: head_rec_h+web_t+pocket_h+pad_t=",
+            MCC_SIDE_BOLT_HEAD_REC_H + MCC_SIDE_BOLT_WEB_T + MCC_SIDE_BOLT_POCKET_H + pad_t,
+            " must be <= wall_t+gap_far=", wall_t + gap_far, " when proud=0 (flush, D-13)"));
 
-    // Root fillet at the wall-plane transition: a modest 3 mm radial flare, tapering away over a
-    // <=blend_a-degree run. 3 mm is a smallest-reasonable-choice fillet allowance (not itself
-    // sourced) — tune/confirm against the coupon print.
-    flare_r   = 3.0;
-    blend_run = min(proud, flare_r / tan(blend_a));
+    // Support web: Z=[proud+wall_t, h] (wall inner face -> pad face), X thickness support_web_t
+    // centred on the boss axis, running in Y (the boss's own radial/"down" direction once
+    // shell.scad orients this feature) from the axis out past the boss's underside (od/2, with a
+    // small epsilon overlap so the union has no coincident/degenerate face) down to web_to_floor_h.
+    web_z0  = proud + wall_t;
+    web_len = h - web_z0;
+    web_y0  = od / 2 - MCC_EPS;
+    web_ly  = web_to_floor_h - web_y0;
+    assert(web_ly > MCC_EPS,
+        str("mcc: captive_side_bolt_boss web_to_floor_h=", web_to_floor_h,
+            " must clear the boss radius (od/2=", od / 2, ") to actually reach the floor"));
 
     union() {
         cyl(h = h, d = od, circum = true, anchor = BOTTOM, $fn = 64);
-        if (blend_run > MCC_EPS)
-            translate([0, 0, proud - blend_run])
-                cyl(h = blend_run, d1 = od, d2 = od + 2 * flare_r, circum = true, anchor = BOTTOM, $fn = 64);
+        if (web_len > MCC_EPS)
+            translate([-support_web_t / 2, web_y0, web_z0])
+                cube([support_web_t, web_ly, web_len]);
     }
 }
 
@@ -238,15 +277,51 @@ module mcc_captive_side_bolt_cut(
 
 // Function: mcc_side_bolt_keepout()
 // Usage:
-//   d = mcc_side_bolt_keepout([od=]);
+//   ko = mcc_side_bolt_keepout([od=], [strip_w=]);
 // Description:
-//   Pure function: the far-wall keep-out disc diameter around the boss, for shell.scad/vents.scad/
-//   cradle.scad/mounts.scad to assert non-intersection against (T1-23, T1-27 — vent slots, cradle
-//   far-flank ribs, lid-fastener bosses, and the splitter bay must all clear this disc).
-//   layout-patch-wall.md §7.1 "keepout_d = boss_od + 2*2.0 = 24.0".
+//   Pure function: the far-wall keep-out for shell.scad/vents.scad/cradle.scad/mounts.scad to
+//   assert non-intersection against (T1-23, T1-27 — vent slots, cradle far-flank ribs,
+//   lid-fastener bosses, and the splitter bay must all clear it). Since D-13 the keep-out is no
+//   longer a plain disc — the internal support web (mcc_captive_side_bolt_boss()) extends it
+//   downward — so this returns a struct/list `[["disc_d",od+4], ["strip_w",strip_w],
+//   ["strip_to_floor",true]]` rather than a bare diameter: the OD24 disc around the boss axis,
+//   PLUS a `strip_w`-wide strip running from the interior floor up to the disc (the support web's
+//   own wall footprint — a vent slot cut there would open into solid material).
+//   layout-patch-wall.md §7.1 "The keep-out is no longer a plain disc ... keepout_d = boss_od+2*2.0
+//   = 24.0 ... union with a 7 mm-wide strip". Use mcc_side_bolt_keepout_2d() to actually draw it.
 // Arguments:
-//   od = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
-function mcc_side_bolt_keepout(od = MCC_SIDE_BOLT_BOSS_OD) = od + 2 * 2.0;
+//   od      = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
+//   strip_w = support-web keep-out strip width, mm. Default: MCC_SIDE_BOLT_KEEPOUT_STRIP_W.
+function mcc_side_bolt_keepout(od = MCC_SIDE_BOLT_BOSS_OD, strip_w = MCC_SIDE_BOLT_KEEPOUT_STRIP_W) =
+    [["disc_d", od + 2 * 2.0], ["strip_w", strip_w], ["strip_to_floor", true]];
+
+// Module: mcc_side_bolt_keepout_2d()
+// Usage:
+//   mcc_side_bolt_keepout_2d(axis_z, [od=], [strip_w=], [floor_z=]);
+// Description:
+//   2D keep-out in the wall plane (local X = across the wall, local Z = up; the caller translates
+//   this to `x_bolt` before subtracting it from a vent slot pattern — layout-patch-wall.md §5 "no
+//   vent slot inside either" the disc or the strip, T1-23). Draws mcc_side_bolt_keepout()'s disc
+//   centred at `z = axis_z`, unioned with a `strip_w`-wide strip centred on the local X axis
+//   running from `z = floor_z` (the interior floor) up to the axis — the support web's own wall
+//   footprint, so a slot cut there would open into solid material, not air.
+// Arguments:
+//   axis_z  = bolt axis height in the caller's own wall-plane frame, mm (required).
+//   od      = boss outer diameter, mm. Default: MCC_SIDE_BOLT_BOSS_OD.
+//   strip_w = keep-out strip width, mm. Default: MCC_SIDE_BOLT_KEEPOUT_STRIP_W.
+//   floor_z = interior floor height in the same frame, mm. Default: MCC_FLOOR_T.
+module mcc_side_bolt_keepout_2d(axis_z, od = MCC_SIDE_BOLT_BOSS_OD, strip_w = MCC_SIDE_BOLT_KEEPOUT_STRIP_W, floor_z = MCC_FLOOR_T) {
+    ko        = mcc_side_bolt_keepout(od = od, strip_w = strip_w);
+    disc_d    = struct_val(ko, "disc_d");
+    strip_len = axis_z - floor_z;
+    assert(strip_len > 0,
+        str("mcc: side_bolt_keepout_2d axis_z=", axis_z, " must be above floor_z=", floor_z));
+
+    union() {
+        translate([0, axis_z]) circle(d = disc_d, $fn = 64);
+        translate([-strip_w / 2, floor_z]) square([strip_w, strip_len]);
+    }
+}
 
 // Module: mcc_side_bolt_envelope()
 // Usage:
@@ -256,11 +331,13 @@ function mcc_side_bolt_keepout(od = MCC_SIDE_BOLT_BOSS_OD) = od + 2 * 2.0;
 //   length of the boss (layout-patch-wall.md §7.1 "the same disc swept through the duct"), in the
 //   same local frame as mcc_captive_side_bolt_boss() so a caller can place both identically.
 //   Mirrors the mcc_fan_envelope()/mcc_splitter_envelope() reservation-box pattern (fan.scad,
-//   poe_splitter.scad) in spirit, but this feature's real non-intersection checks use the plain ⌀
-//   from mcc_side_bolt_keepout() against other features' own geometry, not a CSG-intersected solid
-//   — this box is for visual review only, so (unlike the fan/splitter envelopes) it is `%`-ghosted
-//   and gated behind MCC_SHOW_GHOST like every other ghost in this repo (architecture.md §3
-//   "Ghosts" — both belts: `%` is the mechanism, the flag is the review signal).
+//   poe_splitter.scad) in spirit, but this feature's real non-intersection checks use the plain
+//   `disc_d` from mcc_side_bolt_keepout() against other features' own geometry, not a
+//   CSG-intersected solid — this box is for visual review only (it does not attempt to sweep the
+//   strip too — the strip is a 2D wall-plane feature, see mcc_side_bolt_keepout_2d()), so (unlike
+//   the fan/splitter envelopes) it is `%`-ghosted and gated behind MCC_SHOW_GHOST like every other
+//   ghost in this repo (architecture.md §3 "Ghosts" — both belts: `%` is the mechanism, the flag is
+//   the review signal).
 // Arguments:
 //   proud, wall_t, gap_far, pad_t, od = same meaning/defaults as mcc_captive_side_bolt_boss().
 module mcc_side_bolt_envelope(
@@ -270,9 +347,10 @@ module mcc_side_bolt_envelope(
     pad_t   = MCC_SIDE_BOLT_PAD_T,
     od      = MCC_SIDE_BOLT_BOSS_OD
 ) {
-    h = proud + wall_t + gap_far - pad_t;
+    h      = proud + wall_t + gap_far - pad_t;
+    disc_d = struct_val(mcc_side_bolt_keepout(od = od), "disc_d");
     if (MCC_SHOW_GHOST) {
-        %cyl(h = h, d = mcc_side_bolt_keepout(od), circum = true, anchor = BOTTOM, $fn = 64);
+        %cyl(h = h, d = disc_d, circum = true, anchor = BOTTOM, $fn = 64);
     }
 }
 
