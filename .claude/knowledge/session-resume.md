@@ -12,7 +12,7 @@ stand and what to do next, in order. Delete it (or move its content to CHANGELOG
 | Software | **done** | OpenSCAD nightly 2025.09.07 (`C:\Program Files\OpenSCAD (Nightly)`), Bambu Studio 02.08.02, BOSL2 submodule at `lib/BOSL2` (SHA 804028c), `.venv` with trimesh. |
 | `.claude/skills/*` (9) | **done** | knowledge-lookup, openscad-authoring, openscad-render, neutrik-panel, device-portmap, new-case-variant, print-check, bom-update, git-flow. |
 | `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `BOM.md`, PR template | **done** | `CLAUDE.md` "Current status" and the `neutrik-panel` row ("or Mini-DIN-8") are stale — see step 5. |
-| `scripts/build.py`, `render.ps1`, CI `render.yml` | **done, verified** | Pipeline proven on a test cube; CI pinned AppImage + sha256; Git Flow triggers. |
+| `scripts/build.py`, `render.ps1`, CI `render.yml` | **done, verified** | Pipeline proven on the coupons; CI pinned AppImage + sha256 + runtime libs + stray-file guard; triggers: `main`, `v*` tags, PRs to `main`. |
 | `lib/mcc/*.scad` (L0/L1), `lib/mcc/devices/*.scad` (8), `models/coupons/*.scad` (5), `tests/test_*.scad` (4) | **written, NOT verified** | The developer agent was stopped during its final read-through of `constants.scad`, before running the render/smoke verification. Expect small errors. |
 | `.claude/knowledge/architecture.md`, `layout-patch-wall.md` | **partially current** | Records: patch-wall topology, Mini-DIN8 internal, D-cutout facts. Does NOT yet record the last three user decisions (see step 4). |
 
@@ -32,8 +32,8 @@ is withdrawn); floor = case 1/4"-20 insert + VESA 75×75 + Fishtail M4 + strap s
 profile; **case height stays 51 mm (4 mm Z web; the 49 mm proposal was vetoed)**; **no right-angle
 HDMI adapter in the default BOM (vetoed) — end zones are sized for straight plugs and measured with
 the depth-mockup coupon**; 1 m drop target, 3 mm walls / 5 perimeters; English docs; exports via CI
-only; Git Flow (main/develop/feature/release/hotfix, `gitflow.*` config set, AVH extension not
-installed).
+only; **simplified Git Flow: `feature/*` → `main` via PR, releases via annotated `v*` tags on `main`**
+(the user dropped `develop` on 2026-09-08; no `release/*`/`hotfix/*` branches; no git-flow tooling).
 
 ## Next steps, in order
 
@@ -47,9 +47,9 @@ installed).
    floor `mcc_tripod_boss()` in favour of a captive side-bolt feature (`mcc_captive_side_bolt()` —
    6.6 mm clearance bore, head recess, retaining groove) — may wait for the shell milestone but must
    not be used from the floor.
-3b. **Branching docs**: the user dropped the `develop` branch (2026-09-08). `CLAUDE.md` is updated;
-   `CONTRIBUTING.md`, the `git-flow` skill, the PR template, `CHANGELOG.md` and the `gitflow.*`
-   git config still describe `develop` → rewrite to "feature/* → main via PR, releases via tags".
+3b. ~~Branching docs~~ **DONE 2026-09-08**: CONTRIBUTING, `git-flow` skill, PR template, CHANGELOG,
+   README, ticket-source, CI triggers and CLAUDE.md all describe `feature/* → main`, releases via
+   tags; the `gitflow.*` git config was removed.
 4. **Re-run the architect** (Opus, single instance) with the brief "record R11/R12/D-04/D-06/D-08
    decisions" — the previous run was stopped before it edited anything. Decisions to record are the
    bold items above; deliverables: update `architecture.md` (§1 envelope H=51 and straight-plug end
@@ -60,7 +60,8 @@ installed).
 5. **CLAUDE.md**: rewrite "Current status" (library + coupons exist, unverified → verified), remove
    "(or Mini-DIN-8)" from the `neutrik-panel` row, update Closure/Retention and Cooling bullets with
    the bold decisions above, envelope ≈ 175–192 × 150–156 × 51 mm.
-6. `build.py all` green → open the PR `feature/repo-setup` → `develop` (ask the user before pushing).
+6. ~~`build.py all` green → open the PR~~ **DONE**: PR #1 `feature/repo-setup` → `main` is open and
+   CI-green; merge once the items above land.
 7. **Next milestone** (new feature branch): `lib/mcc/shell.scad`, `cradle.scad`, `mounts.scad`,
    `vents.scad`, `models/<slug>/case.scad` for the 8 priority devices — but only after the coupons
    (`neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`, `tolerance-ladder`) are printed on

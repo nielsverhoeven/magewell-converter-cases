@@ -15,11 +15,13 @@ That inversion drives most of the design decisions recorded in
 
 ## Status
 
-Baseline tooling and project setup only. **No case models exist yet.** The build/render/test
-pipeline (`scripts/build.py`) is in place and proven against a throwaway test part; device data
-files, the shared shell/panel/cradle library (`lib/mcc/**`), and the physical calibration coupons
-(`models/coupons/*.scad`) are being written next. Coupons come before any full case — see
-"Contributing" below.
+Baseline setup. **No case models exist yet.** The build/render/test pipeline (`scripts/build.py`)
+is in place and green in CI; the L0/L1 library (`lib/mcc/**`: constants, ports, Neutrik cutout,
+fasteners, fan, PoE-splitter envelope, ghost, panel dispatcher), 8 device data files and the 5
+physical calibration coupons (`models/coupons/*.scad`, with goldens) exist and pass `build.py all`.
+Next: print and measure the coupons on the X1 Carbon, then the L2 geometry (shell, cradle, mounts,
+vents) and the per-device case assemblies. Coupons come before any full case — see "Contributing"
+below and `.claude/knowledge/session-resume.md` for the ordered plan.
 
 ## Repo map
 
@@ -105,7 +107,8 @@ legal text.
 
 ## Branching
 
-This repo follows Git Flow: `main` holds tagged releases only, `develop` is the integration branch,
-and work happens on `feature/*` / `release/*` / `hotfix/*` branches merged in via PR. Never commit
-directly to `main` or `develop`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full model,
-step-by-step recipes, and the release checklist.
+This repo uses a simplified Git Flow: `main` is the only long-lived branch (integration and release
+both), and everything else — including urgent fixes — is a short-lived `feature/*` branch merged in
+via PR. Releases are annotated `vX.Y.Z` tags on `main`. Never commit directly to `main`. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the full model, step-by-step recipes, and the release
+checklist.

@@ -1,29 +1,32 @@
 # Contributing
 
-This repo uses **Git Flow** (classic nvie / AVH semantics, adapted for a single-maintainer hardware
-repo). This document is the full recipe book; `.claude/skills/git-flow/SKILL.md` is the condensed
-version Claude follows day to day, and `CLAUDE.md` has a short pointer + the non-negotiables.
+This repo uses a **simplified Git Flow**: `main` is the only long-lived branch — it serves as both
+the integration branch and the release branch. All work happens on short-lived `feature/*` branches
+merged into `main` via PR; releases are annotated `vX.Y.Z` tags on `main`. There is no `develop`,
+`release/*`, `hotfix/*`, or `support/*` branch, and the AVH `git flow` extension is not used — every
+recipe below is plain git.
 
-The AVH `git flow` extension is **not required**. Every recipe below is written with **plain git as
-the primary path**; the `git flow` equivalent is given alongside for anyone who installs the
-extension. Docs, code comments, and commit messages are English (`CLAUDE.md` "Language rule");
-conversation with the user stays Dutch.
+This document is the full recipe book; `.claude/skills/git-flow/SKILL.md` is the condensed version
+Claude follows day to day, and `CLAUDE.md`'s "Branching" section has the non-negotiables. Docs, code
+comments, and commit messages are English (`CLAUDE.md` "Language rule"); conversation with the user
+stays Dutch.
 
 ## The model
 
 | Branch | Purpose | Branches from | Merges into | Naming |
 |---|---|---|---|---|
-| `main` | Release history only. Every commit on it is a tagged release `vX.Y.Z` (SemVer). | — | — | `main` |
-| `develop` | Integration branch. Always renders green in CI. | `main` | — | `develop` |
-| `feature/*` | One feature / model / coupon / doc change. | `develop` | `develop` via PR | `feature/<kebab-topic>`, e.g. `feature/compact-shell`, `feature/issue-12-vents` |
-| `release/*` | Stabilise a release: goldens frozen, BOM/CHANGELOG updated, version bumped. | `develop` | `main` (tag `vX.Y.Z`) **and** back into `develop` | `release/vX.Y.Z` |
-| `hotfix/*` | Urgent fix on a released version. | `main` | `main` (tag `vX.Y.Z+1`) **and** `develop` | `hotfix/vX.Y.Z` |
-| `support/*` | Optional, long-lived maintenance of an old major. | `main` tag | — | `support/vX.x` |
+| `main` | Integration **and** release branch. Always renders green in CI. Every tagged commit on it is a release `vX.Y.Z` (SemVer). | — | — | `main` |
+| `feature/*` | Everything else: a feature, a new case variant, a coupon, a doc change, a routine fix, or an urgent fix on something already released. | `main` | `main` via PR | `feature/<kebab-topic>`, `feature/issue-<n>-<topic>` when a GitHub issue exists, or `feature/hotfix-<topic>` for an urgent fix |
 
-**Merge policy:** `--no-ff` merges into `main` and `develop` (keeps the branch topology visible in
-`git log --graph`). Feature PRs into `develop` may be **squash-merged** if the branch's own history
-is noisy (WIP commits, fixups) — the topology that matters is `develop`/`main`, not every feature
-branch's internals. Tags are **annotated**: `git tag -a vX.Y.Z -m "..."`, never lightweight.
+A hotfix is **not** a separate branch type — it's a `feature/*` branch off `main` like any other,
+named `feature/hotfix-<topic>` (or `feature/issue-<n>-<topic>` if a GitHub issue tracks it) so it's
+recognizable in the branch list. It goes through the same PR → CI-green → merge → tag path as
+everything else; there is no separate hotfix workflow to remember.
+
+**Merge policy:** squash-merge or a regular merge commit, maintainer's call — the branch's own
+internal history (WIP commits, fixups) doesn't need to survive, only `main`'s. `main` is **never**
+force-pushed. A PR only merges once the `render` CI check is green — no exceptions for "small"
+changes. Tags are **annotated**: `git tag -a vX.Y.Z -m "..."`, never lightweight.
 
 **Versioning (SemVer):**
 
@@ -48,118 +51,92 @@ PR bodies written by Claude Code end with `🤖 Generated with [Claude Code](htt
 ```mermaid
 gitGraph
     commit id: "v0.1.0" tag: "v0.1.0"
-    branch develop
-    checkout develop
-    commit id: "chore: setup"
     branch feature/compact-shell
     checkout feature/compact-shell
     commit id: "feat: shell"
     commit id: "feat: cradle"
-    checkout develop
-    merge feature/compact-shell id: "PR #1 (squash)"
-    branch release/v0.2.0
-    checkout release/v0.2.0
-    commit id: "chore: bump 0.2.0"
     checkout main
-    merge release/v0.2.0 id: "release" tag: "v0.2.0"
-    checkout develop
-    merge release/v0.2.0
-    checkout main
-    branch hotfix/v0.2.1
-    checkout hotfix/v0.2.1
+    merge feature/compact-shell id: "PR #1"
+    branch feature/hotfix-boss-od
+    checkout feature/hotfix-boss-od
     commit id: "fix: boss OD"
     checkout main
-    merge hotfix/v0.2.1 tag: "v0.2.1"
-    checkout develop
-    merge hotfix/v0.2.1
+    merge feature/hotfix-boss-od id: "PR #2" tag: "v0.2.0"
 ```
 
 Or, ASCII, if the renderer for this file doesn't support mermaid:
 
 ```
-main     ----v0.1.0------------------------v0.2.0----v0.2.1----
-                  \                        /    \    /
-develop            \--(setup)---(PR#1)----/      \  /
-                          \      /                \/
-feature/compact-shell      \----/                 /\
-                                          hotfix/v0.2.1
+main     ----v0.1.0------------------------v0.2.0----
+                  \                        /
+feature/compact-shell  \--(shell)--(cradle)/
+                                            \
+                              feature/hotfix-boss-od--(fix: boss OD)
 ```
 
 ## Recipes
 
-Every recipe assumes `origin` is up to date (`git fetch origin` first if unsure). The `git flow`
-column assumes `git flow init` has been run with `gitflow.branch.master=main`,
-`gitflow.branch.develop=develop`, `gitflow.prefix.feature=feature/`,
-`gitflow.prefix.release=release/`, `gitflow.prefix.hotfix=hotfix/`,
-`gitflow.prefix.support=support/`, `gitflow.prefix.versiontag=v` pre-set, so `git flow init` itself
-is a no-op (accepts the existing config instead of prompting).
+Every recipe assumes `origin` is up to date (`git fetch origin` first if unsure).
 
 ### Start a feature
 
-| Plain git | `git flow` |
-|---|---|
-| `git checkout develop && git pull` | `git checkout develop && git pull` |
-| `git checkout -b feature/<kebab-topic>` | `git flow feature start <kebab-topic>` |
+```
+git switch -c feature/<kebab-topic> main
+```
 
-Naming: `feature/<kebab-topic>`, and `feature/issue-<n>-<topic>` when a GitHub issue exists (see
-`.claude/knowledge/ticket-source.md`) — e.g. `feature/issue-12-vents`.
+Naming: `feature/<kebab-topic>`, `feature/issue-<n>-<topic>` when a GitHub issue exists (see
+`.claude/knowledge/ticket-source.md`) — e.g. `feature/issue-12-vents` — or `feature/hotfix-<topic>`
+for an urgent fix on something already released.
 
-### Finish a feature (PR)
+### Keep it current
 
-| Plain git | `git flow` |
-|---|---|
-| `git push -u origin feature/<topic>` | `git flow feature publish <topic>` |
-| Open a PR **`feature/<topic>` → `develop`** (`gh pr create --base develop`) | same — `git flow` doesn't open the PR for you either |
-| Wait for the `render` check to go green | — |
-| Merge (squash or `--no-ff`, maintainer's call) via the GitHub UI/`gh pr merge` | `git flow feature finish <topic>` merges locally with `--no-ff` — prefer the PR route so CI gates the merge |
-| Delete the feature branch | `git flow feature finish` deletes it locally by default |
+If `main` moves while a feature branch is in flight:
 
-Never merge a feature branch straight to `main`. Never merge while the `render` check is pending or
-failing.
+```
+git fetch origin
+git merge main
+```
 
-### Start a release
+**Never rebase a branch that's already been pushed** — once it's public (pushed, or a PR is open),
+merge `main` into it instead of rewriting its history. Rebase is fine only for a purely local branch
+nothing else depends on yet.
 
-| Plain git | `git flow` |
-|---|---|
-| `git checkout develop && git pull` | `git checkout develop && git pull` |
-| `git checkout -b release/vX.Y.Z` | `git flow release start vX.Y.Z` |
-| Bump the version wherever it's recorded (export manifests, `CHANGELOG.md` header), move `[Unreleased]` entries into a new `## [X.Y.Z] - YYYY-MM-DD` section | same manual steps — `git flow` doesn't know about `CHANGELOG.md` |
-| Freeze goldens: `python scripts/build.py golden --update` only if the diffs are reviewed and intentional | same |
-| Commit as `chore(release): vX.Y.Z` | same |
+### Open the PR
 
-### Finish a release
+```
+git push -u origin feature/<kebab-topic>
+gh pr create --base main --title "..." --body "..."
+```
 
-| Plain git | `git flow` |
-|---|---|
-| `git push -u origin release/vX.Y.Z`, open PR **`release/vX.Y.Z` → `main`** | `git flow release publish vX.Y.Z` |
-| `python scripts/build.py all --release` green (locally and in CI on the PR) | same gate |
-| Merge the PR into `main` with `--no-ff` | `git flow release finish vX.Y.Z` does this locally, plus tags and back-merges |
-| `git checkout main && git pull && git tag -a vX.Y.Z -m "vX.Y.Z"` (unless GitHub's merge UI already tagged it) | done by `release finish` |
-| `git push origin vX.Y.Z` | done by `release finish` |
-| Open a second PR **`release/vX.Y.Z` → `develop`** (or merge directly with `--no-ff` if no PR gate is desired for the back-merge) so `develop` gets the version bump and CHANGELOG move too | done by `release finish` |
-| Delete `release/vX.Y.Z` | done by `release finish` |
+Wait for the `render` check to go green before merging. Never merge while it's pending or failing.
 
-Pushing the tag is what triggers `render.yml`'s release job (`on: tags: v*`) — verify the GitHub
-Release was created with the expected STL/3MF/manifest assets attached before announcing the release.
+### Merge
 
-### Start a hotfix
+Squash-merge or a regular merge commit — maintainer's call, based on whether the branch's own commit
+history is worth keeping. Either way:
 
-| Plain git | `git flow` |
-|---|---|
-| `git checkout main && git pull` | `git checkout main && git pull` |
-| `git checkout -b hotfix/vX.Y.Z` (the version being fixed *into*, i.e. the new patch version) | `git flow hotfix start vX.Y.Z` |
+- `main` is never force-pushed.
+- The `render` CI check must be green on the PR first.
+- Delete the feature branch after merging (locally and on `origin`).
 
-### Finish a hotfix
+### Release (tag on `main`)
 
-| Plain git | `git flow` |
-|---|---|
-| `git push -u origin hotfix/vX.Y.Z`, open PR **`hotfix/vX.Y.Z` → `main`** | `git flow hotfix publish vX.Y.Z` |
-| `python scripts/build.py all --release` green | same gate |
-| Merge into `main` with `--no-ff`, tag `vX.Y.Z` | `git flow hotfix finish vX.Y.Z` does merge + tag |
-| Also merge/PR into `develop` (`--no-ff`) so the fix isn't lost on the next release | done by `hotfix finish` |
-| Delete `hotfix/vX.Y.Z` | done by `hotfix finish` |
+A version bump is a normal change and goes through a normal `feature/*` branch and PR — `main` is
+never committed to directly, not even for a release.
 
-## Definition of done (PR into `develop`)
+1. On `feature/release-vX.Y.Z` (branched from `main`): move `CHANGELOG.md`'s `[Unreleased]` entries
+   into a new `## [X.Y.Z] - YYYY-MM-DD` section, and bump the version wherever else it's recorded.
+2. `python scripts/build.py all --release` must be green locally — this also enforces the release
+   gate (fails on any `WARNING: unmeasured port`).
+3. PR into `main` like any other change; merge only once `render` is green.
+4. `git checkout main && git pull`
+5. `git tag -a vX.Y.Z -m "vX.Y.Z"`
+6. `git push origin vX.Y.Z`
+7. Pushing the tag triggers `render.yml`'s release job (`on: tags: v*`) — verify the GitHub Release
+   was created with the expected `*.stl` / `*.3mf` / `*.manifest.json` assets attached before
+   announcing the release; don't assume the job succeeded just because it started.
+
+## Definition of done (PR into `main`)
 
 - [ ] `python scripts/build.py all` passes locally.
 - [ ] The `render` CI check is green on the PR.
@@ -183,26 +160,20 @@ Release was created with the expected STL/3MF/manifest assets attached before an
 - [ ] CI release job ran on the tag; GitHub Release exists with `exports/**/*.stl`, `*.3mf`, and
       `*.manifest.json` attached — spot-check the asset list, don't assume the job succeeded just
       because it started.
-- [ ] `release/vX.Y.Z` back-merged into `develop`.
 
-## Branch protection (GitHub recommendations)
+## Branch protection (GitHub recommendation)
 
-For both `main` and `develop`:
+For `main`:
 
 - Require a pull request before merging (no direct pushes).
 - Require the `render` status check to pass before merging.
 - Do not allow force-pushes.
-- Do not allow branch deletion (for `main`/`develop` themselves).
-
-For `main` specifically:
-
-- **Leave "require linear history" OFF** — release/hotfix merges into `main` use `--no-ff` on
-  purpose, to keep the merge topology visible; "linear history" would reject exactly the merge
-  commits this workflow relies on.
+- Do not allow branch deletion.
+- Allow squash merging and merge commits (maintainer picks per PR); rebase merging is not required.
 
 ## The one rule that matters most
 
-**Never commit directly on `main` or `develop`.** Every change reaches them through a PR from a
-`feature/*`, `release/*`, or `hotfix/*` branch. If you catch yourself with uncommitted work on
-`develop` or `main`, see the troubleshooting table in `.claude/skills/git-flow/SKILL.md` before doing
-anything destructive.
+**Never commit directly on `main`.** Every change reaches it through a PR from a `feature/*` branch
+— including urgent fixes, which are just a `feature/hotfix-<topic>` branch like any other. If you
+catch yourself with uncommitted work on `main`, see the troubleshooting table in
+`.claude/skills/git-flow/SKILL.md` before doing anything destructive.

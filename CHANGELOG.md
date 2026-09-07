@@ -28,8 +28,9 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 - CI: `.github/workflows/render.yml` — renders every discovered coupon/model, runs the 4-tier test
   suite, uploads exports, and (on a `v*` tag) creates a GitHub Release with the release gate
   (fails on any `WARNING: unmeasured port`).
-- Git Flow branching strategy: `CONTRIBUTING.md`, `.github/pull_request_template.md`, the
-  `git-flow` skill, and the CI trigger set for `main`/`develop`/`release/**`/`hotfix/**`/`v*` tags.
+- Simplified Git Flow: feature branches → main, releases via tags — `CONTRIBUTING.md`,
+  `.github/pull_request_template.md`, the `git-flow` skill, and the CI trigger set for `main`
+  and `v*` tags.
 
 <!-- No Changed / Deprecated / Removed / Fixed / Security entries yet. Keep a Changelog convention:
      add a subsection only once it has an entry; don't carry empty headings forward release to

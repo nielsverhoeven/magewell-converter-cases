@@ -91,7 +91,7 @@ python scripts/build.py all           # doctor + smoke + render + check + golden
 | Scaffold a new `models/<slug>/` case assembly | `new-case-variant` |
 | Pre-slice go/no-go before printing | `print-check` |
 | Regenerate `BOM.md` | `bom-update` |
-| Pick a branch, sequence a commit/PR/release/hotfix | `git-flow` |
+| Pick a branch, sequence a commit/PR/release | `git-flow` |
 
 ## Team routing
 
@@ -114,13 +114,12 @@ explains what to do when a dependency is missing: stop and report, don't improvi
 ## Branching (Git Flow)
 
 This repo uses a simplified Git Flow **without a `develop` branch** (user decision 2026-09-08):
-`main` is the integration *and* release branch; work happens on `feature/*` (and `hotfix/*`)
-branches that reach `main` via PR; releases are annotated `vX.Y.Z` tags on `main`. Recipes in
-`CONTRIBUTING.md` and the `git-flow` skill (see the table above) — where those still mention
-`develop`, read `main`. Three non-negotiables:
+`main` is the integration *and* release branch; all work happens on `feature/*` branches (a hotfix
+is simply a feature branch off `main`) that reach `main` via PR; releases are annotated `vX.Y.Z`
+tags on `main`. Recipes in `CONTRIBUTING.md` and the `git-flow` skill (see the table above). Three
+non-negotiables:
 
-- **Never commit directly on `main`.** All work happens on `feature/*` or `hotfix/*` and reaches
-  `main` via PR.
+- **Never commit directly on `main`.** All work happens on `feature/*` and reaches `main` via PR.
 - **Releases only via annotated `vX.Y.Z` tags on `main`.** No other path produces a GitHub Release.
 - **A PR into `main` must be CI-green** (`render` check) before it merges — no exceptions for
   "small" changes.

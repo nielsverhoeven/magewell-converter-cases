@@ -10,17 +10,11 @@ on:
   push:
     branches:
       - main
-      - develop
-      - 'release/**'
-      - 'hotfix/**'
     tags:
       - 'v*'
   pull_request:
     branches:
-      - develop
       - main
-      - 'release/**'
-      - 'hotfix/**'
   workflow_dispatch:
 
 concurrency:
