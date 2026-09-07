@@ -1,83 +1,52 @@
-# Session resume — paused 2026-09-07 (~16:10)
+# Project status and next milestone — updated 2026-09-08
 
-The kickoff session was paused mid-flight (laptop shutdown). This file says exactly where things
-stand and what to do next, in order. Delete it (or move its content to CHANGELOG/issues) once the
-`feature/repo-setup` PR is merged.
+Working memory for agents resuming this repo. Keep it short and current; move history to
+`CHANGELOG.md` and decisions to `architecture.md` / `layout-patch-wall.md`.
 
-## State on disk (all on branch `feature/repo-setup`, WIP commit)
+## State on disk (branch `feature/repo-setup`, PR #1 → `main`, CI green)
 
 | Area | State | Notes |
 |---|---|---|
-| `knowledge/**` | **done** | Magewell (22 files), Neutrik (10 + assets), components (fans, fasteners, cables, PoE splitters, Mini-DIN8), design (FDM + thermal). Sources cited; `unknown` where unverifiable. |
-| Software | **done** | OpenSCAD nightly 2025.09.07 (`C:\Program Files\OpenSCAD (Nightly)`), Bambu Studio 02.08.02, BOSL2 submodule at `lib/BOSL2` (SHA 804028c), `.venv` with trimesh. |
-| `.claude/skills/*` (9) | **done** | knowledge-lookup, openscad-authoring, openscad-render, neutrik-panel, device-portmap, new-case-variant, print-check, bom-update, git-flow. |
-| `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `BOM.md`, PR template | **done** | `CLAUDE.md` "Current status" and the `neutrik-panel` row ("or Mini-DIN-8") are stale — see step 5. |
-| `scripts/build.py`, `render.ps1`, CI `render.yml` | **done, verified** | Pipeline proven on the coupons; CI pinned AppImage + sha256 + runtime libs + stray-file guard; triggers: `main`, `v*` tags, PRs to `main`. |
-| `lib/mcc/*.scad` (L0/L1), `lib/mcc/devices/*.scad` (8), `models/coupons/*.scad` (5), `tests/test_*.scad` (4) | **written, NOT verified** | The developer agent was stopped during its final read-through of `constants.scad`, before running the render/smoke verification. Expect small errors. |
-| `.claude/knowledge/architecture.md`, `layout-patch-wall.md` | **partially current** | Records: patch-wall topology, Mini-DIN8 internal, D-cutout facts. Does NOT yet record the last three user decisions (see step 4). |
+| `knowledge/**` | done | Magewell (22 files + Fishtail STL), Neutrik (10 + official drawings/STEP), components (fans, fasteners, cables, PoE splitters, Mini-DIN8), design (FDM + thermal). Sources cited; `unknown` where unverifiable; inconsistencies resolved 2026-09-08. |
+| Software | done | OpenSCAD nightly 2025.09.07 (`C:\Program Files\OpenSCAD (Nightly)`), Bambu Studio 02.08.02, BOSL2 submodule `lib/BOSL2` (SHA 804028c), `.venv` with trimesh + pyyaml. |
+| `.claude/skills/*` (9) | done | knowledge-lookup, openscad-authoring, openscad-render, neutrik-panel, device-portmap, new-case-variant, print-check, bom-update, git-flow. |
+| `CLAUDE.md`, `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `BOM.md`, PR template | done, current | Branching = simplified Git Flow (`feature/*` → `main`, tags). BOM filled for the 8 priority SKUs + coupon test kit. |
+| `scripts/build.py`, `render.ps1`, CI `render.yml` | done, verified | Pinned AppImage + sha256 + runtime libs + stray-file guard; triggers `main`, `v*`, PRs to `main`, manual. |
+| `lib/mcc/*.scad` (L0/L1), `lib/mcc/devices/*.scad` (8), `models/coupons/*.scad` (6), `tests/test_*.scad` (5), `tests/golden/coupons/*.json` (6) | done, verified | `build.py all`: smoke 5/5, render 6/6, check 8/8, goldens 6/6. Captive side bolt (flush, D-13), `side_bolt` port records, floor tripod insert, splitter default `DONGLE-75x40x20`. |
+| `.claude/knowledge/architecture.md` (rev 4), `layout-patch-wall.md` (rev 3) | current | D-01…D-13 recorded; deviations D1–D3 resolved; open risks R16, R17, R20. |
+| **Not written yet** | — | L2 geometry `shell.scad`, `cradle.scad`, `mounts.scad`, `vents.scad`; `models/<slug>/case.scad` assemblies. |
 
-## User decisions taken today (all fixed; also in the teamlead's memory)
+## Fixed decisions (summary — full list in CLAUDE.md, rationale in architecture.md)
 
-Printer Bambu Lab X1 Carbon; OpenSCAD nightly + BOSL2; ASA only, no TPU; priority devices HDMI/SDI
-Plus, HDMI/SDI TX, NDI decoders; panel = black `-B` Neutrik only (NE8FDP-B, NAUSB-W-B ×1–2,
-NAHDMI-W-B, NBB75DFGB, DBA-BL-B); Mini-DIN-8 PTZ/Tally stays internal; loop-out goes outside;
-side-exit layout with ONE patch wall (all connectors in one long side wall, max 4); passive-first +
-parametric fan bay (NF-A4x10 5V) + reserved PoE-splitter bay with **dongle-class default envelope
-75×40×20 mm (assumed; buy one UCTRONICS U6114/U6115 and measure)**; closure = tongue-and-groove +
-captive M3 knurled thumbscrews in heat-set inserts, **6 for lids >180 mm (Plus), 4 for compact**;
-**retention = captive 1/4"-20 SLOTTED bolt through the far (non-patch) long wall into the device's
-side thread — the device's 1/4"-20 hole is on a long side face (user verified); the bolt must stay in
-the case when unscrewed; device lies flat on the floor in a ribbed cradle** (the floor through-bolt
-is withdrawn); floor = case 1/4"-20 insert + VESA 75×75 + Fishtail M4 + strap slots + stacking
-profile; **case height stays 51 mm (4 mm Z web; the 49 mm proposal was vetoed)**; **no right-angle
-HDMI adapter in the default BOM (vetoed) — end zones are sized for straight plugs and measured with
-the depth-mockup coupon**; 1 m drop target, 3 mm walls / 5 perimeters; English docs; exports via CI
-only; **simplified Git Flow: `feature/*` → `main` via PR, releases via annotated `v*` tags on `main`**
-(the user dropped `develop` on 2026-09-08; no `release/*`/`hotfix/*` branches; no git-flow tooling).
+Bambu Lab X1 Carbon, ASA, no TPU; OpenSCAD nightly + BOSL2; priority devices HDMI/SDI Plus,
+HDMI/SDI TX, NDI decoders; black `-B` Neutrik only; Mini-DIN-8 stays internal; loop-out outside;
+side-exit with ONE patch wall (≤4 D slots); passive-first + parametric fan bay + reserved dongle
+splitter bay (D-12: +20 mm end zone in every variant); tongue-and-groove lid with 6 captive M3
+thumbscrews; captive slotted 1/4"-20 side bolt + DIN 6799 E-clip, flush boss (D-13, `MCC_GAP_FAR`
+16); case height 51 mm; straight HDMI plugs; VESA 75 + Fishtail M4 + strap slots + stacking
+profile; envelopes compact 194.9 × 159.9 × 51, plus 211.5 × 166.4 × 51 (base and lid on separate
+plates); simplified Git Flow.
 
-## Next steps, in order
+## Next milestone: L2 geometry + case assemblies (new `feature/*` branch off `main`)
 
-1. ~~Verify the library~~ **DONE 2026-09-08**: `build.py all` green (smoke 4/4, render 5/5,
-   check 5/5, goldens 5/5 in `tests/golden/coupons/`). The coupon connector selector is now
-   `-D connector="NE8FDP-B"` (`part` is reserved for build.py's export name). CI got the missing
-   OpenGL/X/Qt runtime libraries for the AppImage.
-2. ~~Mini-DIN-8 fix-up~~ **DONE**: `panel:"none"` on every `minidin8` port; `MINIDIN8` removed from
-   `MCC_PANEL_PARTS` and the dispatcher; `test_ports.scad` asserts it.
-3. ~~Constants fix-up~~ **DONE 2026-09-08**: splitter default `DONGLE-75x40x20`; captive side bolt
-   implemented (`mcc_captive_side_bolt_boss/_cut`, keep-out, `side-bolt` coupon, `side_bolt` port
-   record in all 8 devices, floor `mcc_case_tripod_insert_*` replaces the through-bolt boss). The
-   D-13 flush reconciliation (`MCC_GAP_FAR` 16 derived, `proud` 0, support web, strip keep-out,
-   T1-29/T1-31) is **DONE 2026-09-08** — `build.py all` green: smoke 5/5, render 6/6, check 8/8, goldens 6/6.
-3c. **Architecture is current** (rev 4 / layout rev 3): D-09…D-13 recorded; envelopes compact
-   194.9 × 159.9 × 51, plus 211.5 × 166.4 × 51, 6 thumbscrews both; new non-blocking risk R20
-   (intake vent area below the thermal heuristic → taller intake band when `vents.scad` is written).
-3b. ~~Branching docs~~ **DONE 2026-09-08**: CONTRIBUTING, `git-flow` skill, PR template, CHANGELOG,
-   README, ticket-source, CI triggers and CLAUDE.md all describe `feature/* → main`, releases via
-   tags; the `gitflow.*` git config was removed.
-4. **Re-run the architect** (Opus, single instance) with the brief "record R11/R12/D-04/D-06/D-08
-   decisions" — the previous run was stopped before it edited anything. Decisions to record are the
-   bold items above; deliverables: update `architecture.md` (§1 envelope H=51 and straight-plug end
-   zones, §6 floor rule simplified, §7 `side_bolt` port convention `face [0,-1,0]`, §11 R11/R12
-   resolved + new risks, §12, §14) and `layout-patch-wall.md` (device yaw: hole side faces −Y;
-   side-bolt boss spec; end-zone formula for straight plugs; splitter 75×40×20; envelopes; asserts;
-   D-09 side bolt, D-10 dongle splitter).
-5. **CLAUDE.md**: rewrite "Current status" (library + coupons exist, unverified → verified), remove
-   "(or Mini-DIN-8)" from the `neutrik-panel` row, update Closure/Retention and Cooling bullets with
-   the bold decisions above, envelope ≈ 175–192 × 150–156 × 51 mm.
-6. ~~`build.py all` green → open the PR~~ **DONE**: PR #1 `feature/repo-setup` → `main` is open and
-   CI-green; merge once the items above land.
-7. **Next milestone** (new feature branch): `lib/mcc/shell.scad`, `cradle.scad`, `mounts.scad`,
-   `vents.scad`, `models/<slug>/case.scad` for the 8 priority devices — but only after the six
-   coupons (`neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`, `tolerance-ladder`,
-   `side-bolt`) are printed on the X1C and measured (forms in `models/coupons/README.md`), and after
-   the user measures: the side 1/4"-20 hole position (X from the short end, Z from the bottom —
-   R17: |v| ≤ 1.7 mm for the ⌀18 pad — and which side) per SKU, the thread depth, the chosen dongle
-   splitter's dimensions, and confirms the DIN 6799 size-5 E-clip figures.
+Gate before starting (Tier 4, `architecture.md` §9):
+1. Print the six coupons on the X1C (3MF files delivered to the user; forms in
+   `models/coupons/README.md`) and write the measured values into `lib/mcc/constants.scad`:
+   `MCC_CLR_TG` (tg-ladder), `MCC_INSERT_M3.hole_d` (insert-boss), `MCC_HOLE_COMP` (neutrik-tile),
+   `MCC_PANEL_PARTS[*].plug_len` (depth-mockup — replaces the weakest assumption, `ez(hdmi_a)`),
+   `MCC_CLR_SLIDE/PRESS` (tolerance-ladder), side-bolt stack + E-clip size (side-bolt coupon).
+2. User measurements (M1–M5 in `architecture.md` §12): side 1/4"-20 hole X (from the short end),
+   Z (from the bottom; R17: |v| ≤ 1.7 mm for the ⌀18 pad) and which long side per SKU; thread
+   depth; the dongle splitter's real dimensions; DIN 6799 clip figures; screw head ⌀/height.
+3. Then: researcher plan → architect fit-check → developer implements `shell.scad` (patch-wall
+   aperture + rabbet, reservation rule, side-bolt keep-out ∪ strip, R20 taller intake band),
+   `cradle.scad`, `mounts.scad` (floor rule), `vents.scad`, then `models/<slug>/case.scad` via the
+   `new-case-variant` skill, goldens, BOM per variant, `print-check` before the first full print.
 
-## Known gaps / open questions carried over
+## Known gaps carried over
 
-- All mating-plug lengths are `assumed` (etherCON 25, HDMI 35, USB-B 20, BNC 40.6 bend) → depth-mockup.
-- NAUSB-W / NBB75DFG panel-thickness rating unknown (designing to 2.0 mm seat anyway).
+- Mating-plug lengths `assumed` (etherCON 25, HDMI 35, USB-B 20, BNC 40.6 bend) → depth-mockup.
+- NAUSB-W / NBB75DFG panel-thickness rating unknown (designing to a 2.0 mm seat).
 - Magewell Fishtail hole pitch unknown → derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl`.
 - Device weights unpublished; fan presence in HDMI Plus / SDI Plus contradictory in Magewell docs.
-- WebSearch budget of the session was exhausted; PoE-splitter and Mini-DIN8 research used WebFetch only.
+- Intake vent area (R20) must be re-derived when `vents.scad` is written.
