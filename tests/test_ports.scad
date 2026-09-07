@@ -55,8 +55,14 @@ module test_device(dev) {
         assert(search([conf], MCC_CONFIDENCE_ORDER)[0] != [],
             str("mcc test_ports: port \"", id, "\" on \"", slug, "\" has invalid confidence \"", conf, "\""));
 
-        // Every external port (panel != "none") has a known panel part.
+        // Mini-DIN-8 stays internal on every current SKU (user decision 2026-09-07,
+        // architecture.md §5) — no port may reference the reserved "MINIDIN8" panel part.
         panel = mcc_port_panel(p);
+        assert(panel != "MINIDIN8",
+            str("mcc test_ports: port \"", id, "\" on \"", slug, "\" references the reserved panel ",
+                "part \"MINIDIN8\" — Mini-DIN-8 stays internal, use panel:\"none\""));
+
+        // Every external port's panel is a key of MCC_PANEL_PARTS, or "none".
         if (panel != "none") {
             found = search([panel], MCC_PANEL_PARTS)[0] != [];
             assert(found,

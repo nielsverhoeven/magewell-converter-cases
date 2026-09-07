@@ -41,12 +41,17 @@ Two knowledge trees, do not merge them:
   layout exceeds the 256 mm bed for the Plus family, see architecture.md §11 R1). Envelope
   ≈ 190 × 150 × 45 mm; max 4 D-connectors per model; lids over 180 mm get 6 thumbscrews.
 - **Cooling**: passive-first; parametric fan bay (Noctua NF-A4x10 5V default); reserved PoE-splitter
-  bay (802.3af→5 V USB, gigabit; placeholder PoE Texas GAT-USBC 114×51×25). Both bays are reserved
-  in every variant even when unused (architecture.md §6 reservation rule).
-- **Closure**: tongue-and-groove lid, captive M3 knurled thumbscrews into M3 heat-set inserts.
-  Retention: 1/4"-20 through-bolt into the device tripod thread + printed cradle with ribs. Floor
-  features (one owner, `mounts.scad`): 1/4"-20 insert for the case itself, VESA 75×75 +
-  Magewell-Fishtail-compatible M4 holes, strap slots, stacking profile.
+  bay (802.3af→5 V USB, gigabit) with a **dongle-class default envelope 75×40×20 mm** (`assumed`,
+  e.g. UCTRONICS U6114/U6115 — buy one and measure; the GAT-USBC 114×51×25 does not fit, see
+  architecture.md §11 R11). Both bays are reserved in every variant even when unused (§6 rule).
+- **Closure**: tongue-and-groove lid, captive M3 knurled thumbscrews into M3 heat-set inserts (6 on
+  lids >180 mm, 4 on compact). **Retention: captive 1/4"-20 SLOTTED bolt through the far (non-patch)
+  long wall into the device's side thread** — the user verified the device's 1/4"-20 hole is on a
+  long side face; the bolt must stay in the case when unscrewed; the device lies flat in a ribbed
+  cradle. No floor through-bolt. Floor features (one owner, `mounts.scad`): 1/4"-20 insert for the
+  case itself, VESA 75×75 + Magewell-Fishtail-compatible M4 holes, strap slots, stacking profile.
+  Case height stays **51 mm** (4 mm Z web; 49 mm proposal vetoed); **no right-angle HDMI adapter in
+  the default BOM** — end zones are sized for straight plugs, measured with the `depth-mockup` coupon.
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
   behind a shell bezel. The connector panel is a separate 2 mm flat-printed plate in a rabbet
   (architecture.md §5) — never call the Neutrik provider directly from `models/**`.
@@ -81,7 +86,7 @@ python scripts/build.py all           # doctor + smoke + render + check + golden
 | Look up a dimension/part/spec | `knowledge-lookup` |
 | Write or review `.scad` in `lib/mcc/**` or `models/**` | `openscad-authoring` |
 | Run OpenSCAD headlessly, read render output | `openscad-render` |
-| Place a Neutrik D-series (or Mini-DIN-8) cutout | `neutrik-panel` |
+| Place a Neutrik D-series cutout | `neutrik-panel` |
 | Create/verify a device data file from `knowledge/magewell/models/*.md` | `device-portmap` |
 | Scaffold a new `models/<slug>/` case assembly | `new-case-variant` |
 | Pre-slice go/no-go before printing | `print-check` |
@@ -97,20 +102,25 @@ paths, module names, ordered steps). Tests → `tester`.
 
 ## Current status
 
-Knowledge base, tooling conventions, and `lib/mcc/constants.scad` (L0) exist. `lib/mcc/ports.scad`,
-`lib/mcc/devices/*.scad`, and the L1/L2 geometry modules (`shell.scad`, `cradle.scad`, `mounts.scad`,
-`vents.scad`, `panel.scad`, `neutrik.scad`, `fasteners.scad`, `fan.scad`, `poe_splitter.scad`,
-`ghost.scad`) are **not yet written** — that is the next milestone. `new-case-variant` explains what
-to do when a dependency is missing: stop and report, don't improvise geometry. Coupons
-(`models/coupons/**`) do not exist yet either; build them before any full case.
+Knowledge base, tooling (`scripts/build.py`, CI), the L0/L1 library (`constants`, `util`, `ports`,
+`neutrik`, `fasteners`, `fan`, `poe_splitter`, `ghost`, `panel`, barrel `mcc.scad`), 8 device data
+files (`lib/mcc/devices/*.scad`, all positions `photo`/`assumed`), 5 coupons (`models/coupons/**`)
+with goldens, and 4 smoke tests exist and pass `build.py all`. **Not yet written**: the L2 geometry
+(`shell.scad`, `cradle.scad`, `mounts.scad`, `vents.scad`) and the `models/<slug>/case.scad`
+assemblies — that is the next milestone, and it starts only after the coupons are printed on the
+X1C and measured (see `.claude/knowledge/session-resume.md` for the ordered plan). `new-case-variant`
+explains what to do when a dependency is missing: stop and report, don't improvise geometry.
 
 ## Branching (Git Flow)
 
-This repo uses Git Flow — full model and recipes in `CONTRIBUTING.md`, condensed day-to-day
-guidance in the `git-flow` skill (see the table above). Three non-negotiables:
+This repo uses a simplified Git Flow **without a `develop` branch** (user decision 2026-09-08):
+`main` is the integration *and* release branch; work happens on `feature/*` (and `hotfix/*`)
+branches that reach `main` via PR; releases are annotated `vX.Y.Z` tags on `main`. Recipes in
+`CONTRIBUTING.md` and the `git-flow` skill (see the table above) — where those still mention
+`develop`, read `main`. Three non-negotiables:
 
-- **Never commit directly on `main` or `develop`.** All work happens on `feature/*`, `release/*`,
-  or `hotfix/*` and reaches them via PR.
+- **Never commit directly on `main`.** All work happens on `feature/*` or `hotfix/*` and reaches
+  `main` via PR.
 - **Releases only via annotated `vX.Y.Z` tags on `main`.** No other path produces a GitHub Release.
-- **A PR into `develop` must be CI-green** (`render` check) before it merges — no exceptions for
+- **A PR into `main` must be CI-green** (`render` check) before it merges — no exceptions for
   "small" changes.

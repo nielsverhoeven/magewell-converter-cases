@@ -37,16 +37,19 @@ installed).
 
 ## Next steps, in order
 
-1. **Verify the library** (tester or teamlead): `.venv\Scripts\python scripts\build.py doctor`,
-   then `smoke`, `render --all`, `check --all`. Fix whatever the stopped developer left broken
-   (use the `openscad-authoring` + `openscad-render` skills). Then `golden --update` for the coupons.
-2. **Mini-DIN-8 fix-up** in `lib/mcc`: every device file → `minidin8` port gets `panel:"none"`;
-   remove `MINIDIN8` from `MCC_PANEL_PARTS` and from the `mcc_panel_cutout()` dispatcher;
-   `tests/test_ports.scad` asserts no port has `panel=="MINIDIN8"`.
-3. **Constants fix-up**: splitter default envelope → `75×40×20` (`assumed`), keep GAT-USBC as a named
-   alternative; retire the floor `mcc_tripod_boss()` in favour of a captive side-bolt feature
-   (`mcc_captive_side_bolt()` — 6.6 mm clearance bore, head recess, retaining groove) — this may
-   wait for the shell milestone but must not be used from the floor.
+1. ~~Verify the library~~ **DONE 2026-09-08**: `build.py all` green (smoke 4/4, render 5/5,
+   check 5/5, goldens 5/5 in `tests/golden/coupons/`). The coupon connector selector is now
+   `-D connector="NE8FDP-B"` (`part` is reserved for build.py's export name). CI got the missing
+   OpenGL/X/Qt runtime libraries for the AppImage.
+2. ~~Mini-DIN-8 fix-up~~ **DONE**: `panel:"none"` on every `minidin8` port; `MINIDIN8` removed from
+   `MCC_PANEL_PARTS` and the dispatcher; `test_ports.scad` asserts it.
+3. **Constants fix-up**: ~~splitter default → `DONGLE-75x40x20`~~ **DONE**. Still open: retire the
+   floor `mcc_tripod_boss()` in favour of a captive side-bolt feature (`mcc_captive_side_bolt()` —
+   6.6 mm clearance bore, head recess, retaining groove) — may wait for the shell milestone but must
+   not be used from the floor.
+3b. **Branching docs**: the user dropped the `develop` branch (2026-09-08). `CLAUDE.md` is updated;
+   `CONTRIBUTING.md`, the `git-flow` skill, the PR template, `CHANGELOG.md` and the `gitflow.*`
+   git config still describe `develop` → rewrite to "feature/* → main via PR, releases via tags".
 4. **Re-run the architect** (Opus, single instance) with the brief "record R11/R12/D-04/D-06/D-08
    decisions" — the previous run was stopped before it edited anything. Decisions to record are the
    bold items above; deliverables: update `architecture.md` (§1 envelope H=51 and straight-plug end

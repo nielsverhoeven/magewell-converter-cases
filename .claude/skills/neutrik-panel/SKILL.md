@@ -1,6 +1,6 @@
 ---
 name: neutrik-panel
-description: Place a Neutrik D-series (or Mini-DIN-8) panel cutout with pocket, rear screw bosses, and spacing/depth asserts; use whenever a model needs a connector cutout — always through mcc_panel_cutout(), never by calling the Neutrik provider module directly.
+description: Place a Neutrik D-series panel cutout with pocket, rear screw bosses, and spacing/depth asserts; use whenever a model needs a connector cutout — always through mcc_panel_cutout(), never by calling the Neutrik provider module directly.
 ---
 
 # neutrik-panel
@@ -36,7 +36,13 @@ read that file for the full sourcing comment block above each row) and cross-che
 | NAUSB-W-B | 23.6 mm | 40.55 mm | 2.0 mm | 20 mm | 8 mm | 60.55 mm |
 | NBB75DFGB | 23.6 mm | 34.0 mm | 2.0 mm | 40.6 mm | 40.6 mm | 74.6 mm |
 | DBA-BL-B | 0 (solid) | 3.2 mm | 4.0 mm | 0 | 0 | 3.2 mm |
-| MINIDIN8 (future variant only) | 12.5 mm (flagged — likely undersized, see the `TODO(teamlead): MINIDIN8's hole_d` comment in `constants.scad`) | 20 mm (assumed) | 3.0 mm (assumed) | 15 mm (assumed) | 10 mm (assumed) | 35 mm |
+
+**Mini-DIN-8 is not supported by `mcc_panel_cutout()`.** The PTZ/Tally Mini-DIN-8 port stays
+internal (`panel:"none"`) on every current SKU (user decision 2026-09-07, architecture.md §5) — it
+is not a row in `MCC_PANEL_PARTS` and `panel.scad` has no Mini-DIN-8 branch. A port referencing
+`"MINIDIN8"` is a deviation (guarded by an assert in `tests/test_ports.scad`). Research for a
+*possible future variant* lives in `knowledge/components/mini-din8-feedthrough.md` only — do not
+wire it into the dispatcher without a new user decision.
 
 `mcc_cutout_d(part) = mcc_panel_hole_d(part) + MCC_HOLE_COMP` (`MCC_HOLE_COMP = 0.2`) is the nominal
 CAD hole diameter — always call this function, never hand-add the compensation yourself; if
@@ -94,10 +100,11 @@ consequences for this skill:
 
 ## Dispatcher contract — `mcc_panel_cutout()` is the only entry point
 
-`panel.scad` owns `mcc_panel_cutout(kind, ...)`. `neutrik.scad` is one *provider* behind it, not the
-top-level abstraction, because the Mini-DIN-8 PTZ/Tally port has no D-size equivalent and (for the
-future variant) needs a bespoke round cutout with its own flange/fixing pattern reusing only the same
-M3 screw grid.
+`panel.scad` owns `mcc_panel_cutout(part, ...)`. `neutrik.scad` is one *provider* behind it, not the
+top-level abstraction — today every dispatchable part is a Neutrik D-series part (plus the
+`DBA-BL-B` blank), so the dispatcher is single-provider in practice. It stays behind `panel.scad`
+rather than being called directly so a second provider (e.g. a future Mini-DIN-8 round-cutout
+module, see the note above) can be added later without touching `models/**`.
 
 **If `models/**` ever calls `mcc_neutrik_*` directly instead of `mcc_panel_cutout()`, that is a
 layering deviation** — flag it in review, don't just fix it silently; log it per architecture.md §13.

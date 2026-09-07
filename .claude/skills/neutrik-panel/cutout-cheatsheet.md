@@ -31,7 +31,10 @@ Flange: 26.0 x 31.0 mm, corner radius R3.5 mm
 | NAUSB-W-B (USB A/B) | 23.6 mm | 23.8 mm | 40.55 mm | 2.0 mm | 20 mm | 8 mm | 60.55 mm |
 | NBB75DFGB (BNC/SDI) | 23.6 mm | 23.8 mm | 34.0 mm | 2.0 mm | 40.6 mm | 40.6 mm | 74.6 mm |
 | DBA-BL-B (blank) | — (solid) | — | 3.2 mm | 4.0 mm | 0 | 0 | 3.2 mm |
-| MINIDIN8 (future variant, not a current fixed decision) | 12.5 mm (flagged, likely undersized) | 12.7 mm | 20 mm | 3.0 mm | 15 mm | 10 mm | 35 mm |
+
+Mini-DIN-8 is **not** in this table and **not** supported by `mcc_panel_cutout()` — the PTZ/Tally
+port stays internal (`panel:"none"`) on every current SKU. Future-variant research only, in
+`knowledge/components/mini-din8-feedthrough.md`.
 
 All rows sourced in `lib/mcc/constants.scad`'s `MCC_PANEL_PARTS` comment block; ultimate sources are
 `knowledge/neutrik/d-series-cutout.md` and `knowledge/neutrik/placement-and-depth.md`.

@@ -30,8 +30,9 @@ MCC_DEV_PRO_CONVERT_HDMI_PLUS = [
         // End B bottom row (knowledge/magewell/models/pro-convert-hdmi-plus.md:23): HDMI IN, Mini-DIN-8, HDMI OUT
         [["id", "hdmi_in"],   ["face", [ 1, 0, 0]], ["pos", [-22, -6]], ["kind", "hdmi_a"],
          ["dir", "in"],       ["panel", "NAHDMI-W-B"], ["confidence", "photo"]],
+        // internal — not brought out (user decision 2026-09-07)
         [["id", "ptz_tally"], ["face", [ 1, 0, 0]], ["pos", [  0, -6]], ["kind", "minidin8"],
-         ["dir", "bidir"],    ["panel", "MINIDIN8"],   ["confidence", "photo"]],
+         ["dir", "bidir"],    ["panel", "none"],       ["confidence", "photo"]],
         [["id", "hdmi_out"],  ["face", [ 1, 0, 0]], ["pos", [ 22, -6]], ["kind", "hdmi_a"],
          ["dir", "out"],      ["panel", "NAHDMI-W-B"], ["confidence", "photo"]],
         // End B top row: 16-position rotary switch (flanked by Tally PREVIEW/PROGRAM LEDs, not modelled as ports)

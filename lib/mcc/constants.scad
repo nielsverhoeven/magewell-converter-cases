@@ -144,14 +144,29 @@ MCC_FANS = [
 // knowledge/components/poe-splitters.md.
 // -----------------------------------------------------------------------------------------
 
-// PoE Texas GAT-USBC placeholder envelope (architecture.md:485-486 "pending
-// knowledge/components/poe-splitters.md; the bay envelope is a placeholder until a part is chosen").
+// Default splitter envelope: "dongle-class" 802.3af/at->5V USB splitter (e.g. UCTRONICS
+// U6114/U6115, knowledge/components/poe-splitters.md rank-2 recommendation). Its own dimensions
+// are explicitly unpublished (poe-splitters.md:129-136,211-215 "physical dimensions ... not found
+// on the manufacturer's product pages") — R11 (architecture.md §11) blocks the GAT-USBC placeholder
+// from fitting the patch-wall topology at all, so this smaller "dongle class" default (75x40x20,
+// user decision 2026-09-07) is what shell.scad reserves by default until the depth-mockup /
+// physical-measurement follow-up replaces it with a measured value.
+// PoE Texas GAT-USBC kept as a named, non-default alternative (larger, dimensioned, but does not
+// fit the patch-wall topology per R11 — architecture.md:529-542).
 // size:         knowledge/components/poe-splitters.md:58 "114 x 51 x 25" (L x W x H, mm)
 // weight_g:     knowledge/components/poe-splitters.md:58 "85 g"
 // cable_allow:  knowledge/components/poe-splitters.md §"Space envelope" / the brief's own instruction
 //               "plus 20 mm cable allowance on each RJ45 end" — 20 mm, per-end, applied at both RJ45 ends.
 MCC_SPLITTERS = [
+    // weight_g intentionally omitted — genuinely unknown, not just unmeasured (no weight figure
+    // exists anywhere in poe-splitters.md for a dongle-class part); struct_val() returns undef for
+    // a missing key, same as an explicit undef would, without implying a datum that doesn't exist.
+    ["DONGLE-75x40x20", [["size", [75, 40, 20]], ["cable_allow", 20], ["confidence", "assumed"]]],
+                 // dongle-class 802.3af/at->5 V USB splitter, e.g. UCTRONICS U6114/U6115 —
+                 // dimensions unpublished (knowledge/components/poe-splitters.md), measure before
+                 // the shell is finalised
     ["GAT-USBC", [["size", [114, 51, 25]], ["weight_g", 85], ["cable_allow", 20]]],
+                 // does not fit the single-patch-wall layout (architecture.md §11 R11)
 ];
 
 // -----------------------------------------------------------------------------------------
@@ -218,47 +233,19 @@ MCC_SPLITTERS = [
 //              feedthrough)"; max_panel_t assumed 4.0 (not a feedthrough, no seat constraint — reuses
 //              the etherCON ceiling as a generous, non-binding default); plug_len 0, bend 0 (nothing
 //              plugs into a blank).
-//   MINIDIN8   (Mini-DIN-8 PTZ/Tally, printed D-footprint insert, architecture.md §5 "Mini-DIN-8
-//              panel solution"): hole_d — brief's explicit instruction "hole_d 12.5 assumed"
-//              (cross-checked against knowledge/components/mini-din8-feedthrough.md:68 "a standard
-//              mini-DIN shell is ~13.2 mm mating-face diameter" — 12.5 mm is smaller than that figure
-//              and is flagged for correction, see TODO below); depth — brief's explicit instruction
-//              "depth 20 assumed" (no sourced figure exists per
-//              knowledge/components/mini-din8-feedthrough.md:271-272 "Exact panel hole diameter ...
-//              and depth-behind-panel for any specific branded Mini-DIN8 panel-mount connector ...
-//              none could be confirmed"); max_panel_t assumed 3.0 (reuses the etherCON/general-D
-//              1-3 mm band, knowledge/neutrik/d-series-cutout.md:88); plug_len assumed 15 (mini-DIN
-//              mating plug is compact, no sourced figure); bend assumed 10 (no sourced figure).
-//              TODO(teamlead): MINIDIN8's hole_d (12.5) is smaller than the ~13.2 mm typical mini-DIN
-//              mating-face diameter cited in knowledge/components/mini-din8-feedthrough.md:68 — this
-//              looks likely to be undersized for a real connector body (though it may be intentional,
-//              since a mini-DIN *shell* often clears a smaller panel hole than its overall diameter,
-//              similar to a bulkhead nut). Flagged rather than silently changed, since the brief gave
-//              this figure explicitly. Confirm against a physically sourced Mini-DIN8 panel connector
-//              before cutting the neutrik-tile-equivalent Mini-DIN coupon.
+// The Mini-DIN-8 PTZ/Tally port stays internal on every current SKU (panel:"none", user decision
+// 2026-09-07) — it is not dispatchable, so it is intentionally NOT a row in MCC_PANEL_PARTS.
+// architecture.md §5 "the Mini-DIN-8 PTZ/Tally port stays internal ... on every current variant ...
+// panel.scad needs no Mini-DIN-8 branch and no bespoke round-cutout provider". A possible future
+// variant is documented in knowledge/components/mini-din8-feedthrough.md, but that record is not
+// wired into this table; a port referencing "MINIDIN8" here is a deviation, not a valid part.
 MCC_PANEL_PARTS = [
     ["NE8FDP-B",  [["hole_d", 24.0], ["depth", 34.55], ["max_panel_t", 4.0], ["plug_len", 25],   ["bend", 10],   ["kind", "rj45"],     ["confidence", "drawing"]]],
     ["NAHDMI-W-B",[["hole_d", 23.6], ["depth", 40.65], ["max_panel_t", 2.0], ["plug_len", 35],   ["bend", 15],   ["kind", "hdmi_a"],   ["confidence", "drawing"]]],
     ["NAUSB-W-B", [["hole_d", 23.6], ["depth", 40.55], ["max_panel_t", 2.0], ["plug_len", 20],   ["bend", 8],    ["kind", "usb_b"],    ["confidence", "drawing"]]],
     ["NBB75DFGB", [["hole_d", 23.6], ["depth", 34.0],  ["max_panel_t", 2.0], ["plug_len", 40.6], ["bend", 40.6], ["kind", "bnc"],      ["confidence", "drawing"]]],
     ["DBA-BL-B",  [["hole_d", 0],    ["depth", 3.2],   ["max_panel_t", 4.0], ["plug_len", 0],    ["bend", 0],    ["kind", "blank"],    ["confidence", "drawing"]]],
-    ["MINIDIN8",  [["hole_d", 12.5], ["depth", 20],    ["max_panel_t", 3.0], ["plug_len", 15],   ["bend", 10],   ["kind", "minidin8"], ["confidence", "assumed"]]],
 ];
-
-// -----------------------------------------------------------------------------------------
-// Section: Mini-DIN-8 "PTZ+TALLY" printed D-footprint insert (optional fixing screws)
-// architecture.md §5 "Mini-DIN-8 panel solution ... panel.scad models it as a parametric round
-// cutout with a configurable flange/fixing pattern" / architecture.md §12 Q5 (open question).
-// No mechanical drawing exists for any specific Mini-DIN8 panel-mount connector
-// (knowledge/components/mini-din8-feedthrough.md:271-272 "Exact panel hole diameter ... and
-// depth-behind-panel for any specific branded Mini-DIN8 panel-mount connector ... none could be
-// confirmed"). Both figures below are smallest-reasonable-choice placeholders.
-// TODO(teamlead): entirely assumed pending a physically sourced Mini-DIN8 panel connector; confirm
-// or replace before cutting a Mini-DIN8 coupon.
-// -----------------------------------------------------------------------------------------
-
-MCC_MINIDIN8_SCREW_PITCH = 18;  // optional M2.5 fixing-screw pitch, mm. assumed.
-MCC_M2_5_CLR_D            = 2.8; // M2.5 clearance hole, mm. assumed — ISO 273 "medium" M2.5 clearance.
 
 // -----------------------------------------------------------------------------------------
 // Section: Port confidence order

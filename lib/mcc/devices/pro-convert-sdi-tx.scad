@@ -19,8 +19,9 @@ MCC_DEV_PRO_CONVERT_SDI_TX = [
         // Input end (knowledge/magewell/models/pro-convert-sdi-tx.md:21): SDI IN BNC -> Input LED -> Mini-DIN-8 PTZ+TALLY
         [["id", "sdi_in"],    ["face", [ 1, 0, 0]], ["pos", [-18, 0]], ["kind", "bnc"],
          ["dir", "in"],       ["panel", "NBB75DFGB"], ["confidence", "photo"]],
+        // internal — not brought out (user decision 2026-09-07)
         [["id", "ptz_tally"], ["face", [ 1, 0, 0]], ["pos", [ 14, 0]], ["kind", "minidin8"],
-         ["dir", "bidir"],    ["panel", "MINIDIN8"],  ["confidence", "photo"]],
+         ["dir", "bidir"],    ["panel", "none"],      ["confidence", "photo"]],
         // Power/data end (knowledge/magewell/models/pro-convert-sdi-tx.md:22): USB-B +5V -> Power LED -> RJ45
         [["id", "usb_b"],     ["face", [-1, 0, 0]], ["pos", [-16, 0]], ["kind", "usb_b"],
          ["dir", "power"],    ["panel", "NAUSB-W-B"], ["confidence", "photo"]],

@@ -28,9 +28,11 @@ function mcc_splitter_spec(name) =
 //   applied at BOTH ends along the long (X) axis. architecture.md:234-238 reservation rule — this
 //   is the placeholder envelope architecture.md:485-486 flags as pending a final part choice.
 // Arguments:
-//   name = splitter name, key into MCC_SPLITTERS. Default: "GAT-USBC"
-//          (knowledge/components/poe-splitters.md §"Recommendation" rank 1).
-module mcc_splitter_envelope(name = "GAT-USBC") {
+//   name = splitter name, key into MCC_SPLITTERS. Default: "DONGLE-75x40x20" (user decision
+//          2026-09-07 — the "GAT-USBC" placeholder does not fit the single-patch-wall layout at
+//          all, architecture.md §11 R11; "DONGLE-75x40x20" is the smaller dongle-class default
+//          that does).
+module mcc_splitter_envelope(name = "DONGLE-75x40x20") {
     spec        = mcc_splitter_spec(name);
     size        = struct_val(spec, "size");
     cable_allow = struct_val(spec, "cable_allow");
@@ -51,9 +53,10 @@ module mcc_splitter_envelope(name = "GAT-USBC") {
 //   generic cable-tie width table (fasteners-and-hardware.md:219-221), which covers stock tie
 //   widths, not slot geometry.
 // Arguments:
-//   name    = splitter name, key into MCC_SPLITTERS. Default: "GAT-USBC".
+//   name    = splitter name, key into MCC_SPLITTERS. Default: "DONGLE-75x40x20" (matches
+//             mcc_splitter_envelope()'s default — see the rationale there).
 //   floor_t = floor thickness at the tie-down location, mm. Default: MCC_FLOOR_T.
-module mcc_splitter_tiedown(name = "GAT-USBC", floor_t = MCC_FLOOR_T) {
+module mcc_splitter_tiedown(name = "DONGLE-75x40x20", floor_t = MCC_FLOOR_T) {
     spec   = mcc_splitter_spec(name);
     size   = struct_val(spec, "size");
     slot_l = 4;   // zip-tie slot length (along the splitter's long/X axis), mm.

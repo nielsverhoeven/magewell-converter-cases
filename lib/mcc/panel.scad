@@ -18,65 +18,29 @@ use <neutrik.scad>
 // Z-axis convention: matches lib/mcc/neutrik.scad — a plate/panel spans Z=[0, panel_t] with the
 // outward (connector-flange) face at Z=panel_t.
 
-// Module: _mcc_minidin8_cutout()
-// Description:
-//   Private helper behind the mcc_panel_cutout() dispatcher. Mini-DIN-8 "PTZ+TALLY" cutout: a
-//   round hole sized mcc_cutout_d("MINIDIN8"), plus optional M2.5 fixing screws at
-//   MCC_MINIDIN8_SCREW_PITCH (both entirely assumed — see constants.scad's Mini-DIN-8 section and
-//   architecture.md §12 Q5). architecture.md §5 "no D-size equivalent ... needs a bespoke round
-//   cutout with its own flange/fixing pattern".
-// Arguments:
-//   mirror         = mirror the fixing-screw positions left-right. Default: false.
-//   seat_t         = desired seat material thickness, mm. Default: MCC_PANEL_SEAT_T.
-//   panel_t        = actual panel thickness at this location, mm. Default: MCC_WALL.
-//   fixing_screws  = cut the two optional M2.5 fixing screws. Default: true.
-module _mcc_minidin8_cutout(mirror = false, seat_t = MCC_PANEL_SEAT_T, panel_t = MCC_WALL, fixing_screws = true) {
-    part = "MINIDIN8";
-    assert(seat_t <= mcc_panel_max_t(part),
-        str("mcc: seat_t=", seat_t, " exceeds max panel thickness ", mcc_panel_max_t(part), " for \"", part, "\""));
-
-    d         = mcc_cutout_d(part);
-    cut_h     = panel_t + 2 * MCC_EPS;
-    mirror_x  = mirror ? -1 : 1;
-
-    union() {
-        translate([0, 0, panel_t / 2]) cyl(h = cut_h, d = d, circum = true, $fn = 64);
-
-        if (fixing_screws) {
-            for (sx = [-1, 1])
-                translate([mirror_x * sx * MCC_MINIDIN8_SCREW_PITCH / 2, 0, panel_t / 2])
-                    cyl(h = cut_h, d = MCC_M2_5_CLR_D, circum = true, $fn = 48);
-        }
-
-        // Generic round seat pocket (no Neutrik flange geometry exists for this connector) —
-        // footprint margin assumed, TODO(teamlead) per constants.scad's Mini-DIN-8 section.
-        if (panel_t > seat_t) {
-            translate([0, 0, -MCC_EPS])
-                linear_extrude(height = (panel_t - seat_t) + MCC_EPS)
-                    circle(d = d + 8, $fn = 64);
-        }
-    }
-}
-
 // Module: mcc_panel_cutout()
 // Usage:
 //   mcc_panel_cutout(part, [mirror=], [seat_t=], [panel_t=]);
 // Description:
-//   Panel-cutout dispatcher (architecture.md §5). Routes to the right provider by part number:
-//   any Neutrik D-series part (including "DBA-BL-B", the blank — it shares the same flange/screw
-//   footprint, per this file's module contract) goes to mcc_neutrik_d_cutout(); "MINIDIN8" goes
-//   to the bespoke round cutout above.
+//   Panel-cutout dispatcher (architecture.md §5). Every dispatchable part is a Neutrik D-series
+//   part (including "DBA-BL-B", the blank — it shares the same flange/screw footprint, per this
+//   file's module contract), so this is a single-provider dispatcher onto mcc_neutrik_d_cutout().
+//   The Mini-DIN-8 PTZ/Tally port stays internal (panel:"none") on every current SKU — it is never
+//   passed here — so there is no Mini-DIN-8 branch and no bespoke round-cutout provider
+//   (architecture.md §5). An unknown/unsupported `part` fails loudly with a clear assert rather
+//   than silently producing no cutout.
 // Arguments:
 //   part    = panel part number, key into MCC_PANEL_PARTS (constants.scad).
 //   mirror  = mirror the screw/fixing positions left-right. Default: false.
 //   seat_t  = desired seat material thickness, mm. Default: MCC_PANEL_SEAT_T.
 //   panel_t = actual panel thickness at this location, mm. Default: MCC_WALL.
 module mcc_panel_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, panel_t = MCC_WALL) {
-    if (part == "MINIDIN8") {
-        _mcc_minidin8_cutout(mirror = mirror, seat_t = seat_t, panel_t = panel_t);
-    } else {
-        mcc_neutrik_d_cutout(part, mirror = mirror, seat_t = seat_t, panel_t = panel_t);
-    }
+    assert(search([part], MCC_PANEL_PARTS)[0] != [],
+        str("mcc: mcc_panel_cutout() got unknown/unsupported panel part \"", part,
+            "\" — must be a key of MCC_PANEL_PARTS (Neutrik D parts + \"DBA-BL-B\"); ",
+            "\"MINIDIN8\" is reserved and not dispatchable, the PTZ/Tally port stays internal ",
+            "(panel:\"none\", architecture.md §5)"));
+    mcc_neutrik_d_cutout(part, mirror = mirror, seat_t = seat_t, panel_t = panel_t);
 }
 
 // Module: mcc_panel_plate()
@@ -144,10 +108,11 @@ module mcc_panel_plate(size, slots = [], t = MCC_PANEL_SEAT_T, rim_t = MCC_WALL,
                 mcc_panel_cutout(s[2], mirror = s[3], seat_t = t, panel_t = t);
     }
 
+    // Every dispatchable part is a Neutrik D part (§ mcc_panel_cutout() above), so every slot gets
+    // the same rear screw bosses.
     for (s = slots)
-        if (s[2] != "MINIDIN8")
-            translate([s[0], s[1], -t])
-                mcc_neutrik_d_bosses(s[2], mirror = s[3]);
+        translate([s[0], s[1], -t])
+            mcc_neutrik_d_bosses(s[2], mirror = s[3]);
 }
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
