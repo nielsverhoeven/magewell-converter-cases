@@ -9,6 +9,24 @@ could not be verified from an actual source is explicitly marked `unknown` rathe
 
 ## 1. M3 Heat-Set Inserts
 
+**Which figure this project uses (added 2026-09-08):** this file carries two disagreeing hole-
+diameter figures for M3 inserts — the ~4.0 mm nominal figure in §1.1 (Ruthex/community consensus)
+and the 4.24–4.30 mm per-material CAD-pocket chart in §1.3 (tools.creative3dp.com) — and does not
+pick a winner between them; neither is dropped, since they come from different, non-comparable
+source families (a single nominal community figure vs. a third-party per-material shrink-compensated
+pocket chart). For this project specifically:
+
+- The **library default** is `MCC_INSERT_M3.hole_d = 4.0` (mm), defined in `lib/mcc/constants.scad`
+  — i.e. the code currently follows the §1.1 nominal figure, not the §1.3 chart.
+- The **`insert-boss` coupon** (`models/coupons/insert-boss.scad`) is the mechanism that actually
+  decides the calibrated value for this printer/material combination: it prints a ladder of bosses
+  at bore diameters 3.8/3.9/4.0/4.1/4.2/4.3 mm (bracketing both the §1.1 nominal figure and the
+  §1.3 ASA/ABS column) so the real hole-shrinkage-compensated diameter for ASA can be measured
+  directly, per the "print a hole-diameter test coupon" guidance already given below, rather than
+  trusting either sourced number blindly. Update `MCC_INSERT_M3.hole_d` from the coupon's measured
+  result once printed — do not silently switch to the §1.3 chart's 4.29 mm ASA/ABS figure without a
+  physical measurement backing it.
+
 ### 1.1 Ruthex product line (primary reference brand)
 
 | Item | Value | Source |
