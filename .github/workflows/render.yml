@@ -55,6 +55,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Guard against stray empty files
+        # Agent shell commands have twice left zero-byte files with odd names (e.g. "180") in the
+        # repo root. Fail fast if any tracked file is empty (the BOSL2 submodule is excluded).
+        run: |
+          stray="$(git ls-files -z | tr '\0' '\n' | grep -v '^lib/BOSL2' | while IFS= read -r f; do
+            [ -f "$f" ] && [ ! -s "$f" ] && echo "$f"; done || true)"
+          if [ -n "$stray" ]; then
+            echo "::error::Tracked zero-byte files found (delete them):"; echo "$stray"; exit 1
+          fi
+          echo "No stray empty files."
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
