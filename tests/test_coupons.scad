@@ -12,7 +12,7 @@
 //   & "C:\Program Files\OpenSCAD (Nightly)\openscad.com" --backend=Manifold `
 //       -o out\neutrik-tile.stl models\coupons\neutrik-tile.scad
 //   & "C:\Program Files\OpenSCAD (Nightly)\openscad.com" --backend=Manifold `
-//       -D 'part="NE8FDP-B"' -o out\neutrik-tile-ne8fdp.stl models\coupons\neutrik-tile.scad
+//       -D 'connector="NE8FDP-B"' -o out\neutrik-tile-ne8fdp.stl models\coupons\neutrik-tile.scad
 //   & "C:\Program Files\OpenSCAD (Nightly)\openscad.com" --backend=Manifold `
 //       -o out\depth-mockup.stl models\coupons\depth-mockup.scad
 //   & "C:\Program Files\OpenSCAD (Nightly)\openscad.com" --backend=Manifold `

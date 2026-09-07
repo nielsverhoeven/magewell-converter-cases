@@ -1,23 +1,29 @@
 //////////////////////////////////////////////////////////////////////
 // models/coupons/depth-mockup.scad
 //   Tier-4 physical coupon (architecture.md §9). A U-shaped jig: a real panel cutout at one end,
-//   a mock "device port face" block at a distance `bay` (default mcc_bay_depth(part)) from the
+//   a mock "device port face" block at a distance `bay` (default mcc_bay_depth(connector)) from the
 //   panel's flange front, and a 5 mm scale engraved along a side rail so the real patch cable can
 //   be tried and the needed depth read off directly. This is the ONLY way to replace the
 //   `assumed` mating-plug lengths in constants.scad (architecture.md §11 R2).
 //
 // Render:
 //   openscad --backend=Manifold -o out/depth-mockup.stl models/coupons/depth-mockup.scad
-//   openscad --backend=Manifold -D 'part="NE8FDP-B"' -D 'bay=60' -o out/depth-mockup-rj45.stl models/coupons/depth-mockup.scad
+//   openscad --backend=Manifold -D 'connector="NE8FDP-B"' -D 'bay=60' -o out/depth-mockup-rj45.stl models/coupons/depth-mockup.scad
 //////////////////////////////////////////////////////////////////////
 
 $fa = 1; $fs = 0.4;
 
 include <mcc/mcc.scad>
 
-// -D part="..." switches the connector; -D bay=<mm> overrides the default budgeted depth.
-part = "NAHDMI-W-B";
-bay  = mcc_bay_depth(part);
+// scripts/build.py always passes -D part="<file-stem>" (the export part name — see its
+// discover_coupons()); "part" is reserved for that and must never be reused as this coupon's own
+// parameter. This default is harmless: it is only ever compared against nothing, so build.py's
+// override is accepted silently.
+part = "depth-mockup";
+
+// -D connector="..." switches the connector; -D bay=<mm> overrides the default budgeted depth.
+connector = "NAHDMI-W-B";
+bay  = mcc_bay_depth(connector);
 
 PLATE_T = 2.0; // brief's explicit instruction: "a 2 mm panel plate".
 FACE_T  = 3.0; // mock device port face block thickness, mm. assumed.
@@ -34,7 +40,7 @@ d_face_near = bay;          // mock face's near side, at depth = bay behind the 
 d_face_far  = bay + FACE_T; // mock face's far side / overall jig depth.
 
 echo(str(
-    "depth-mockup: part=\"", part, "\" bay=", bay, " plate_t=", PLATE_T, " total_depth=", d_face_far
+    "depth-mockup: connector=\"", connector, "\" bay=", bay, " plate_t=", PLATE_T, " total_depth=", d_face_far
 ));
 
 // Z-axis convention: matches lib/mcc/neutrik.scad — the panel wall spans Z=[0, PLATE_T], flange
@@ -46,7 +52,7 @@ difference() {
         difference() {
             linear_extrude(height = PLATE_T)
                 square([JIG_W, JIG_H], center = true);
-            mcc_panel_cutout(part, seat_t = PLATE_T, panel_t = PLATE_T);
+            mcc_panel_cutout(connector, seat_t = PLATE_T, panel_t = PLATE_T);
         }
 
         // Mock device port face block: near face at depth d = bay behind the flange front.
