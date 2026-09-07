@@ -1,9 +1,12 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 3, 2026-09-08.** Baseline 2026-09-07 (before any code); rev 2 added the patch-wall
-topology; rev 3 records the user's decisions on R11 (dongle-class splitter), R12 (**side** bolt
+Status: **revision 4, 2026-09-08.** Baseline 2026-09-07 (before any code); rev 2 added the patch-wall
+topology; rev 3 recorded the user's decisions on R11 (dongle-class splitter), R12 (**side** bolt
 retention), D-04 (accepted), D-06 (**vetoed** → H = 51), D-08 (**vetoed** → straight-plug end zones)
-and the dropped `develop` branch. L0/L1 (`constants`, `ports`, `util`, `neutrik`, `panel`,
+and the dropped `develop` branch. **Rev 4 closes the last two blockers:** R15 → the splitter
+reservation and the −X cable allowance **sum** (`ez_neg = 47`, +20 mm of `L`, 6 thumbscrews on both
+families), and R18 → the side-bolt boss is **flush, not proud** (`MCC_GAP_FAR` 6 → 16,
+`MCC_SIDE_BOLT_PROUD` 10 → 0, +10 mm of `W`). L0/L1 (`constants`, `ports`, `util`, `neutrik`, `panel`,
 `fasteners`, `fan`, `poe_splitter`, `ghost`), 8 device data files and 5 coupons exist and pass
 `python scripts/build.py all`. **L2 (`shell`, `cradle`, `mounts`, `vents`) and `models/<slug>/` do
 not exist yet** — this file and `layout-patch-wall.md` are their specification.
@@ -43,19 +46,40 @@ device lies lengthwise and its end-face ports reach the wall via short patch cab
 the end zones. Full derivation, coordinate frame, slot rule, keep-outs and asserts:
 **`.claude/knowledge/layout-patch-wall.md`** (summarised in §14).
 
-| Family | Shell envelope L × W × H | + side-bolt lug (bbox W) | Lid fasteners | Bed margin (256 mm) |
+| Family | Shell envelope = printed bbox, L × W × H | Lid fasteners | Bed margin vs 256 | Margin vs the 250 assert limit |
 |---|---|---|---|---|
-| `compact` (device 100.9 × 60.2 × 23.3) | **174.9 × 149.9 × 51.0 mm** | 159.9 | 4 | 81.1 / 96.1 mm |
-| `plus` (device 117.5 × 66.7 × 23.4) | **191.5 × 156.4 × 51.0 mm** | 166.4 | 6 | 64.5 / 89.6 mm |
+| `compact` (device 100.9 × 60.2 × 23.3) | **194.9 × 159.9 × 51.0 mm** | 6 | 61.1 / 96.1 mm | 55.1 / 90.1 mm |
+| `plus` (device 117.5 × 66.7 × 23.4) | **211.5 × 166.4 × 51.0 mm** | 6 | 44.5 / 89.6 mm | 38.5 / 83.6 mm |
 | `ip_decoder` (120 × 79.3 × 24.5) | future — not derived | — | — | — |
 
 Per-SKU L/W vary within the family (they are computed from the port map, not hand-typed); the figures
 above are the family maxima, i.e. the size to quote and to print. The in-line envelopes previously
-recorded here (~244 × 72 × 45 and ~260 × 80 × 45) are **superseded**.
+recorded here (~244 × 72 × 45 and ~260 × 80 × 45) are **superseded**, and so are the rev-3 patch-wall
+figures (174.9 × 149.9 and 191.5 × 156.4) — see the two decisions below.
 
-The `+ side-bolt lug` column is the printed bounding box in Y: the far (−Y) wall carries a local
-outward boss for the captive 1/4"-20 side bolt (decision D-09, §6), `MCC_SIDE_BOLT_PROUD = 10.0 mm`
-by default. `L` and `H` are unaffected.
+**There is no longer a separate "bbox" column: the shell envelope *is* the printed bounding box.**
+Rev 3 carried a `+ side-bolt lug` column because the far wall grew a 10 mm proud boss. **D-13
+(2026-09-08) makes that boss flush** — nothing protrudes from any wall on any variant.
+
+Base and lid are separate parts with the *same* L × W footprint, so each needs its own build plate
+(2 × 211.5 or 2 × 166.4 both exceed 250 mm — they cannot be nested on one plate). The panel plate
+(`L − 26` × 39, flat) *can* share a plate with the base: it fits the 250 − 166.4 = 83.6 mm strip.
+
+**The two decisions that produced these numbers (user, 2026-09-08):**
+
+- **R15 → accept +20 mm of `L` (decision D-12).** §6's reservation rule is honoured
+  unconditionally: the dongle-class PoE-splitter bay (75 × 40 × 20, on edge) is reserved in **every**
+  variant, and because the device's own −X plugs need their allowance whether or not a splitter is
+  fitted, the two allowances **sum**: `ez_neg = 27 + 20 = 47`. Second-order consequence, accepted:
+  at `L = 194.9` the **compact family crosses the 180 mm D-04 threshold and also goes to 6 lid
+  thumbscrews** — a BOM and print-time change on all five compact SKUs, not a cosmetic 20 mm.
+- **R18 → the side-bolt boss is flush (decision D-13).** Instead of a 10 mm lug outside the far wall,
+  the far wall moves 10 mm outward: `MCC_GAP_FAR` 6 → **16 mm**, `MCC_SIDE_BOLT_PROUD` 10 → **0**, so
+  the 17 mm captive stack (head recess 6 + web 3 + clip pocket 8) sits entirely inside
+  `MCC_WALL + MCC_GAP_FAR − pad = 3 + 16 − 2 = 17 mm`. **The printed bbox is unchanged by this
+  decision** (rev 3's bbox was already `W + 10`); what changes is that the 10 mm is now usable
+  interior — a 16 mm airflow duct along the device's far flank — instead of a stress-riser lump. Cost:
+  more ASA in the floor and lid, and the boss's 14 mm cantilever moves *inside* the wall (§11 R18).
 
 **Straight-plug end zones (D-08 vetoed).** No right-angle HDMI adapter is in the default BOM, so the
 device-side HDMI end zone is sized for a *straight* plug: `ez(hdmi_a) = 25 (axial, assumed —
@@ -65,10 +89,9 @@ table and the resulting per-SKU L: `layout-patch-wall.md` §4/§8. **Family maxi
 the growth lands on SKUs that were not the family maximum. A right-angle adapter remains available as
 an explicit per-variant option; if a variant declares one, it must appear in that variant's BOM.
 
-**Not yet in this table: the PoE-splitter reservation.** §6's reservation rule requires the splitter
-bay in every variant, and the dongle-class default does not fit the −X end zone alongside the device's
-end-face plugs. Resolving it costs +20 mm of `L` (compact 194.9, plus 211.5). See **R15** — blocking
-for `shell.scad`, needs a user decision.
+**Both are in the table now.** The splitter reservation (+20 mm `L`) and the flush boss (+10 mm `W`)
+are folded into the figures above; `layout-patch-wall.md` §8 has the per-SKU breakdown. Nothing about
+the envelope is blocking any more — the remaining blockers are physical measurements (§12 M1/M2/M3/M5).
 
 ---
 
@@ -224,9 +247,10 @@ The slots are spread **as wide as the wall allows**, not packed at the minimum p
 pitch gives every cable the longest run to its 90° turn and puts the outer slots in the end-zone
 corners where the turn is cleanest.
 
-**Consequence recorded:** the plate is now ~138–166 mm long, not the ~70 × 40 mm quoted in
-rationale 4 below. Reprinting it after a drop is still far cheaper than reprinting a 192 mm shell,
-but the "small replaceable part" argument is weaker than it was under the in-line topology.
+**Consequence recorded:** the plate is now **~168–186 mm** long (`L − 26`, rev 4), not the ~70 × 40 mm
+quoted in rationale 4 below. Reprinting it after a drop is still far cheaper than reprinting a 211 mm
+shell, but the "small replaceable part" argument is weaker than it was under the in-line topology.
+Practical upside: at 39 mm tall it prints flat in the strip left beside the base on one plate.
 
 Rationale:
 
@@ -307,11 +331,23 @@ Three rules exist because these features will otherwise collide silently:
   far-wall slot arrays, and `cradle.scad` must keep its far-flank ribs out of it. Full geometry:
   `layout-patch-wall.md` §7.1. Rationale: the user physically verified that the device's 1/4"-20
   threaded hole is on a **long side face**, not the bottom (resolves R12).
+  **The boss is flush (D-13, 2026-09-08):** it never protrudes past the wall's outer face. The
+  captive stack is accommodated by `MCC_GAP_FAR`, which is therefore **derived, not chosen**:
+  `MCC_GAP_FAR = max(MCC_GAP_FAR_DUCT_MIN, boss_len + MCC_PAD_T − MCC_WALL) = max(6, 17 + 2 − 3) = 16`.
+  Nobody may "optimise" it back to 6 — the 16 mm is a fastener requirement that happens to also buy a
+  duct. If a measurement (M5) makes the head taller, **`MCC_GAP_FAR` and hence `W` grow; the wall
+  never grows a lug.**
 - **The reservation rule.** `shell.scad` always reserves the fan bay and the PoE-splitter bay as
   internal keep-out volume, **even when `fan = false` and `splitter = false`**. Otherwise enabling a
   fan later moves connectors and invalidates every printed part. `fan.scad` and `poe_splitter.scad`
   each expose an `*_envelope()` function used for reservation, separate from the module that cuts
   real geometry.
+  **Reserved volume adds, it does not overlap (D-12, 2026-09-08).** Where a reserved bay shares an
+  end zone with cable allowances that are needed *regardless* of whether the bay is populated, the
+  two **sum**; they are not `max`ed. Concretely
+  `ez_neg = max(mcc_dev_side_allow(kind) over −X ports) + (splitter reserved ? splitter_x : 0)`
+  `= 27 + 20 = 47`. Treating a reservation as free because "the splitter isn't fitted yet" is exactly
+  the retrofit failure this rule exists to prevent.
 
 ---
 
@@ -476,12 +512,14 @@ contracts, so a bad parameter fails loudly at render instead of quietly at the p
 | no two floor features overlap (`mcc_floor_keepout()`) | §6 floor rule |
 | every port with `panel != "none"` has a cutout, and vice versa | §7 |
 
-**Plus 28 topology asserts (T1-01 … T1-28)** introduced by the patch-wall layout and the side bolt:
-slot bijection, slot pitch, bay depth and lateral bend fit, end-zone cable allowance,
-plate-fits-wall, boss-to-flange clearance, splitter/fan/vent non-intersection, the
-`panel != "MINIDIN8"` guard, and the six side-bolt asserts (single `tripod_1_4_20` port on
-`[0,-1,0]`; boss ∩ vent = ∅; bolt axis inside the device side face; head fully recessed; clip pocket
-inside the wall; boss ∩ cradle-rib = ∅). Full table with sources: `layout-patch-wall.md` §9. Do not
+**Plus 31 topology asserts (T1-01 … T1-31)** introduced by the patch-wall layout, the side bolt and
+rev 4: slot bijection, slot pitch, bay depth and lateral bend fit, end-zone cable allowance
+**including the summed splitter term**, plate-fits-wall, boss-to-flange clearance, splitter/fan/vent
+non-intersection, the `panel != "MINIDIN8"` guard, the six side-bolt asserts (single `tripod_1_4_20`
+port on `[0,-1,0]`; keep-out ∩ vent = ∅; bolt axis inside the device side face; head fully recessed;
+clip pocket inside the wall; keep-out ∩ cradle-rib = ∅), and the three rev-4 additions (duct floor,
+intake free area vs. the fan aperture, flush boss). Full table with sources: `layout-patch-wall.md`
+§9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
 
@@ -538,8 +576,9 @@ conventions in §3 without the teamlead restating them every time.
 
 **R1 — Plus family vs. the build plate. RESOLVED 2026-09-07 (user decision).**
 The in-line layout (76 HDMI bay + 117.5 device + 61 USB bay + 6 walls = ~260.5 mm) exceeded the
-256 mm bed. Resolution: **side-exit, one patch wall.** Both families now fit comfortably —
-plus 191.5 × 156.4, compact 174.9 × 149.9, ≥ 64 mm of bed margin in every axis (§1, §14). The
+256 mm bed. Resolution: **side-exit, one patch wall.** Both families still fit comfortably after
+D-12 and D-13 — plus 211.5 × 166.4, compact 194.9 × 159.9, ≥ 44.5 mm of bed margin in every axis
+(≥ 38.5 mm against the 250 mm assert limit) (§1, §14). The
 architectural hedge held: bay depth stayed a computed function of the port map, so the new envelope
 fell out of the data rather than being re-derived by hand. Residual, carried into **R14**: the new
 footprint is ~54 % more bed area of ASA than the in-line one.
@@ -553,11 +592,12 @@ measured values before any full case is printed.
 
 **R3 — Plus End B connector count. RESOLVED 2026-09-07 (user decision).**
 Two changes remove the problem entirely: the **Mini-DIN-8 stays internal** (`panel:"none"`, §5), and
-the connectors no longer share an end face at all — they sit in the patch wall, which is 138–166 mm
+the connectors no longer share an end face at all — they sit in the patch wall, which is **168–186 mm**
 long. Every priority SKU now has **≤ 4 external D-size ports** (Plus encoder: video IN, loop-OUT,
 etherCON, USB-B; TX: video IN, etherCON, USB-B; NDI decoders: video OUT, USB-A host, etherCON,
 USB-B; AIO: HDMI OUT, BNC OUT, etherCON, USB-B), and the **HDMI loop-out is brought outside** as the
-user wanted. Achieved pitch is 34.7–53.5 mm, comfortably above the 32 mm minimum.
+user wanted. Achieved pitch is **41.97–63.45 mm** at the rev-4 lengths, comfortably above the 32 mm
+minimum.
 
 **R4 — HDMI's 2 mm panel cap puts the weakest material at the highest-load point.** A 2 mm ASA
 membrane with a 23.8 mm hole, carrying the heaviest, stiffest cable in the build. Mitigations are
@@ -565,12 +605,16 @@ already in §5 (separate flat-printed plate, rabbet takes shear, sacrificial bez
 pocket). **Open:** NAUSB-W and NBB75DFG panel-thickness ratings are `unknown`
 (`d-series-cutout.md:92-93`) — treat as ≤3 mm and confirm before finalising.
 
-**R5 — thermal.** With the ~244 × 84 × 45 mm shell, A ≈ 0.070 m². At the verified still-air
-h = 1.6 W/m²K and ΔT = 15 K, passive rejection is ~1.7 W; the 10 W Plus models need ~12 W/m²K, above
-every natural-convection figure in `knowledge/design/thermal-guidelines.md:421-443`. Devices are
-rated 0–45 °C (Plus) / 0–40 °C (compact), so in a 35 °C venue the ΔT budget is ~10 K, not 15 K.
-Passive-first is the right *intent*, but the fan is not optional for the 10 W Plus models. This is
-why §6's reservation rule exists: vent and fan geometry are reserved in every variant from v1.
+**R5 — thermal. Numbers refreshed 2026-09-08 (rev 4 envelope); conclusion unchanged.** The plus shell
+is now 211.5 × 166.4 × 51 mm → external A ≈ **0.109 m²** (was 0.070 m² on the superseded in-line
+envelope). At the verified still-air h = 1.6 W/m²K and ΔT = 15 K, passive rejection is ~2.6 W; a 10 W
+Plus model needs h ≈ 6.1 W/m²K at ΔT = 15 K, or **~9.2 W/m²K at the realistic ΔT = 10 K** (devices are
+rated 0–45 °C (Plus) / 0–40 °C (compact), so a 35 °C venue leaves ~10 K). Still above every
+natural-convection figure in `knowledge/design/thermal-guidelines.md:421-443`, so **the fan is not
+optional for the 10 W Plus models** — but the margin improved by roughly 25 % purely from the bigger
+box. Passive-first stays the intent; §6's reservation rule keeps vent and fan geometry in every
+variant from v1. The 16 mm far-wall duct (D-13) is the other thermal gain — see R20 for what it does
+*not* fix.
 
 **R6 — PoE power budget.** 802.3af delivers 12.95 W at the PD. A 10 W Plus device + splitter
 conversion loss (1–2 W) + fan (0.25–1.3 W) is at or over budget, and the splitter's own heat lands
@@ -578,15 +622,19 @@ conversion loss (1–2 W) + fan (0.25–1.3 W) is at or over budget, and the spl
 the device; confirm the chosen splitter's rated continuous output against the worst-case model.
 Pending research in `knowledge/components/poe-splitters.md`. **Escalate once that lands.**
 
-**R7 — lid fastener count. RESOLVED; D-04 ACCEPTED by the user 2026-09-08.** Baseline stays the
-user's 4 captive M3 thumbscrews; **6 for any lid over 180 mm span** (D-04). Outcome under the
-patch-wall envelopes: **compact → 4** (L ≤ 174.9), **plus → 6** (L ≥ 190.5). The two extra fasteners
-go mid-span on the long walls; on the patch wall the mid-span position must clear every flange edge
-by ≥ 6.15 mm. With the straight-plug end zones (D-08 vetoed) the plus pitch rose to 40.8–41.2 mm, so
-the mid-span boss now clears by 7.42 mm (HDMI Plus) / 7.58 mm (SDI Plus) and **the buttress-rib
-fallback is currently unused on every priority SKU** — keep the rule anyway, it is cheap and a future
-SKU may need it. The patch wall is the one that most needs the mid-span restraint — it has a
-138–166 mm aperture cut in it.
+**R7 — lid fastener count. RESOLVED; D-04 ACCEPTED by the user 2026-09-08. Outcome revised by D-12.**
+Baseline stays the user's 4 captive M3 thumbscrews; **6 for any lid over 180 mm span** (D-04).
+Outcome under the **rev-4** envelopes: **compact → 6** (L = 193.9–194.9) and **plus → 6**
+(L = 210.5–211.5) — the compact family crossed the threshold when D-12 added 20 mm, so **every
+current SKU carries 6**. Keep the threshold rule anyway; a constant `6` would silently break the first
+sub-180 mm variant. The two extra fasteners go mid-span on the long walls; on the patch wall the
+mid-span position must clear every flange edge by ≥ 6.15 mm. At the rev-4 pitches the clearance is
+10.75–10.92 mm (plus, 4 slots), **7.98–8.15 mm (compact, 4 slots — the tightest in the repo, 1.8 mm
+spare)** and 18.5–18.7 mm (compact, 3 slots), so **the buttress-rib fallback is still unused on every
+priority SKU** — but it is much closer than it was. The far-wall mid fastener now *always* collides
+with the side-bolt keep-out and must be displaced by the deterministic rule in
+`layout-patch-wall.md` §6. The patch wall is the one that most needs the mid-span restraint — it has a
+168–186 mm aperture cut in it.
 
 **R8 — device retention. REVISED 2026-09-08 (D-09: side bolt, not floor bolt).** A single 1/4"-20
 bolt is still one point of restraint, now **horizontal, through the far wall into the device's side
@@ -654,14 +702,29 @@ A right-angle adapter is still allowed as an explicit per-variant option and mus
 variant's BOM (`bom-update`). This risk is now carried by R2 (all plug lengths assumed) — it is no
 longer a BOM obligation.
 
-**R14 — bed area, not bed length, is now the ASA warp risk. NEW.** The patch-wall plus base is
-191.5 × 156.4 = 30,000 mm² of first layer, ~54 % more than the superseded in-line 244 × 80 =
-19,500 mm². R9's mitigations (generous bottom-edge fillet, uniform walls with ribs, brim, enclosure
-at temperature) become more important, not less, even though the longest dimension shrank by 50 mm.
-Print time and filament per case rise correspondingly.
+**R14 — bed area, not bed length, is now the ASA warp risk. UPDATED 2026-09-08 (rev 4).** The plus
+base is now **211.5 × 166.4 = 35,200 mm²** of first layer (compact 194.9 × 159.9 = 31,200 mm²) — 17 %
+more than rev 3's 30,000 mm² and **~80 % more than the superseded in-line 244 × 80 = 19,500 mm²**.
+D-12 added the length, D-13 added the width. R9's mitigations (generous bottom-edge fillet, uniform
+walls with ribs, brim, enclosure at temperature) become more important, not less, even though the
+longest dimension is still 33 mm shorter than the in-line layout's. Print time and filament per case
+rise correspondingly, and base + lid can no longer share a build plate (§1) — **two plates per case,
+minimum.** This is the accepted price of D-12 + D-13 and should be stated in the BOM/print notes.
 
-**R15 — the dongle-class splitter reservation still collides with the −X end zone. NEW, blocking for
-`shell.scad`. Needs a user decision.** R11's dongle envelope clears the *connector bay* but not the
+**R15 — the dongle-class splitter reservation collides with the −X end zone. RESOLVED 2026-09-08 —
+user accepted option (a), recorded as D-12.** `ez_neg = 27 + 20 = 47`; every `L` grows 20 mm
+(compact 194.9, plus 211.5); §6's reservation rule is honoured unconditionally; assert T1-28 now
+passes by construction. Accepted consequences, all recorded in §1 and `layout-patch-wall.md` §8:
+the **compact family crosses the 180 mm D-04 threshold and goes to 6 lid thumbscrews**; bed margin
+falls to 44.5 mm on the plus family (still 38.5 mm inside the 250 mm assert limit); first-layer area
+rises (R14). Two knock-ons a developer must not miss:
+(i) `MCC_END_ZONE_NEG_EXTRA_SPLITTER` is **derived**, not typed — it is
+`mcc_splitter_envelope(part)[2]` (the on-edge X extent, = `size[2]` = 20 for `DONGLE-75x40x20`,
+`constants.scad:164`), so measurement **M3** flows straight into `L` without another decision;
+(ii) with `ez_neg ≠ ez_pos` the device is no longer centred in X — `x_dev_c = +3.0…+3.5` on every
+priority SKU — which pushes the default side-bolt keep-out off case centre and *always* displaces
+the far-wall mid-span lid fastener (`layout-patch-wall.md` §6).
+Original analysis, kept for the record: R11's dongle envelope clears the *connector bay* but not the
 *cable* end zone. Standing on edge (20 mm in X, 75 mm in Y, 40 mm in Z — the only orientation that
 fits a 45 mm interior) the reserved slab occupies the outer 20 mm of a 27 mm end zone, across the
 full case width, at exactly the height the device's −X patch cables run (`z ≈ 19.5–31.5`, centred on
@@ -676,7 +739,7 @@ rule exists to prevent; (c) source a physically smaller splitter (≤ 60 × 40 �
 one in hand and re-derive. Note the previous doc's "costs `max(0, 40 − ez_neg)` extra mm" is wrong —
 it assumed the splitter and the device-side plugs could share the end zone, and they cannot, in
 either Z or Y. Secondary: the on-edge slab also masks the far half of the −X end wall, so the intake
-vent band there must move to the +Y half (`layout-patch-wall.md` §5).
+vent band there must move to the +Y half (`layout-patch-wall.md` §5) — **this part still applies.**
 
 **R16 — the captive side bolt is not an off-the-shelf part. NEW, sourcing risk.** The design needs a
 1/4"-20 slotted machine screw, ~19 mm under the head, with a **retaining groove ~10 mm below the
@@ -689,12 +752,18 @@ impractical: a cross-drilled ⌀2 mm roll pin through the shank, or a grub-screw
 sitting in the same clip pocket. **The E-clip dimensions themselves are unverified** — DIN 6799 is
 not in `knowledge/**`; the size-5 figures in `layout-patch-wall.md` §7.1 are marked `assumed` and are
 on the measurement list. Do not order hardware on them.
+**Unaffected by D-13.** The flush decision leaves `proud + MCC_WALL + MCC_GAP_FAR = 19 mm` exactly as
+it was (0 + 3 + 16 = 10 + 3 + 6), so `screw_len_under_head` is still 19.0 mm → stock 3/4" (19.05), and
+`groove_pos` is still 10.0 mm below the under-head face. The sourcing problem is neither better nor
+worse; only where the boss material sits has changed.
 
 **R17 — the side-bolt hole position is unmeasured, and one of the two unknowns is geometrically
 tight. NEW.** `u` (along the length) is benign — it only shifts the boss along the far wall and the
 vent arrays step around it. `v` (height above the device's mid-plane) is not: the boss's compliant
 pad must land wholly on a device flank that is only 23.3–23.4 mm tall, so
-`pad_od ≤ dev_h − 2·|v| − 2`. With the default ⌀18 pad that allows `|v| ≤ 1.7 mm`; a ⌀12 pad (the
+`pad_od ≤ dev_h − 2·|v| − 2`. **Unchanged by D-13** — the pad still lands on the device flank at the
+same place; only the material behind it moved inboard. With the default ⌀18 pad that allows
+`|v| ≤ 1.7 mm`; a ⌀12 pad (the
 smallest sourced EPDM size, `fasteners-and-hardware.md:186`) allows `|v| ≤ 4.7 mm`. If the real hole
 sits further off mid-height than that, the pad has to become a non-circular bearing face and the boss
 spec needs revisiting. Measure `v` **before** `cradle.scad`/`shell.scad` are written, not after.
@@ -704,22 +773,78 @@ hole turns out to be on the opposite side the canonical-frame flip (§7) puts th
 the patch wall, where it is unreachable — acceptable today (it is `panel:"none"`), but record it if
 the user ever wants rotary access.
 
-**R18 — the far wall grows a 10 mm proud lug. NEW, accepted-by-derivation, worth a user sanity
-check.** The captive stack (head recess 6 + retaining web 3 + clip pocket 8) needs ~17 mm between the
-case's outer surface and the device flank, and `MCC_WALL + MCC_GAP_FAR − pad = 7 mm` is all that
-exists. The 10 mm shortfall is taken as a **local outward boss on the far wall** rather than by
-widening `MCC_GAP_FAR` (which would add the same 10 mm to `W` along the *whole* case and a lot of
-ASA). Consequences: the printed bbox in Y is `W + 10`; the lug needs a ≤45° conical blend on its
-underside to stay self-supporting when the base is printed floor-down; and the lug is a stress riser
-and a stack/strap obstruction on the one wall that was previously clean. Alternative if the user
-dislikes a lump: blend it into a full-length external spine (more material, cleaner look).
+**R18 — the far wall grows a 10 mm proud lug. RESOLVED 2026-09-08 — the user chose FLUSH, recorded as
+D-13.** The captive stack (head recess 6 + retaining web 3 + clip pocket 8 = 17 mm) needs 17 mm
+between the case's outer surface and the pad face. Rev 3 bought it with a 10 mm outward lug; **rev 4
+buys it by moving the whole far wall out**: `MCC_GAP_FAR` 6 → **16**, `MCC_SIDE_BOLT_PROUD` 10 → **0**,
+`MCC_WALL + MCC_GAP_FAR − MCC_PAD_T = 3 + 16 − 2 = 17` exactly. What this bought:
+
+- **No proud metal or plastic anywhere on the shell.** The drop rule (§5 sacrificial bezel, recessed
+  connectors) now holds on all six faces. The far wall is clean for the strap slots and the stacking
+  profile again, and the stress riser at the lug root is gone.
+- **The printed bounding box did not change** (rev 3's bbox was already `W + 10`), so bed margin and
+  the T1-21 assert are untouched. The 10 mm became *interior*.
+- **A 16 mm airflow duct along the device's far flank**, up from 6 mm — ~2.7 × the duct
+  cross-section. See R20 for why that is a smaller win than it looks.
+- **The M5 risk changed shape.** A taller measured screw head now grows `MCC_GAP_FAR` and therefore
+  `W` (≈ +1.5 mm of `W` per +1.5 mm of head height) instead of growing a lug. Bounded, cheap, and it
+  fails loudly through T1-26 rather than silently producing an ugly lump.
+
+What it cost, and the one thing that got harder:
+
+- **~17 % more first-layer area and more ASA** in the floor and lid (R14).
+- **The 14 mm cantilever moved inside the wall.** The boss is now a local thickening on the *inside*
+  of the far wall — a ⌀20 cylinder from the wall's inner face (local `Z = 3`) to the pad face
+  (`Z = 17`). Printed floor-down that is a horizontal ⌀20 cylinder cantilevered 14 mm off a vertical
+  wall: its lower half is an unsupported overhang, and a purely conical ≤45° blend would need a ⌀48
+  root, which collides with the vent band, the cradle far-flank ribs and the lid-fastener boss.
+  **Normative resolution (`layout-patch-wall.md` §7.1): a central vertical support web** — 3 mm thick
+  in X, in the plane `x = x_bolt`, from the interior floor `z = 3` to the boss underside, spanning the
+  boss's full Y extent — which caps every unsupported horizontal span at `(20 − 3)/2 = 8.5 mm`, inside
+  the §5 "no unsupported horizontal span over 10 mm" rule. The web is free in airflow terms because
+  the boss already dams the duct at that X, but it **extends the far-wall vent keep-out downward** to
+  a 7 mm-wide strip from `z = 3` to the boss (a slot cut there would open into solid material).
+  Fallback if a developer prefers it: local slicer support under the boss — the base prints with its
+  top open, so the boss is reachable for support removal. Do not mix the two on one variant.
 
 **R19 — repeated screwdriver load on an ASA head-bearing web. NEW.** The 1/4"-20 thread is in the
 *device* (metal), so the ASA boss never takes thread-forming torque — but the 3 mm web behind the
 head recess takes the full clamp load and gets scrubbed every time the device is swapped. Mitigation
 to specify in the BOM: a stainless washer (⌀12–14 × 1 mm) seated on the recess floor under the head.
 Do not solve it by increasing torque headroom — hand-tight against the compliant pad is the intended
-preload (R8).
+preload (R8). **D-13 makes this slightly worse and slightly better:** the web is now 3 mm of wall-
+backed material instead of 3 mm of lug material (better in bending), but the head recess is a ⌀12 bore
+straight through the 3 mm wall, so the wall itself carries no material at the bolt axis — the boss and
+its support web are the load path. The washer stays mandatory.
+
+**R20 — the 16 mm duct is not the thermal win it looks like; the vent *slots* are now the bottleneck,
+and the fan is not aligned with the duct. NEW (2026-09-08), non-blocking, decide before `vents.scad`.**
+`knowledge/design/thermal-guidelines.md:104-109` is explicit that vent openings "mainly need to be
+large enough to not throttle the buoyancy-driven flow", and that the defensible sizing approach is to
+make vent free area **comfortably larger than the fan's inlet/outlet duct area** when a fan is fitted.
+Order-of-magnitude check with the rev-4 geometry:
+
+| Path | Free area | Note |
+|---|---|---|
+| Fan aperture ⌀38 | **1134 mm²** | the thing everything else must feed |
+| Far-wall duct cross-section (16 × 45) | 720 mm² | was 270 mm² at `MCC_GAP_FAR = 6` |
+| Total internal cross-section normal to X, minus the device | ≈ 5400 mm² | the fan is never starved by the *case* |
+| Far-wall intake slot band as specified (12 mm tall, 1.2 mm slot / 1.6 mm web, over the device length) | ≈ 590 mm² | |
+| −X end-wall intake band, +Y half only | ≈ 400 mm² | |
+| **Total intake free area** | **≈ 990 mm²** | **< 1134 mm² — under the cited heuristic** |
+
+Two conclusions. **(1)** D-13 removed the duct as a restriction (720 mm² is one of several parallel
+paths, and the total internal cross-section is 5 × the fan), so *widening the duct further buys
+nothing thermally* — the correct lever is slot open area, i.e. a taller intake band and/or a higher
+slot:web ratio. Sizing the *duct* to the fan is the wrong assert; sizing the *slots* to the fan is the
+right one (new T1-30). **(2)** The fan aperture is centred on `y_dev_c`, roughly 40 mm away from the
+duct mouth, so as drawn the fan pulls from the plenum over the device and only indirectly through the
+duct. With a 16 mm duct there is now a real choice: keep the fan on the device centreline (even
+cooling of the device's top grille, which §12 Q10 forbids sealing) or shift it toward −Y so the ⌀38
+circle overlaps the duct (a genuine through-duct flow path). **Architectural hedge, not a decision:**
+make the fan's Y position a shell parameter `fan_y`, defaulting to `y_dev_c` (today's behaviour), and
+settle it with a thermal measurement rather than by argument. Escalate to the user only if they want
+to pre-commit.
 
 ---
 
@@ -738,9 +863,11 @@ preload (R8).
    `panel:"none"` on every SKU; `mcc_panel_cutout()` dispatches Neutrik D parts + `DBA-BL-B` only.
    `knowledge/components/mini-din8-feedthrough.md` and the `MINIDIN8` row in `MCC_PANEL_PARTS` are
    retained as reserved data for a possible future variant; assert T1-05 forbids referencing it.
-6. ~~**PoE splitter part**~~ **RESOLVED 2026-09-07/08:** default reservation is the dongle class
-   `DONGLE-75x40x20` (`constants.scad:164`), `GAT-USBC` retained as a non-default alternative. The
-   *envelope* is `assumed` (Q15) and the *placement* is still blocking (R15).
+6. ~~**PoE splitter part and placement**~~ **RESOLVED 2026-09-07/08:** default reservation is the
+   dongle class `DONGLE-75x40x20` (`constants.scad:164`), `GAT-USBC` retained as a non-default
+   alternative; placement is the −X end on edge, and its 20 mm X extent **adds to** the −X cable
+   allowance (`ez_neg = 47`, D-12/R15). The *envelope* is still `assumed` — measurement M3 feeds
+   `L` directly.
 7. **All mating-plug lengths** (R2) — placeholder constants until the `depth-mockup` coupon is built.
    Now includes the **straight HDMI plug's axial length**, assumed 25 mm, `unknown` in
    `cables.md:121`; the whole HDMI end-zone figure rests on it since D-08 was vetoed.
@@ -762,6 +889,12 @@ preload (R8).
 14. ~~**Two architect-derived rules flagged for user veto**~~ **RESOLVED 2026-09-08: D-04 accepted
     (6 fasteners over 180 mm), D-06 vetoed** (the flange-to-plate-edge web stays 4.0 mm in Z, so the
     plate is 39 mm and the case is **51 mm** tall, not 49).
+15. ~~**Splitter reservation vs. the −X end zone (R15), and the 10 mm proud side-bolt lug
+    (R18)**~~ **RESOLVED 2026-09-08: D-12 (accept +20 mm of `L`, reservation allowances sum) and
+    D-13 (flush boss, `MCC_GAP_FAR = 16`, `MCC_SIDE_BOLT_PROUD = 0`).** See §1 and §11.
+16. **Fan Y position vs. the 16 mm duct (R20) — new, non-blocking.** Keep the fan on the device
+    centreline or shift it onto the duct? Parameterise (`fan_y`, default `y_dev_c`) and settle it by
+    measurement, not argument.
 
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
@@ -769,9 +902,9 @@ preload (R8).
 |---|---|---|---|
 | M1 | Side 1/4"-20 hole `u` (from the nearest short end), `v` (from the device bottom), and **which long side** (seen from the USB/RJ45 end) — **per SKU** | Places the boss; `v` may force a smaller pad or a redesign (R17) | User, with the devices in hand |
 | M2 | The device's side-thread **depth** | Sets bolt engagement `e` (assumed 6.0), which sets clip travel, pocket depth and screw length | User |
-| M3 | The chosen dongle PoE splitter's real L × W × H | The 75 × 40 × 20 default is `assumed`; drives R15's +20 mm (R11) | User, after buying one |
+| M3 | The chosen dongle PoE splitter's real L × W × H | The 75 × 40 × 20 default is `assumed`. **Since D-12 its on-edge X extent (`size[2]`, 20 mm) is a direct term in `ez_neg` and therefore in `L`** — a part 5 mm thicker makes every case 5 mm longer (R11, R15) | User, after buying one |
 | M4 | E-clip: confirm DIN 6799 nominal size for a 6.35 mm shank — groove ⌀, groove width, clip OD, thickness | Every figure in `layout-patch-wall.md` §7.1's clip block is `assumed`; not sourced anywhere in `knowledge/**` (R16) | Whoever orders the hardware |
-| M5 | Slotted 1/4"-20 screw head ⌀ and head height for the part actually bought | Sets the head recess ⌀/depth and therefore the lug's proud amount (R18) | Same |
+| M5 | Slotted 1/4"-20 screw head ⌀ and head height for the part actually bought | Sets the head recess ⌀/depth → `boss_len` → **`MCC_GAP_FAR` → `W`** since D-13 (it no longer sets a lug height). +1.5 mm of head height = +1.5 mm on every case's width; T1-26 fails loudly if it is not propagated (R18) | Same |
 | M6 | Straight HDMI plug axial length; etherCON/USB/BNC plug lengths | `depth-mockup` coupon — replaces every `assumed` bay depth and end zone (R2, R13) | Print the coupon |
 | M7 | Magewell Fishtail M4 hole pitch | Floor pattern; derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl` | Anyone |
 
@@ -784,9 +917,10 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 
 | # | Date | Intended rule | Violation | Why it matters | Resolution |
 |---|---|---|---|---|---|
-| D1 | 2026-09-08 | §7 `side_bolt` convention: exactly one `tripod_1_4_20` port, `face [0,-1,0]` | `pro-convert-hdmi-tx.scad:37`, `-sdi-tx.scad:34`, `-hdmi-plus.scad:42`, `-sdi-plus.scad:36` use `face [0,0,-1]`; `-for-ndi-to-hdmi.scad:29`, `-for-ndi-to-sdi.scad:33`, `-for-ndi-to-aio.scad:32`, `-for-ndi-to-hdmi-4k.scad:38` use `face [0,0,1]`. `id` is `"tripod"`, and `pos` (`[±30,0]`, `[20,0]`) is a bottom/top-face position | `cradle.scad`/`shell.scad` will place the retention boss from this field; a bottom-face record silently produces a floor bolt that cannot reach the thread | **Open — developer task.** Rewrite all 8 to `["id","side_bolt"], ["face",[0,-1,0]], ["pos",[0,0]], ["confidence","assumed"]`, add T1-22/T1-23 to `tests/test_ports.scad` |
-| D2 | 2026-09-08 | §6 floor rule: the floor no longer carries a device through-bolt | `lib/mcc/fasteners.scad:100-120` `mcc_tripod_boss()` is a boss with a ⌀6.6 **clearance** through-hole — i.e. exactly the withdrawn floor through-bolt geometry. The floor's remaining 1/4"-20 feature is a *threaded* one (case → tripod plate) | An unused module whose contract contradicts the design will be picked up by the first developer who greps for "tripod" | **Open — developer task.** Either repurpose it as a 1/4"-20 *insert* boss for the floor, or retire it. It is currently referenced by nothing outside its own file |
-| D3 | 2026-09-08 | §8 branching: `develop` is dropped | `CONTRIBUTING.md`, `.claude/skills/git-flow`, the PR template, `CHANGELOG.md` and the `gitflow.*` git config still describe `develop`. `.github/workflows/render.yml:11-17` is already correct | An agent reading `git-flow` will open a PR against a branch that should not exist | **Open — docs task** (session-resume step 3b) |
+| D1 | 2026-09-08 | §7 `side_bolt` convention: exactly one `tripod_1_4_20` port, `face [0,-1,0]` | `pro-convert-hdmi-tx.scad:37`, `-sdi-tx.scad:34`, `-hdmi-plus.scad:42`, `-sdi-plus.scad:36` use `face [0,0,-1]`; `-for-ndi-to-hdmi.scad:29`, `-for-ndi-to-sdi.scad:33`, `-for-ndi-to-aio.scad:32`, `-for-ndi-to-hdmi-4k.scad:38` use `face [0,0,1]`. `id` is `"tripod"`, and `pos` (`[±30,0]`, `[20,0]`) is a bottom/top-face position | `cradle.scad`/`shell.scad` will place the retention boss from this field; a bottom-face record silently produces a floor bolt that cannot reach the thread | **In progress (developer task running, 2026-09-08).** Rewrite all 8 to `["id","side_bolt"], ["face",[0,-1,0]], ["pos",[0,0]], ["confidence","assumed"]`, add T1-22/T1-23 to `tests/test_ports.scad`. Re-verify at the end of that task |
+| D2 | 2026-09-08 | §6 floor rule: the floor no longer carries a device through-bolt | `lib/mcc/fasteners.scad:100-120` `mcc_tripod_boss()` is a boss with a ⌀6.6 **clearance** through-hole — i.e. exactly the withdrawn floor through-bolt geometry. The floor's remaining 1/4"-20 feature is a *threaded* one (case → tripod plate) | An unused module whose contract contradicts the design will be picked up by the first developer who greps for "tripod" | **In progress (developer task running, 2026-09-08)** — same task that adds `mcc_captive_side_bolt_boss/cut()` to `fasteners.scad`. Either repurpose it as a 1/4"-20 *insert* boss for the floor, or retire it. Re-verify at the end of that task |
+| D3 | 2026-09-08 | §8 branching: `develop` is dropped | `CONTRIBUTING.md`, `.claude/skills/git-flow`, the PR template, `CHANGELOG.md` and the `gitflow.*` git config still described `develop`. `.github/workflows/render.yml:11-17` was already correct | An agent reading `git-flow` will open a PR against a branch that should not exist | **RESOLVED 2026-09-08.** Branching docs rewritten: `CONTRIBUTING.md:4-6` and `.claude/skills/git-flow/SKILL.md:9-11` now state "There is no `develop`, `release/*`, `hotfix/*`, or `support/*` branch"; `CLAUDE.md:116-117`, the PR template, `CHANGELOG.md`, `README.md` and `.claude/knowledge/ticket-source.md` updated; CI triggers already `main` + `v*` + PRs to `main`; the `gitflow.*` git config was removed. Verified by grep: the only remaining `develop` hits in tracked non-BOSL2 files are negations or the English word "developer" |
+| D4 | 2026-09-08 | Nothing but source and small text goldens in the working tree (§8) | Two untracked junk files in the repo root, `5` and `RJ45,` (`git status`), almost certainly the debris of a mis-quoted PowerShell redirect | They will be swept into a commit by a `git add -A`, and CI's stray-file guard may or may not catch them | **Open — trivial housekeeping, teamlead's call.** Delete them (architect is read-only; I have not touched them). Not a design issue |
 
 ---
 
@@ -808,11 +942,14 @@ centreline `z = 25.5`.
 the connector centreline (`z = 25.5`), giving an 8.8 mm cradle deck + 2.0 mm compliant pad and a
 level cable run. That in turn leaves 10.8 mm of plenum over the device's top grille.
 
-**Device retention is a side bolt, not a floor bolt (D-09).** Device flat on the cradle at zero yaw,
-its 1/4"-20 side thread facing −Y; a captive 1/4"-20 slotted screw runs horizontally through a boss
-in the far wall into that thread, held captive by a DIN 6799 E-clip in a pocket inside the boss. The
-floor keeps only the case's own 1/4"-20 insert, VESA 75 + Fishtail M4, strap slots and the stacking
-profile.
+**Device retention is a side bolt, not a floor bolt (D-09), and its boss is flush (D-13).** Device
+flat on the cradle at zero yaw, its 1/4"-20 side thread facing −Y; a captive 1/4"-20 slotted screw
+runs horizontally through a boss in the far wall into that thread, held captive by a DIN 6799 E-clip
+in a pocket inside the boss. **Nothing protrudes:** `MCC_SIDE_BOLT_PROUD = 0` and the 17 mm captive
+stack lives inside `MCC_WALL + MCC_GAP_FAR = 19 mm`, with the boss a ⌀20 internal thickening from the
+wall's inner face to the pad face plus a 3 mm central support web down to the floor. The floor keeps
+only the case's own 1/4"-20 insert, VESA 75 + Fishtail M4, strap slots and the stacking profile — and
+the stacking profile no longer has to dodge a lug.
 
 **Slot rule (`mcc_slot_for_port()`).** Partition the external ports by the sign of `face.x`; end-A
 ports take the leftmost slots, end-B ports the rightmost; inside each block order by
@@ -826,22 +963,40 @@ the innermost) get `DBA-BL-B`.
 **Bay and end zones.** `d_bay_free = max(mcc_bay_depth) − 5.0` (5 mm of it is plate + lip material),
 = 70.65 mm for HDMI-bearing devices — and the bay must run the **full device length**, because slots
 2 and 3 sit over the device's X range. End zone per end = `max(mcc_dev_side_allow(kind))` over that
-end's ports: BNC 41, **HDMI 40 (straight plug — D-08 vetoed, R13)**, RJ45 27, USB 17. BNC's 40.6 mm
-lateral bend is absorbed in the 70 mm-deep bay, so it does not force an end slot.
+end's ports: BNC 41, **HDMI 40 (straight plug — D-08 vetoed, R13)**, RJ45 27, USB 17 — **plus, on the
+−X end only, the reserved splitter's 20 mm on-edge X extent (D-12): `ez_neg = 27 + 20 = 47`.**
 
 **Reserved bays.** Fan: +X end wall, NF-A4x10 frame inside, **⌀38** wall aperture (the interior grew
-to 45 mm), exhaust away from the patch wall. PoE splitter: −X end, **dongle class 75 × 40 × 20
-standing on edge** — clears the connector bay (R11 resolved) but not the end-zone cables, **see
-R15.** Vents: intake low in the −X end wall (+Y half only, the splitter slab masks the −Y half) and
-the far long wall (into the 6 mm `MCC_GAP_FAR` duct along the device flank), exhaust high in the far
-wall's +X half; **never in the patch wall**, and **never inside the side-bolt boss keep-out.**
+to 45 mm), exhaust away from the patch wall; its Y position is a shell parameter defaulting to the
+device centreline (R20). PoE splitter: −X end, **dongle class 75 × 40 × 20 standing on edge** — clears
+the connector bay by 20.8 mm (R11) *and* the end-zone cables by construction now that the allowances
+sum (D-12, T1-28 passes). Vents: intake low in the −X end wall (+Y half only, the splitter slab masks
+the −Y half) and the far long wall (into the **16 mm** `MCC_GAP_FAR` duct along the device flank),
+exhaust high in the far wall's +X half; **never in the patch wall**, and **never inside the side-bolt
+keep-out** (⌀24 disc *plus* a 7 mm strip down to the floor for the boss's support web, D-13). Slot
+free area — not duct depth — is the flow bottleneck; size the intake slots against the fan aperture
+(R20, T1-30).
 
 **Floor.** VESA 75×75 and the case's own 1/4"-20 insert default to the case plan centre; `vesa_pos`
 is a shell parameter so a colliding SKU can shift it; `mcc_floor_keepout()` asserts non-overlap. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
 
-**Architect verdict, 2026-09-08 (rev 3): APPROVED WITH CHANGES.** The topology, the side-bolt
-retention and the vetoes are all sound and recorded. Blocking before `shell.scad` starts: **R15**
-(splitter vs. end zone — a user decision worth ±20 mm of case length) and the **M1/M2 measurements**
-(side-hole `u`/`v`/side and thread depth). Non-blocking but must be cleaned up in the same PR series:
-deviations D1 (8 device files), D2 (`mcc_tripod_boss()`), D3 (`develop` in the docs).
+**Architect verdict, 2026-09-08 (rev 4): APPROVED.** Both remaining design blockers are closed by
+user decision — **D-12** (R15: reservation allowances sum, `ez_neg = 47`, +20 mm `L`, 6 thumbscrews on
+both families) and **D-13** (R18: flush side-bolt boss, `MCC_GAP_FAR = 16`, `MCC_SIDE_BOLT_PROUD = 0`,
++10 mm `W`, printed bbox unchanged). Both are architecturally *cleaner* than the alternatives they
+replace: D-12 keeps §6's reservation rule unconditional, D-13 keeps the drop rule true on all six
+faces and converts a lug-height risk into a bounded width risk. Envelopes: **compact
+194.9 × 159.9 × 51.0, plus 211.5 × 166.4 × 51.0**, every part ≥ 38.5 mm inside the 250 mm assert
+limit. `shell.scad` may now be specified against `layout-patch-wall.md` rev 3.
+
+Still open, none of it blocking the *design*:
+- **Physical measurements M1/M2** (side-hole `u`/`v`/which side; thread depth) block the first
+  full-size **print**, not the code — `pos [0,0]` is the recorded placeholder and T1-24 catches a bad
+  value at render.
+- **M3/M5** now feed `L` and `W` directly (see the measurement list) — expect the envelope to move by
+  a few mm when the hardware lands. That is by design; nothing is hand-typed.
+- **R20** (fan Y vs. the 16 mm duct; intake slot free area below the cited heuristic) — parameterise
+  `fan_y`, widen the intake band, decide by measurement.
+- Deviations **D1/D2** are in progress in the running developer task; **D3 is resolved**; **D4** is
+  two junk files in the repo root awaiting a `rm`.
