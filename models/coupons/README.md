@@ -63,31 +63,10 @@ about the other.
 | Coupon | Orientation | Why |
 |---|---|---|
 | `neutrik-tile` | **Flange (front) face down on the bed.** As modeled: the tile's Z axis (connector-cutout axis) is already vertical when the part sits on its large flat face, so no rotation is needed — just place it flange-down, rear screw bosses pointing up. | The Ø23.8/24.2 mm cutout prints as a true circle with no bridging; the flange seat prints against the bed as a smooth, flat surface (print-check §3). |
-| `depth-mockup` | **Panel-wall end down on the bed** (connector-cutout axis vertical, matching `neutrik-tile`), rail rising as a vertical spine, mock face block at the top. **Enable tree/normal supports for the mock face block** — see caveat below. | Keeps the functional cutout's hole axis vertical for a true-circle hole. No orientation of this coupon is fully self-supporting — see below. |
+| `depth-mockup` | **Flat, floor plate down on the bed**, walls rising vertically out of the floor. No supports needed. | A flat-printing U-channel: the floor plate is the bed-contact face, and both the panel wall and the mock-face wall stack directly on top of the floor (and of each other's ribs), so every layer has full support from the layer below. The only overhang is the connector cutout's horizontal hole, which prints with a short self-supporting bridge at its top — expected, not a defect (print-check §8 exception, noted in the coupon's own header comment). |
 | `tg-ladder` | **Flat, base plate down.** | Base is a simple flat plate; tongues/grooves project upward, no bridging. Brim recommended — base footprint is 230×36 mm, the longest single dimension of any coupon here. |
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |
 | `tolerance-ladder` | **Flat, base plate down**, pegs facing up. | Peg/hole axis vertical for both the printed pegs and the through-holes in the base — true circles, no bridging. |
-
-### `depth-mockup` orientation caveat (read before printing)
-
-`depth-mockup` is a U/C-shaped jig: a panel-wall plate and a mock-face-block plate, both full
-40×45 mm, connected only by a single 3×8 mm rail running along one edge for the whole 78.65 mm
-depth. There is **no single flat face that lies across both plates without a large gap** between
-them (checked all four axis-aligned candidates: the two plates' outward faces are coplanar but not
-contiguous — the rail that bridges them sits at a different, offset X/Y position, so laying any of
-those faces on the bed leaves the connecting rail spanning ~75 mm of open air).
-
-Recommended orientation (panel-wall down, rail vertical, mock face block at the top) confines the
-problem to a single, well-defined overhang: the mock face block extends ~18.5 mm past the rail on
-each side at the very top of a 78.65 mm-tall print. That needs Bambu Studio tree supports under the
-overhanging part of the block — expect this in the plate preview and do not treat it as an error for
-this coupon specifically (contrast with print-check §8's general rule that unexpected supports are a
-design smell — here they are expected and confined to one location). If the printed jig turns out too
-wobbly on its thin rail spine for a clean print, the practical fix is a second, mirrored rail on the
-opposite edge (mirrored copy of the existing rail `cube()`, at `-JIG_W/2 - RAIL_T` instead of
-`JIG_W/2`) so the assembly becomes a self-supporting picture-frame shape instead of a single-spine C;
-this has **not** been applied automatically — it changes the coupon's geometry and its golden, so it
-needs a deliberate decision, not a silent edit.
 
 ## Print settings (ASA, Bambu Studio) — print-check §4
 
@@ -125,7 +104,7 @@ number under a stale `confidence: "drawing"` still reads as unverified.
   the plug body stops (or, for a cable that reaches through, where the cable's jacket/strain-relief
   boot meets the mock face block).
 - Does the cable bend comfortably within the jig's lateral clearance, or does it bind against the
-  rail/edges?
+  stiffening ribs/floor edges?
 - **Good** = the plug fully seats against (or short of) the mock face block with the cable's natural
   bend radius unforced.
 - Record: connector class, measured seating depth (mm, from the flange front), whether the cable
