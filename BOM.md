@@ -237,6 +237,12 @@ table's "only when `fan=true`" case.
 ### pro-convert-for-ndi-to-hdmi-4k
 
 **4 external D-connectors** (Plus chassis, decoder electronics — see the device file's own comment).
+**Fan fitted by default** (`fan = true` in `models/pro-convert-for-ndi-to-hdmi-4k/case.scad`, user
+decision 2026-09-08 R5 / `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 — the Plus-family
+thermal budget makes active cooling the shipped default for this SKU, unlike the compact
+`pro-convert-for-ndi-to-hdmi` template it was copied from), so unlike every other section in this
+table the fan row below is **not** the common-hardware "optional, only when `fan=true`" case — it
+ships with every unit of this SKU.
 
 | Part | Qty | Notes | Source |
 |---|---|---|---|
@@ -245,10 +251,19 @@ table's "only when `fan=true`" case.
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:32-33`; `lib/mcc/constants.scad:423` |
 | M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
+| Noctua NF-A4x10 5V (plain 3-pin) | 1 | 40×40×10 mm case-cooling fan in the +X end wall's live cutout (`fan=true` default, `mcc_fan_cutout("NF-A4x10", grille=true)`) — additional to, and independent of, the device's own internal variable-speed fan | `knowledge/components/fans.md:13-24`; `lib/mcc/constants.scad:534-535` (`MCC_FANS`); `lib/mcc/fan.scad` |
+| M3 machine screw, ~8–10 mm (or the bundled NA-AV3 silicone anti-vibration mounts, push-fit, no screw) | 4 | Through `mcc_fan_cutout()`'s 4 clearance holes at the fan's 32 mm pitch (⌀4.3) into the fan's own threaded corners | `knowledge/components/fans.md:89-95` (NA-AV3 bundled in the NF-A4x10 5V box); `lib/mcc/constants.scad:535` (`hole_d=4.3`) |
+| USB-A-to-fan-connector power lead (generic, 2-/3-pin), or splice onto the device's own USB-B +5V feed | 1 | **The device's own external `usb_host` port (NAUSB-W-B, USB-A host) can power this fan**: NF-A4x10 5V draws 0.044 A typ / 0.05 A max, far under any USB host's current budget — a plain USB-A-to-fan-connector cable is the simplest wiring path (no separate internal 5V tap needed); wiring choice `assumed`, not verified against the device's actual USB-A host output rating | `knowledge/components/fans.md:20-24` (current draw), `:140-160` ("General 5V-from-USB power options") |
 | USB 2.0 A-to-A cable, 0.15 m | 1 | `usb_host` | `knowledge/components/cables.md:78,125` |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
+
+Note: `vesa = true` (library default, set explicitly in `case.scad` for documentation parity) — the 4
+VESA 75×75 M4 floor bosses are present, hardware already covered by the "Case floor mounting" common
+section above (M4 machine screw + nut/washer, optional). `splitter = false` — the PoE-splitter bay is
+reserved (architecture.md §6) but unpopulated on this SKU, same as every other current variant; no
+splitter hardware row here.
 
 ### pro-convert-for-ndi-to-sdi
 
