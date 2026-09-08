@@ -1,6 +1,20 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 6, 2026-09-08.** Rev 6 is the ruling on the user's rejection of the first rendered
+Status: **revision 7, 2026-09-08.** Rev 7 is the **pre-implementation architecture gate for the seven
+remaining SKUs** (GitHub issues #3–#9), which are to be built in parallel on seven branches. Verdict:
+**APPROVED WITH ONE BLOCKING LIBRARY CHANGE.** Six of the seven need no library edit at all — §4's
+acceptance test ("adding a device = one thin assembly + goldens + BOM, no library change") holds —
+but **T1-18(c) as coded fails on all four BNC-ended SKUs** (SDI TX, SDI Plus, NDI to SDI, NDI to
+AIO) because it charges the BNC cable's *lateral* bend radius against the *axial* +X end-zone
+budget. That fix, plus a stale-skill fix, must land **once, first, on a single pre-flight branch**
+before any of the seven is opened. Rev 7 also carries two record corrections: **§5's boss-relief
+positions** (the *placed* plate's rear bosses are at `(−9.5, −12)` and `(+9.5, +12)` relative to the
+slot centre — the rev-6 `(∓9.5, ±12)` was the mirror; `shell.scad` was corrected on 2026-09-08,
+commit 2a7e0b0) and **D10's resolution** (the plate-fixing bosses carry a genuine *through*-bore).
+Per-SKU fit-check table, ruling, and the parallel-work rules: **`layout-patch-wall.md` rev 7, §16 +
+§15 "Ruling 2026-09-08c"**. New deviations **D12–D16** in §13. Nothing in §1's envelope table moves.
+
+Rev 6 history follows. Rev 6 is the ruling on the user's rejection of the first rendered
 case's patch-wall connector openings. It rewrites §5's aperture paragraph (the lip window is a
 **`union()` of a truncated-teardrop body circle and two plain boss reliefs** — never a `hull()`),
 **rejects the proposed top-open U-notch aperture**, and logs deviations **D9** (the rejected window
@@ -322,8 +336,18 @@ are part of the design contract:
   **Each window is a `union()` of three separate profiles and NEVER a `hull()` of them:** a plain
   body circle `⌀(mcc_cutout_d(part) + 2·MCC_CLR_SLIDE)` truncated-teardropped above its 45° tangent
   line (`cap_h = d/2 + MCC_APERTURE_CAP_RISE`, flat bridge ≤ `MCC_APERTURE_BRIDGE_MAX`), plus two
-  plain circles `⌀(boss_od + 2·MCC_CLR_SLIDE) = 8.88` at the plate's rear-boss positions `(∓9.5, ±12)`
-  — small enough (< `MCC_APERTURE_SELF_SUPPORT_MAX_D`) to need no teardrop of their own.
+  plain circles `⌀(boss_od + 2·MCC_CLR_SLIDE) = 8.88` at the **placed** plate's rear-boss positions —
+  **`(slot_x − 9.5, z_conn_c − 12)` and `(slot_x + 9.5, z_conn_c + 12)` in case `(x, z)`** — small
+  enough (< `MCC_APERTURE_SELF_SUPPORT_MAX_D`) to need no teardrop of their own.
+  **Corrected rev 7 (2026-09-08):** rev 6 wrote this diagonal as `(∓9.5, ±12)`, which is the plate's
+  *authored* Neutrik front-view pattern. `case.scad` places the plate with `rotate([-90,0,0])`, which
+  maps local `(x, y)` → world `(x, z = −y)`, so the placed bosses sit on the **other** diagonal.
+  Following the doc literally produced mirrored reliefs; the user saw it and `lib/mcc/shell.scad`
+  was fixed on 2026-09-08 (**commit 2a7e0b0**). **Frame rule, recorded so it is not repeated: the
+  outside viewer's right is world −X, and a plate-local `+y` becomes world `−z`.** Every patch-wall
+  position in this file and in `layout-patch-wall.md` is in **case** coordinates unless it explicitly
+  says otherwise. Full statement: `layout-patch-wall.md` §2.5 "The frame rule" + §15 ruling
+  2026-09-08c C1.
   **The acceptance criterion is what the user sees from outside:** a flat plate face 3.0 mm behind
   the wall face, `n_slots` *exactly round* cutouts and two ⌀3.4 screw holes per slot. The union
   achieves it because the body circle and its apex are everywhere *larger* than the plate's own
@@ -369,9 +393,18 @@ D-connectors down".**
    (assert **T1-35**): the insert bore runs from the boss's rear tip for `insert.len +
    MCC_INSERT_BORE_EXTRA`, and an `MCC_M3_CLR_D` through-bore carries it the rest of the way into the
    panel's own screw clearance hole. **No solid material anywhere on the screw axis between the
-   flange face and the insert.** Today `mcc_neutrik_d_bosses()` leaves 0.3 mm of solid ASA there
-   (`lib/mcc/neutrik.scad:117-120`) and the four plate-fixing bosses in `shell.scad` have no bore at
-   all (deviation **D10**) — i.e. neither the connectors nor the plate can currently be fastened.
+   flange face and the insert.** Rev 6 found both bores missing — `mcc_neutrik_d_bosses()` left
+   0.3 mm of solid ASA on the axis and the four plate-fixing bosses in `shell.scad` had no bore at
+   all (deviation **D10**), i.e. neither the connectors nor the plate could be fastened.
+   **RESOLVED 2026-09-08 (rev 7).** Both are bored, and in both cases the bore is a genuine
+   **through-hole**, open at the boss's rear tip *and* at its bearing face, rather than the blind
+   pocket this paragraph's wording implies: Manifold on the pinned OpenSCAD **2025.09.07** cannot
+   union a *blind-bored* boss flush against a face of another solid (the boss comes back as its own
+   disconnected component; diagnosed by isolated bisection, reproducible with the aperture entirely
+   absent and at every overlap depth tried). **The insert therefore goes in from the interior/rear
+   tip** and the screw enters from the plate side — put that on the build sheet. Reasoning,
+   scope and the "do not over-drive the insert" caveat: `layout-patch-wall.md` §15 ruling
+   2026-09-08c C2. T1-35's wording is unchanged and is satisfied strictly by a through-bore.
    The `neutrik-tile` coupon (§9 Tier 4) exists to catch exactly this class of defect and has not
    been printed; **print it before the first full-size case.**
 
@@ -1010,7 +1043,12 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | D7 | 2026-09-08 | §6 reservation rule / `layout-patch-wall.md` §5 on-edge splitter (`H→X, L→Y, W→Z`) | `lib/mcc/poe_splitter.scad:38-45,62-72` — both `mcc_splitter_envelope()` and `mcc_splitter_tiedown()` are authored **flat** (`L→X, W→Y, H→Z`), and the envelope additionally inflates `size[0]` by `2 × cable_allow`, so a naive call reserves a 115 × 40 × 20 box on the wrong axes instead of §5's 20 × 75 × 40 | `shell.scad` would reserve the wrong volume and `mounts.scad` would cut the tie-downs on the wrong axis — a silent, invisible failure that only shows up when the splitter is fitted | **Open — approved fix, developer task.** Add `orient = "edge"` to both modules and a `cable_allow` toggle to the envelope; `mounts.scad` calls the module rather than hand-rolling holes. Re-verify at the end of the L2 milestone |
 | D8 | 2026-09-08 | §5 "the aperture roof is a ≤45° self-supporting chamfer … no unsupported horizontal span over 10 mm" | `layout-patch-wall.md` rev 1–4 specified "a full-length rectangular aperture with a rabbet" with no window/opening distinction, which is unbuildable at 162–186 mm | Would have produced either an unprintable roof or an ad-hoc improvisation in `shell.scad` — and would have removed the wall material the `n_fast = 6` patch-wall mid fastener needs | **Resolved 2026-09-08 (doc fix).** `layout-patch-wall.md` §2.5 is now normative: one plate, one stepped rabbet, `n_slots` discrete minimal windows, T1-34 |
 | **D9** | 2026-09-08 | §5 rev 6: the lip window is a `union()` of a truncated-teardrop body circle and two plain boss reliefs, and the assembled patch wall must read as *exactly round* from outside | `lib/mcc/shell.scad` `_mcc_patch_wall_window()` `hull()`s the ⌀24.4 body circle with the two ⌀8.88 reliefs at `(∓9.5, ±12)`, producing a 27.9 × 32.4 mm diagonal blob through the 3 mm structural lip. Because the hull is *narrower than the plate's own D cutout on its two diagonal flanks*, its outline shows through every plate hole | **Rejected by the user on sight** (2026-09-08, first rendered case, `models/pro-convert-for-ndi-to-hdmi`). Also removes ~35 % more of the structural lip than needed, exactly on the flanks where the plate's 2 mm flange seat needs backing (R4). The "self-supporting crown" justification in the code comment is false — the hull's top is still a horizontal-tangent arc | **Open — approved fix, developer task, rev-6 spec.** Replace `hull()` with `union()`; body circle gets a truncated teardrop (`cap_h = d/2 + MCC_APERTURE_CAP_RISE`); reliefs stay plain circles. Retire T1-34, add T1-34a–d. **The proposed top-open U-notch replacement is REJECTED** (five reasons, `layout-patch-wall.md` §15 ruling 2026-09-08b) |
-| **D10** | 2026-09-08 | §5 rev 6 / T1-35: no solid material anywhere on a fastener's screw axis between the bearing face and its heat-set insert | (a) `lib/mcc/neutrik.scad:117-120` — `bore_depth = insert_len + 1 = 6.7` into a `boss_h = 7` boss, bored from the rear tip, leaving **0.3 mm of solid ASA** across the screw axis behind the plate's ⌀3.4 clearance hole. (b) `lib/mcc/shell.scad` `_mcc_patch_wall_fixing_bosses()` — the four plate-retention bosses are **plain unbored solids**, self-documented in that module as a deferred Manifold-robustness workaround | Neither the four Neutrik connectors nor the panel plate itself can be screwed down on the part as modelled — this is the literal, mm-level content of the user's "there is no place to screw the D-connectors down". A print-blocking defect, not cosmetic | **Open — developer task.** (a) split the bore: `insert.len + MCC_INSERT_BORE_EXTRA` at `insert.hole_d` from the rear tip, then `MCC_M3_CLR_D` through to the front face. (b) retry the bore now that the aperture boolean tree changes (D9); if the spurious `n_parts>1` returns, **escalate — do not ship an unbored boss.** Also reconcile the two contradictory comments in `shell.scad` (one says the bore is "not modelled here", the other says it is "resolved locally"). New assert T1-35 |
+| **D10** | 2026-09-08 | §5 rev 6 / T1-35: no solid material anywhere on a fastener's screw axis between the bearing face and its heat-set insert | (a) `lib/mcc/neutrik.scad:117-120` — `bore_depth = insert_len + 1 = 6.7` into a `boss_h = 7` boss, bored from the rear tip, leaving **0.3 mm of solid ASA** across the screw axis behind the plate's ⌀3.4 clearance hole. (b) `lib/mcc/shell.scad` `_mcc_patch_wall_fixing_bosses()` — the four plate-retention bosses were **plain unbored solids**, self-documented in that module as a deferred Manifold-robustness workaround | Neither the four Neutrik connectors nor the panel plate itself could be screwed down on the part as modelled — this is the literal, mm-level content of the user's "there is no place to screw the D-connectors down". A print-blocking defect, not cosmetic | **RESOLVED 2026-09-08 (rev 7) — accepted resolution: a genuine THROUGH-bore in both cases.** (a) `mcc_neutrik_d_bosses()` (`neutrik.scad:126-151`): `MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` = 6.2 mm at `hole_d` from the rear tip, then `MCC_M3_CLR_D` for the remaining 0.8 mm out through the panel-side face. (b) `_mcc_patch_wall_fixing_bosses()` (`shell.scad:289-321`): the same two-diameter bore, likewise open at **both** ends. **Reason it is a through-bore and not the blind pocket T1-35's wording implies:** Manifold on the pinned OpenSCAD 2025.09.07 cannot union a *blind-bored* boss flush against a face of another solid — the boss returns as its own disconnected component (`n_parts` = 1 + one per bored boss). Diagnosed by isolated bisection: it reproduces with the aperture entirely absent, at every overlap depth from `MCC_EPS` to 2 mm, and the add-then-cut-in-the-outer-`difference()` pattern used for the tripod/VESA floor bosses does not fix it. A plain unbored cylinder unions cleanly; any blind cavity breaks it. Nothing at these bosses' rear tips carries another feature, so opening them costs nothing. **Consequence, must reach the build sheet: the M3 insert is installed from the boss's INTERIOR (rear) tip**, before the lid goes on, and must not be over-driven past the 6.2 mm bore or it protrudes from the front face and stands the plate off its seat; the screw enters from the plate side through a short 0.8 mm clearance lead-in and must be started square. Full ruling: `layout-patch-wall.md` §15 ruling 2026-09-08c C2. Verified `parts=1` + watertight by `build.py check --all`; **still to be confirmed physically by the `neutrik-tile` coupon before the first full-size print** |
+| **D12** | 2026-09-08 | §4 / `new-case-variant`: the variant config's `external_ports` list is what decides which of a device's ports this case brings outside ("a real Neutrik `panel` value omitted from `external_ports` gets a DBA-BL-B blank") | `lib/mcc/layout.scad:73-115,306-320` — `mcc_slot_assignment()` and `mcc_case_layout()` derive `n_slots` and every slot's part **solely** from `mcc_ports_external(dev)`. A grep of `lib/**` finds `external_ports` only inside doc comments (`layout.scad:303`, `shell.scad:341`). The key is **inert** | The one documented per-variant switch does nothing. A developer who omits a port id to blank it gets the live connector anyway — silently. It also makes `DBA-BL-B` unreachable, so the blank branch in `mcc_aperture_window()`/`mcc_panel_plate()` is untested dead code | **Open — escalated, teamlead/user call.** Either (i) implement it (`mcc_slot_assignment(dev, cfg)` filters by `external_ports` and pads unfilled slots with `DBA-BL-B`) — a library change, and it would change `n_slots` semantics; or (ii) drop the key and rewrite §4/the skill to say the **device file** is the only source. **Not** work for the seven parallel branches either way. `layout-patch-wall.md` §16.4 |
+| **D13** | 2026-09-08 | Skills must describe the library that exists (§10) | `.claude/skills/new-case-variant/SKILL.md:12-31,55-73` states that `shell.scad`, `cradle.scad`, `mounts.scad`, `vents.scad`, `panel.scad`, `neutrik.scad`, `fasteners.scad`, `fan.scad`, `poe_splitter.scad`, `ghost.scad` and `ports.scad` "do not exist yet", and its template calls `mcc_shell(family=…, device=…, variant=…, half="base")` and `mcc_panel(device=…, variant=…, face=[1,0,0])` — **signatures that exist nowhere.** The real API is `mcc_shell_base(dev, cfg)` / `mcc_shell_lid(dev, cfg)` / `mcc_panel_plate(size, slots)` / `mcc_panel_plate_dims(dev)` / `mcc_slot_assignment(dev)` / `mcc_case_layout(dev, cfg)`, and `case.scad` also carries the `assembly`/`panel_placed`/`ghost_*` preview branches | This skill is the *first* thing seven Sonnet-tier developers will read. A stale template with non-existent signatures is a guaranteed seven-way rework, and the stop-and-report gate it opens with will fire on modules that are in fact present | **Open — BLOCKING in practice for the seven-SKU fan-out; fix on the pre-flight branch.** Rewrite the skill against `models/pro-convert-for-ndi-to-hdmi/case.scad`, which is the normative template until then. Also fix its `external_ports`/`DBA-BL-B` claim per D12 |
+| **D14** | 2026-09-08 | §5 rev 7 frame rule: patch-wall positions are in case coordinates; the placed plate's rear bosses are at `(−9.5, −12)` / `(+9.5, +12)` | `lib/mcc/layout.scad:388-391` builds T1-34d's relief pair from `(slot_x − 9.5, z + 12)` / `(slot_x + 9.5, z − 12)` — the **mirrored** (rev-6 doc) diagonal — while `lib/mcc/shell.scad:210-211` correctly draws `(−sx, −sz)` / `(+sx, +sz)` | Numerically invariant today, because `mcc_panel_fixing_pos()` is symmetric about `z = z_conn_c`, so T1-34d's clearance multiset is identical either way (3.18 mm). Latent: the moment a fixing position becomes asymmetric, T1-34d silently checks the wrong pattern | **Open — low priority, library change.** Publish the relief pair once as a pure function in `layout.scad` and call it from both files. Do **not** fix inside a variant branch |
+| **D15** | 2026-09-08 | §9 Tier 1: contract asserts live *in the model* and fire on every render | T1-30 (intake vent free area ≥ the fan aperture's area) exists only as `tests/test_shell.scad:53`, hard-wired to `MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI`. `mcc_vent_intake_area()` (`vents.scad:174`) is never called from `mcc_shell_base()` | Seven of the eight SKUs will render, pass, and be printed with **no** intake-area check at all — and the margin is genuinely thin: hand-evaluated, `pro-convert-sdi-tx` and `pro-convert-for-ndi-to-sdi` land at ≈1153 mm² against the 1134 mm² threshold (1.6 %), because their `W = 158.80` loses one whole slot off the −X end wall's run | **Open — recommended on the pre-flight branch, not blocking.** Call `mcc_vent_intake_area()` from `mcc_shell_base()` and assert T1-30 there, **after** a render confirms all eight devices pass. If a BNC compact SKU actually fails, that is a real thermal finding — escalate, do not relax `MCC_VENT_AREA_RATIO` |
+| **D16** | 2026-09-08 | §6 floor rule: `mounts.scad` "exposes `mcc_floor_keepout()` and **asserts non-overlap** between all of them"; `layout.scad:240-243` repeats the promise | `lib/mcc/mounts.scad` asserts only VESA-boss-vs-splitter-bay (`:89-92`). There is no pairwise non-overlap check over `mcc_floor_keepout()`'s list, and `MCC_FLOOR_FEATURE_MIN_SEP` (`constants.scad:448`) is referenced by nothing | The floor is the one place §6 predicts silent collisions, and the guard that was supposed to catch them is absent. The `−X` strap slot is already positioned by a *displacement* rule whose only validation would have been this assert | **Open — library change, later single branch.** Add the pairwise `max(MCC_FLOOR_FEATURE_MIN_SEP, r1+r2+2.0)` assert over `mcc_floor_keepout(dev,cfg)` in `mounts.scad`. Not work for the seven |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
@@ -1074,6 +1112,38 @@ free area — not duct depth — is the flow bottleneck; size the intake slots a
 **Floor.** VESA 75×75 and the case's own 1/4"-20 insert default to the case plan centre; `vesa_pos`
 is a shell parameter so a colliding SKU can shift it; `mcc_floor_keepout()` asserts non-overlap. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
+
+**Architect verdict, 2026-09-08 (rev 7): the seven remaining SKUs (issues #3–#9) are APPROVED WITH
+ONE BLOCKING LIBRARY CHANGE.** Full per-SKU fit-check table, ruling and parallel-work rules:
+**`layout-patch-wall.md` §16**; the two record corrections: **§15 ruling 2026-09-08c**.
+
+- **Six of seven need no library change.** Slot order, envelope, pitch, end zones, bay depth, cradle
+  ribs, fastener count and every aperture assert come out correct for all seven straight from the
+  data — §4's acceptance test holds. The **plus** family is `shell.scad`'s first use and was audited
+  specifically: there is no compact-only assumption anywhere in L1/L2 (no family branch, no literal
+  device dimension outside `devices/`). Envelopes: compact `193.9–194.9 × 158.80–159.85 × 51.0`,
+  plus `210.5–211.5 × 165.30–166.35 × 51.0`, all ≥ 38.5 mm inside the 250 mm assert limit.
+- **BLOCKING: T1-18(c).** `lib/mcc/shell.scad:360-366` uses `mcc_plug_len("NBB75DFGB")` = 40.6 as the
+  BNC *axial* term, but that figure **is** the Belden 4855R bend radius (`constants.scad:588-592`
+  says so). The assert therefore double-counts a lateral allowance against an axial budget and fails
+  by **14.60 mm** on SDI TX, SDI Plus, NDI to SDI and NDI to AIO. Fix: give the axial term its own
+  `assumed` table entry (`bnc → 25.0`, pending M6), leaving the envelope untouched — no geometry
+  moves and no golden changes. **Growing `ez_pos` to 55.6 is rejected** (it would add 14.6 mm of `L`
+  to four cases on a number that is admittedly not an axial figure), and so is downgrading the
+  assert. Because it touches `constants.scad` + `shell.scad`, it must land **once, first, on a
+  single pre-flight branch**, with the stale `new-case-variant` skill (D13) fixed alongside it.
+- **HDMI-ended SKUs pass T1-18(c) with exactly 0.00 mm of slack.** When `depth-mockup` (M6) measures
+  the straight HDMI plug above 25 mm, four cases fail at once and the answer is `L`, not the assert.
+- **Merge order: compact first (#3 → #4 → #8 → #9), then plus (#5 → #6 → #7).** Develop in parallel,
+  merge in order, so a plus-family surprise lands against a known-good `main`.
+- **Two views per PR, both mandatory:** an ISO of the assembly *and* a straight-on `−Y → +Y`
+  orthographic elevation of the patch wall with the plate placed. Both defects this repo has shipped
+  to the user (D9's blob, and rev 7's mirrored reliefs) are unambiguous only in that elevation.
+- **Escalations for the user, not for a developer:** (i) R5 says the fan is not optional for the 10 W
+  Plus models, yet #5/#6/#7 will inherit `["fan", false]` from the copied template — confirm before
+  those three merge; (ii) D12 — the `external_ports` variant key is inert, so decide whether to
+  implement it or drop it.
+- **Five new deviations logged (§13): D12–D16.** None of them is work for a variant branch.
 
 **Architect verdict, 2026-09-08 (rev 6): the user's rejection of the patch-wall openings is UPHELD;
 the proposed top-open (U-notch) aperture is REJECTED; the fix is a shape-and-bore change only.**
