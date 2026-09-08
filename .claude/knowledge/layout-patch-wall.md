@@ -1,6 +1,14 @@
 # Patch-wall layout contract
 
-Status: **revision 5, 2026-09-08.** Rev 5 is the L2 architecture gate for
+Status: **revision 6, 2026-09-08.** Rev 6 answers the user's rejection of the first rendered case's
+connector openings (Pro Convert for NDI to HDMI). It **replaces §2.5**: the lip window stops being a
+`hull()`-ed "crown" and becomes a **plain round hole (truncated-teardrop above the 45° line) plus two
+separate boss reliefs**, so the only thing visible through the plate's own D cutout is ≤ 1.5 mm of
+relief crescent. It **retires T1-34** in favour of T1-34a–d and adds T1-35 (the connector screw must
+actually reach its insert). It **rejects the proposed top-open (U-notch) aperture** — reasons in §15
+ruling 2026-09-08b. §2.3 fixing positions are **unchanged**. Rev-5 history follows.
+
+Rev 5 is the L2 architecture gate for
 `docs/plans/2026-09-08-l2-first-case.md`: it rules on that plan's eight `PLAN-ASSUMPTION`s, **replaces
 the §3 worked-results slot table (it was wrong on six of eight rows)**, adds §2.5 (the patch-wall
 aperture is one rabbet + `n_slots` discrete windows), re-scopes T1-18, adds T1-23b/T1-32/T1-33/T1-34,
@@ -221,6 +229,16 @@ into a connector bay.
 > and `shell.scad`; `panel.scad` stops hardcoding it. (An L1 file is the right home — both consumers
 > are L2, so the edge stays downward.)
 
+> **Rev 6, 2026-09-08 — the fixing positions are UNCHANGED.** The user's rejection of the connector
+> openings does not touch plate retention: it stays **4 × M3 at `mcc_panel_fixing_pos(plate_size,
+> rim_w)` = `(±(plate_l/2 − 3), ±16.5)`**, through the plate's rim into heat-set bosses standing
+> rearward off the rabbet lip. The top-open aperture that would have forced this down to "2 lower
+> bosses + lid capture" is rejected (§15 ruling 2026-09-08b). **But those four shell bosses are
+> currently modelled as plain UNBORED solids** (`lib/mcc/shell.scad`
+> `_mcc_patch_wall_fixing_bosses()`, self-documented there) — so the plate cannot in fact be screwed
+> down today. That is deviation **D10** (`architecture.md` §13) and it is a blocker for the first
+> print, not a cosmetic issue. New assert **T1-35**.
+
 > **Correction, 2026-09-08.** Revision 1 recorded `L_panel_min = 172` (4 slots) / `140` (3 slots).
 > Those do not follow from the formula above, which gives **164** and **132**
 > (`span + 68`, `span = (n_slots−1)·32`). The corrected figures are used in §8. It changes nothing
@@ -239,17 +257,32 @@ into a connector bay.
 | Print orientation | flat, face-down (`architecture.md` §5) |
 | Rim | 3 mm ribbed rim around the whole outline (`mcc_panel_plate()` default `rim_t = MCC_WALL`, `rim_w = 6`) |
 
-### 2.5 The patch-wall aperture — ONE rabbet, `n_slots` DISCRETE WINDOWS (new, rev 5, 2026-09-08)
+### 2.5 The patch-wall aperture — ONE rabbet, `n_slots` ROUND WINDOWS + 2 BOSS RELIEFS (rev 6, 2026-09-08)
 
-Rev 1–4 said "the patch wall carries a full-length rectangular aperture with a rabbet" without saying
-whether the *hole through the wall* is one opening or several. It cannot be one:
+> **Rev 6 replaces rev 5's `hull()`ed "crown" window.** Rev 5's shape was the convex hull of the
+> connector circle and the two rear-boss relief circles — a 27.9 × 32.4 mm diagonal blob. The user
+> rejected it on sight ("the 4 D-slots must be exactly round — not the weird round/diamond-like
+> shape they have now"), and the user is right on the merits as well as on looks. See §15 ruling
+> 2026-09-08b for the full ruling, including why the proposed **top-open U-notch aperture is
+> rejected**.
+
+**What the assembled patch wall must look like from outside — the acceptance criterion.** A flat
+plate face recessed `MCC_PANEL_BEZEL_T` (3.0 mm) behind the wall's outer face, carrying `n_slots`
+**exactly round** ⌀`mcc_cutout_d(part)` cutouts (24.2 for `NE8FDP-B`, 23.8 for the 23.6-class parts)
+and, per slot, two ⌀`MCC_M3_CLR_D` (3.4) screw holes on the Neutrik diagonal `(∓9.5, ±12)`. Each
+26 × 31 flange seats flat on that plate face and screws into an M3 heat-set insert in the plate's own
+rear boss. **Nothing else may be visible through a D cutout** except the two relief crescents
+quantified in T1-34b, which the fitted connector body covers completely.
+
+The wall itself still cannot be one long opening — the three rev-5 reasons stand and are not
+re-litigated:
 
 - `architecture.md` §5 is a hard shell rule — "the aperture roof is a ≤45° self-supporting chamfer,
   never a flat bridge … no unsupported horizontal span over 10 mm anywhere in the shell." A single
   161.9 mm-wide void 39 mm tall has no legal roof: a 45° chamfer converging from both top corners
   needs ~81 mm of rise and only 39 mm exists.
 - §6's `n_fast = 6` mid-span lid fastener sits at `x_gap`, a *slot-gap centre* on the patch wall. Its
-  boss runs floor-to-lid and needs solid wall material at that X across the whole aperture band.
+  boss runs floor-to-lid and its gusset needs solid wall material at that X across the aperture band.
 - T1-13 ("every lid-fastener boss clears every flange edge by ≥ `boss_od/2 + 2`") only means anything
   if the boss is embedded in wall material *between* flanges.
 
@@ -257,20 +290,56 @@ whether the *hole through the wall* is one opening or several. It cannot be one:
 
 | Element | Ruling |
 |---|---|
-| Panel plate | **ONE** continuous `plate_l × MCC_PLATE_H` part. Do **not** split it into `n_slots` plates (§5 of `architecture.md`, §2.4 here). |
-| Rabbet | **ONE** continuous pocket in the wall's outer layers, spanning the whole plate footprint + `MCC_CLR_SLIDE` per side. **Stepped, not flat-bottomed:** `MCC_PANEL_BEZEL_T (3) + rim_t (3) = 6 mm` deep over the plate's `rim_w` border ring, `MCC_PANEL_BEZEL_T (3) + MCC_PANEL_SEAT_T (2) = 5 mm` deep over the field. Rev 1–4's uniform 5 mm pocket is wrong — `mcc_panel_plate()`'s rim is 3 mm thick, not 2. |
-| Structural lip behind the plate | 3 mm behind the field, **2 mm behind the rim ring**. Assert `residual lip >= 2.0`. |
-| Windows | `n_slots` **discrete openings through the 3 mm structural lip only**, one per `slot_x(i)`, with solid lip material in the ~8 mm inter-slot webs and out to `MCC_PANEL_FRAME_MIN`. **Not one long opening, and NOT one rabbet per window.** |
-| Window shape | The **minimal** clearance envelope, not a 34 × 39 rectangle: `⌀(mcc_cutout_d(part) + 2·MCC_CLR_SLIDE)` for the connector body at `z = z_conn_c`, **unioned with** two `⌀(boss_od + 2·MCC_CLR_SLIDE)` circles at the `mcc_neutrik_d_bosses()` positions `(∓9.5, ±12)`. Smaller windows leave more lip material, which both stiffens the wall and better supports the plate's 2 mm flange seat. |
-| Window roof | Self-supporting (teardrop crown, or a ≤45° gable ending in a ≤10 mm flat bridge). **T1-34** asserts both the clearance and the ≤10 mm span. |
-| Rabbet-pocket roof | A 5–6 mm-deep horizontal ledge, supported along its whole back edge by the lip — an overhang, not a bridge, and inside the 10 mm rule. A ≤45° relief chamfer is optional. |
+| Panel plate | **ONE** continuous `plate_l × MCC_PLATE_H` part, flat-printed face-down, retained by 4 × M3 at `mcc_panel_fixing_pos()` (§2.3, **unchanged by rev 6**). Do **not** split it into `n_slots` plates. |
+| Rabbet | **ONE** continuous pocket in the wall's outer layers, spanning the whole plate footprint + `MCC_CLR_SLIDE` per side. **Stepped, not flat-bottomed:** `MCC_PANEL_BEZEL_T (3) + rim_t (3) = 6 mm` deep over the plate's `rim_w` border ring, `MCC_PANEL_BEZEL_T (3) + MCC_PANEL_SEAT_T (2) = 5 mm` deep over the field. Unchanged from rev 5 — it is correct and it is what puts the plate face 3.0 mm behind the wall face (the sacrificial bezel). |
+| Structural lip behind the plate | 3 mm behind the field, **2 mm behind the rim ring**. Assert `residual lip >= 2.0`. Unchanged. |
+| Windows | `n_slots` **discrete openings through the 3 mm structural lip only**, one per `slot_x(i)`, with solid lip material in the inter-slot webs and out to `MCC_PANEL_FRAME_MIN`. **Not one long opening, and NOT one rabbet per window.** Unchanged. |
+| **Window shape (CHANGED, rev 6)** | A **`union()` of three separate 2-D profiles — never a `hull()`**: (i) the **body opening**, a plain circle `⌀ d_win = mcc_cutout_d(part) + 2·MCC_CLR_SLIDE` centred on `(slot_x(i), z_conn_c)`, **truncated-teardropped above the 45° tangent line** (below 45° it is exactly the circle); (ii) + (iii) two **boss reliefs**, plain circles `⌀ d_rel = boss_od + 2·MCC_CLR_SLIDE = 8.88` centred on the `mcc_neutrik_d_bosses()` positions `(slot_x(i) ∓ 9.5, z_conn_c ± 12)`. |
+| **Body-opening apex (CHANGED, rev 6)** | Truncated teardrop: `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE (0.4)` above the centre, flat bridge width `w_flat = 2·(d_win/2·√2 − cap_h)`. At `d_win = 24.8` (etherCON): `cap_h = 12.8`, `w_flat = 9.48`; at `d_win = 24.4`: `cap_h = 12.6`, `w_flat = 9.30`. Both ≤ `MCC_APERTURE_BRIDGE_MAX (10.0)`, so `architecture.md` §5's span rule holds **and** the apex stays hidden behind the plate (`cap_h > mcc_cutout_d(part)/2` by 0.7 mm). A full 45° teardrop apex (`r·√2` = 17.5) is **not** used: it would leave only 0.26 mm to the plate's top edge (T1-34c). |
+| **Boss reliefs (CHANGED, rev 6)** | Plain circles, **no teardrop**: `d_rel = 8.88 < MCC_APERTURE_SELF_SUPPORT_MAX_D (10.0)`, so they are self-supporting by this repo's own 10 mm span rule. They stay **separate** from the body opening — they overlap it geometrically (centre distance `hypot(9.5,12) = 15.305`, sum of radii `12.4 + 4.44 = 16.84`), so the union is one connected void and the plate's bosses still slide straight in along −Y, but the *silhouette* is a circle with two small satellites instead of a diagonal blob. |
+| Rabbet-pocket roof | A 5–6 mm-deep horizontal ledge, supported along its whole back edge by the lip — an overhang, not a bridge, and inside the 10 mm rule. A ≤45° relief chamfer on the **bezel layer only** (outer 3 mm, leaving the seat plane intact) is recommended; it improves the 168 mm-long top edge and costs nothing. Optional, not asserted. |
 
-**Why a plain rectangle + 45° top chamfer does not work** (this is the trap the first plan fell into):
-with the window top at `z = 45` and a ≤45° roof, the clear width at height `z` is at most
-`bridge + 2·(45 − z)`, **independent of the window's nominal width**. The plate's rear bosses reach
-`z = z_conn_c + 12 + boss_od/2 = 41.64`, where that gives at most `10 + 6.72 = 16.72 mm` — but the
-boss pair spans `2·(9.5 + 4.14) = 27.28 mm`. No rectangle width fixes it; the two local boss reliefs
-are the fix.
+**Why `union` beats `hull` — three independent reasons, in priority order.**
+
+1. **Roundness (the user's objection).** With `hull()`, the whole boundary of the diagonal blob is
+   visible through the plate's ⌀23.8/24.2 cutout from any oblique angle: the blob is *smaller* than
+   the plate hole along the two diagonal flanks. With `union()`, the body opening is a circle
+   0.3 mm larger in radius than the plate hole and the teardrop apex is larger still, so **the whole
+   body-opening boundary is hidden behind the plate.** Only the two relief circles intrude:
+   `mcc_cutout_d/2 − (15.305 − 4.44)` = **1.04 mm** (23.6-class) / **1.24 mm** (etherCON) of crescent,
+   2.0 mm behind the plate face and covered by the fitted connector body. That is T1-34b.
+2. **Lip material.** The hull removes ~35 % more of the 3 mm structural lip than the union, and it
+   removes it exactly on the diagonal flanks where the plate's 2 mm flange seat most needs backing
+   against plug-insertion load (`architecture.md` §11 R4).
+3. **The hull never bought printability.** The rev-5 code comment claims a "continuously-curved,
+   self-supporting crown". It is not: the top of the hull near the upper relief circle is still a
+   circular arc with a horizontal tangent — exactly the overhang a plain circle has. The
+   self-supporting job is done by the truncated teardrop above, not by hulling.
+
+**Why a plain rectangle + 45° top chamfer still does not work** (kept from rev 5 — the trap the
+first plan fell into): with the window top at `z = 45` and a ≤45° roof, the clear width at height `z`
+is at most `bridge + 2·(45 − z)`, **independent of the window's nominal width**. The plate's rear
+bosses reach `z = z_conn_c + 12 + boss_od/2 = 41.64`, where that gives at most `10 + 6.72 = 16.72 mm`
+— but the boss pair spans `2·(9.5 + 4.14) = 27.28 mm`. No rectangle width fixes it; the two local
+boss reliefs are the fix.
+
+**Where the flange-fixing bosses live, and why they stay on the plate (rev 6, settled).** The two M3
+heat-set bosses per slot stay on the **rear of the panel plate** (`mcc_neutrik_d_bosses()`, called
+from `mcc_panel_plate()`), at `(∓9.5, ±12)` in the front-view diagonal, `boss_h = 7` rearward from
+the plate's rear face. The alternative — moving them into the shell's structural lip, which would
+delete the reliefs and make the window a single perfect circle — was evaluated and **rejected**:
+it forces 8 heat-set inserts to be set blind from inside a 45 mm-deep box against the wall instead of
+on a flat bench plate, it needs longer non-stock M3 screws, and it destroys the "load the plate with
+all four connectors on the bench, then drop it in" assembly sequence that makes a `L − 26` mm plate
+handleable at all. The 1.0–1.24 mm crescent is the price and it is cheap. Recorded so it is not
+re-opened (§15 ruling 2026-09-08b, option C).
+
+**Nothing in the shell needs a relief for the plate's bosses other than the two window circles.** The
+bosses run from `y = W/2 − 5` to `y = W/2 − 12`; the lip occupies `y ∈ [W/2 − 8, W/2 − 5]`, so the
+reliefs must be **through-holes** in the lip (a blind pocket cannot work — the boss is 7 mm long and
+the lip is 3 mm thick) and the remaining 4 mm sits in free interior. No other shell feature is
+affected: the nearest neighbour is the plate-fixing boss at `mcc_panel_fixing_pos()`, whose insert
+bore is **3.18 mm** clear of the outermost relief on NDI to HDMI (T1-34d).
 
 ---
 
@@ -994,7 +1063,12 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-23b** | no vent slot inside the far-wall mid-span lid-fastener boss + gusset strip | **new, rev 5** — §5 vent table. The `n_fast = 6` far-wall fastener lands inside the intake band's X run on every current SKU |
 | **T1-32** | the case's own 1/4"-20 insert stack fits under the device: `MCC_INSERT_1_4_20.len + 1 <= MCC_FLOOR_T + mcc_cradle_deck(dev)` | **new, rev 5** — §7.1 floor correction 3. `13.7 <= 13.85` (compact) / `13.8` (plus): **0.15 / 0.10 mm of slack**. The insert is installed from the case underside and its boss must union into the cradle deck's hollow |
 | **T1-33** | tongue-and-groove fits the lid: `MCC_TG_H + 1.0 <= MCC_LID_T` **and** `MCC_TG_W + 2*MCC_CLR_TG <= MCC_WALL - 0.8` (offset/shiplap tongue) | **new, rev 5** — §2.2 / D-07. The lid is a flat 3.0 mm slab and `H = 51.0` is a fixed user decision, so a 4 mm-deep groove is geometrically impossible and a *centred* tongue does not fit a 3 mm wall at all. See §15 ruling 4 |
-| **T1-34** | every patch-wall window clears the connector's rear envelope: the window opening contains `⌀(mcc_cutout_d(part) + 2*MCC_CLR_SLIDE)` at `z = z_conn_c` **and** the two `mcc_neutrik_d_bosses()` circles `⌀(boss_od + 2*MCC_CLR_SLIDE)` at `(slot_x ∓ MCC_D_SCREW_PITCH[0]/2, z_conn_c ± MCC_D_SCREW_PITCH[1]/2)`; and no unsupported horizontal span in the window roof exceeds 10.0 mm | **new, rev 5** — §2.5, `architecture.md` §5. This is the assert that kills the naive "34 × 39 rectangle with a 45° top chamfer": the plate's rear bosses reach `z = 41.64`, where a 45°-gabled window whose top is at `z = 45` is only 16.7 mm wide |
+| ~~**T1-34**~~ | ~~every patch-wall window clears the connector's rear envelope … and no unsupported horizontal span in the window roof exceeds 10.0 mm~~ | **RETIRED rev 6, 2026-09-08.** It was satisfied by the `hull()`ed crown the user rejected, and it under-specified the shape (any envelope containing the three circles passed, including the blob). Replaced by **T1-34a–d**, which pin the shape exactly. The *reason* T1-34 existed — a 45°-gabled rectangle cannot clear the bosses at `z = 41.64` — is preserved in §2.5's "why a plain rectangle still does not work" |
+| **T1-34a** | the lip window is `union(body, relief_lo, relief_hi)` with `body = truncated teardrop ⌀(mcc_cutout_d(part) + 2*MCC_CLR_SLIDE)`, `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE`, and `relief = ⌀(MCC_BOSS_MIN_RATIO*insert_od + 2*MCC_CLR_SLIDE)` at `(∓MCC_D_SCREW_PITCH[0]/2, ±MCC_D_SCREW_PITCH[1]/2)`. Asserts: `w_flat = 2*(d_win/2*sqrt(2) − cap_h) <= MCC_APERTURE_BRIDGE_MAX` **and** `d_rel <= MCC_APERTURE_SELF_SUPPORT_MAX_D` **and** `cap_h > mcc_cutout_d(part)/2` | **new, rev 6** — §2.5. The first clause is `architecture.md` §5's ≤10 mm span rule; the second says the reliefs are small enough not to need their own teardrop; the third is what hides the apex behind the plate. **`hull()` is forbidden in the aperture** — that is a code-review rule, not assertable |
+| **T1-34b** | *roundness* — the only part of the lip window visible through the plate's own cutout is the two relief crescents: `mcc_cutout_d(part)/2 − (hypot(MCC_D_SCREW_PITCH/2) − d_rel/2) <= MCC_APERTURE_RELIEF_INTRUSION_MAX (1.5)` | **new, rev 6** — §2.5, and the direct expression of the user's requirement. Evaluates to **1.035 mm** for the 23.6-class parts and **1.235 mm** for `NE8FDP-B`. If a future insert or `MCC_BOSS_MIN_RATIO` change pushes this over 1.5 mm the window stops reading as round and the design must be revisited, not fudged |
+| **T1-34c** | *containment* — the whole window stays inside the plate silhouette with `MCC_APERTURE_LIP_WEB_MIN (2.0)` of lip left all round: `cap_h + 2.0 <= MCC_PLATE_H/2`, `MCC_D_SCREW_PITCH[1]/2 + d_rel/2 + 2.0 <= MCC_PLATE_H/2`, and `abs(slot_x(i)) + MCC_D_SCREW_PITCH[0]/2 + d_rel/2 + 2.0 <= plate_l/2` | **new, rev 6** — §2.5. Z: `12.8 + 2 = 14.8 <= 19.5` ✓ and `12 + 4.44 + 2 = 18.44 <= 19.5` ✓ (1.06 mm spare — the binding one). X on NDI to HDMI: `62.95 + 13.94 + 2 = 78.89 <= 83.95` ✓. **This is why the apex is truncated:** a full 45° teardrop apex at `12.4*√2 = 17.54` leaves only 0.26 mm and fails |
+| **T1-34d** | every lip window clears every plate-fixing boss's **insert bore** by ≥ 2.0 mm of lip material: `hypot(fix_x − (slot_x ∓ 9.5), fix_z − (z_conn_c ± 12)) − d_rel/2 − MCC_INSERT_M3.hole_d/2 >= 2.0` | **new, rev 6** — `fdm-rugged-enclosure-guidelines.md:127`. On NDI to HDMI the worst pair is the outer slot's lower relief `(72.45, 13.5)` vs. the fixing at `(80.95, 9.0)`: `9.617 − 4.44 − 2.0 = 3.18 mm` ✓. Measured **to the bore, not to the boss OD** (boss-OD-to-relief is only 1.04 mm, which merely undercuts the boss root on that flank) |
+| **T1-35** | *the connector screw must reach its insert* — `mcc_neutrik_d_bosses()`'s bore is continuous from the boss's rear tip through to the panel's own screw clearance hole: `insert_bore_depth + thru_depth == boss_h` with `insert_bore_depth >= MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` and `thru_d >= MCC_M3_CLR_D`. **No solid material anywhere on the screw axis between the flange face and the insert.** Same rule for the 4 plate-fixing bosses in `shell.scad` | **new, rev 6** — the literal, mm-level form of the user's "there is no place to screw the D-connectors down". Today `bore_depth = len + 1 = 6.7` against `boss_h = 7`, leaving **0.3 mm of solid ASA** across the screw axis (`lib/mcc/neutrik.scad:117-120`), and the four `shell.scad` plate-fixing bosses have **no bore at all** (deviation D10). The `neutrik-tile` coupon exists precisely to catch this and has not been printed |
 
 ---
 
@@ -1082,6 +1156,27 @@ top-to-bottom ordering requirement, not a module dependency.
 | `MCC_STRAP_SLOT` | `[25, 5]` `assumed` | unchanged, but the −X pair's X position is now derived (§7.1 correction 1), not `±(L/2 − 25)` |
 | `MCC_FLOOR_FEATURE_MIN_SEP` | 15.0 | unchanged, §7.1 |
 
+### Rev-6 addendum (2026-09-08) — constants for the aperture ruling
+
+All five are new; all are `assumed` (they are print-process figures, not sourced dimensions) and all
+belong in the **"Patch-wall layout"** section of `constants.scad`, after `MCC_PANEL_BEZEL_T`. None of
+them changes `L`, `W`, `H`, the plate size, the slot pitch or any fixing position — the rev-6 ruling
+is shape-only.
+
+| Constant | Value | Purpose / where used |
+|---|---|---|
+| **`MCC_APERTURE_BRIDGE_MAX`** | **NEW — 10.0** | The one place `architecture.md` §5's "no unsupported horizontal span over 10 mm" becomes a number instead of prose. Used by T1-34a (window apex) and available to T1-31. Do **not** duplicate the literal `10.0` in `shell.scad` or `fasteners.scad` |
+| **`MCC_APERTURE_SELF_SUPPORT_MAX_D`** | **NEW — 10.0 `assumed`** | Round-hole diameter below which a horizontally-printed hole needs **no** teardrop. Same 10 mm span rule read as a diameter. Used by T1-34a to justify plain-circle boss reliefs (`d_rel = 8.88`) |
+| **`MCC_APERTURE_CAP_RISE`** | **NEW — 0.4 `assumed`** | How far the truncated-teardrop cap sits above the body circle's top, mm. `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE`. Chosen as the smallest rise that still hides the cap behind the plate (`cap_h > mcc_cutout_d/2`, margin 0.7 mm) while keeping `w_flat` under `MCC_APERTURE_BRIDGE_MAX`. Calibrate with `neutrik-tile` |
+| **`MCC_APERTURE_RELIEF_INTRUSION_MAX`** | **NEW — 1.5 `assumed`** | Maximum radial intrusion of a boss relief inside the plate's own cutout silhouette, mm — the numeric form of "the D slots must read as exactly round". Actual worst case today 1.235 mm (`NE8FDP-B`). T1-34b |
+| **`MCC_APERTURE_LIP_WEB_MIN`** | **NEW — 2.0** | Minimum lip material between any part of a window and the plate's edge, mm. `fdm-rugged-enclosure-guidelines.md:127`. T1-34c |
+| **`MCC_INSERT_BORE_EXTRA`** | **NEW — 0.5 `assumed`** | Extra bore depth past a heat-set insert's own length so the insert seats fully, mm. Replaces the bare `+ 1` literal in `mcc_neutrik_d_bosses()`. T1-35 |
+| **`MCC_PLATE_RIM_W`** | **NEW — 6.0** | The plate's rim (border) width. It is the *same* number in three places today — `mcc_panel_plate()`'s `rim_w = 6` default, `_mcc_patch_wall_aperture()`'s local `rim_w = 6`, and the literal `6` passed to `_mcc_patch_wall_fixing_bosses()` — across two L2 files, and it feeds `mcc_panel_fixing_pos()`. That is a §3 "no magic numbers in L2" deviation and the exact drift hazard that produced **D6**. Name it once and pass it |
+
+**Explicitly NOT added: `MCC_APERTURE_TOP_OPEN`.** The top-open (U-notch) aperture is rejected, not
+parameterised — a flag for a rejected topology is an invitation to re-open a settled decision and to
+ship an untested second geometry path. §15 ruling 2026-09-08b.
+
 ---
 
 ## 15. Rulings, 2026-09-08 — L2 architecture gate for `docs/plans/2026-09-08-l2-first-case.md`
@@ -1116,3 +1211,83 @@ nine further defects found during validation that the plan did not raise.
 | H | VESA 75 × 75 cannot be M4 clearance through-holes on the compact family — they land under the device | §7.1 correction 4 |
 | I | The far-wall mid-span lid-fastener boss stands inside the intake vent band | §5 vent table, T1-23b |
 | J | The side-bolt support web's floor footprint is 3 × 14, not 3 × 20 | §7.1 floor table |
+
+---
+
+## Ruling 2026-09-08b — user feedback on the connector openings (rev 6)
+
+**Trigger.** The user reviewed the first rendered case (`models/pro-convert-for-ndi-to-hdmi`) in a
+3D viewer and rejected the patch-wall connector openings: *"the 4 D-slots must be exactly round — not
+the weird round/diamond-like shape they have now. As they are now there is no place to screw the
+D-connectors down."*
+
+**What the user was actually looking at.** The rev-5 §2.5 window: `hull()` of the ⌀24.4 body circle
+and the two ⌀8.88 rear-boss reliefs at `(∓9.5, ±12)` — a 27.9 × 32.4 mm diagonal blob through the
+3 mm structural lip (`lib/mcc/shell.scad` `_mcc_patch_wall_window()`). Because that blob is *narrower
+than the plate's own D cutout along the two diagonal flanks*, its outline shows through every plate
+hole. The plate itself, 2.0 mm behind the plate face with the real round cutouts, the ⌀3.4 screw
+holes and the M3 rear bosses, is geometrically correct and correctly placed — but it is not what the
+eye lands on.
+
+**Verdict — the complaint is upheld on all three counts.**
+
+| Count | Finding |
+|---|---|
+| "not exactly round" | **Upheld.** The `hull()` is the cause and it buys nothing: it is not more self-supporting than a plain circle (its top near the upper relief is still a horizontal-tangent arc), it removes ~35 % more of the 3 mm lip than a `union()`, and it removes it exactly where the plate's 2 mm flange seat needs backing (R4). **Fix: `union()` of a truncated-teardrop body circle and two plain relief circles.** §2.5, T1-34a–c |
+| "no place to screw the D-connectors down" — the connectors | **Upheld, and it is a real mm-level defect, not a perception issue.** `mcc_neutrik_d_bosses()` bores `insert_len + 1 = 6.7 mm` into a `boss_h = 7` boss from the **rear** tip, leaving **0.3 mm of solid ASA across the screw axis** between the plate's ⌀3.4 clearance hole and the insert (`lib/mcc/neutrik.scad:117-120`). The screw physically cannot reach the insert. **Fix: continuous bore — insert bore from the rear tip, `MCC_M3_CLR_D` through to the front.** T1-35 |
+| "no place to screw the D-connectors down" — the plate | **Upheld.** The four shell-side plate-retention bosses are **plain unbored solids** (`shell.scad` `_mcc_patch_wall_fixing_bosses()`, self-documented as a known deviation), so the plate cannot be fastened either. Deviation **D10**. Two contradictory comments in `shell.scad` describe this bore as both "not modelled" and "resolved locally" — reconcile them |
+
+**The proposed top-open (U-notch) aperture: REJECTED.** The proposal — a full-plate-width notch from
+the wall's top edge down to the plate's bottom edge, plate slid in from above, lid rim capturing it —
+does eliminate windows by eliminating the roof, and I credit that it also restores a bezel on the
+fourth side (the lid overhangs the recessed plate by `MCC_PANEL_BEZEL_T`). It is still the wrong
+trade, for five reasons, any two of which would be enough:
+
+1. **It breaks the patch wall's top continuity over 168 of 194 mm** (86 % of the wall). The base
+   becomes a ⊐-channel in plan. Racking and torsional stiffness — the properties that carry the 1 m
+   drop-onto-concrete requirement (`architecture.md` §1, `fdm-rugged-enclosure-guidelines.md`) — and
+   ASA warp resistance on a 194 × 160 mm first layer (R9/R14) both depend on that closed rim. The
+   plate cannot substitute: it is a separate part sitting on `MCC_CLR_SLIDE = 0.3` mm of slide
+   clearance and transfers no reliable shear.
+2. **It destroys the tongue-and-groove closure along the whole patch side.** D-07 puts the tongue on
+   the base's inner top perimeter; with the notch there is no base material to carry it for 168 mm.
+   Moving the tongue onto the plate's top edge makes the T&G fit inherit the plate's own slide
+   clearance — a sloppy tongue is worse than no tongue, and the dust/ingress function is lost.
+3. **Plate retention drops from 4 fixings to 2 + lid capture.** On a 168 mm plate carrying four
+   connectors and their cable loads that is a real reduction, and the plate becomes removable only
+   with the lid off (it is currently serviceable from outside).
+4. **The `n_fast = 6` patch-wall mid-span lid fastener loses its gusset.** Its boss at
+   `(x_gap, W/2 − MCC_FASTENER_INSET)` currently gussets into the patch wall floor-to-lid
+   (`_mcc_gusset_web()`); above `z ≈ 5.7` there would be no wall to gusset into, leaving a
+   free-standing 45 mm pillar in the connector bay.
+5. **It forces `MCC_PLATE_H` off its derivation** (39.0 = `MCC_D_FLANGE[1] + 2·MCC_D_FLANGE_EDGE_MARGIN`,
+   the D-06 veto) up to ~42.3 to reach the wall top, or leaves a 2.7 mm open slot along 168 mm.
+   Either way it perturbs `H_int`/`z_conn_c`, and `H = 51.0` is a **fixed user decision**.
+
+All of that to remove a shape that one word of code (`hull` → `union`) removes. **Do not build it,
+and do not add a `MCC_APERTURE_TOP_OPEN` flag** — see §11's rev-6 addendum.
+
+**Option C, also rejected (recorded so it is not re-opened): move the flange-fixing bosses from the
+plate into the shell's structural lip.** This is the only way to make the lip window a single
+*perfect* circle with no relief crescents at all, and it would put the connector fixing into
+wall-backed 3 mm shell material instead of a 2 mm plate field (attractive against R4). Rejected
+because it costs more than it buys: 8 heat-set inserts per case would have to be set blind from
+inside a 45 mm-deep box against the patch wall instead of on a flat bench plate; it needs
+non-stock ~M3×14 screws (flange + 2 mm plate + 3 mm lip + engagement) instead of the screws Neutrik
+supplies; and it destroys the "bolt all four connectors to the plate on the bench, then drop the
+loaded plate into the rabbet" sequence, which is what makes an `L − 26` mm plate handleable. The
+residual 1.0–1.24 mm relief crescent is 2 mm behind the plate face and is covered by the fitted
+connector body — an acceptable price. §2.5.
+
+**Process finding (the reason a rejected design reached the user at all).** The only patch-wall view
+in `exports/` that shows the plate is `preview-rear.png`, an oblique ISO. There is no straight-on
+outside elevation of the assembled patch wall, and `scripts/build.py` renders no previews at all —
+they are ad-hoc. A geometry whose acceptance criterion is "what the user sees from outside" must be
+reviewed in exactly that view. **Required, `architecture.md` §9 Tier-4 / the `print-check` skill:
+every case variant publishes a straight-on `−Y → +Y` orthographic elevation of the assembled patch
+wall (base + `panel_placed`) before it is shown to the user.** Cheap, and it prevents a repeat.
+
+**Not changed by this ruling:** `L`, `W`, `H`, `plate_l`, `MCC_PLATE_H`, slot pitch, slot assignment,
+the stepped rabbet, `MCC_PANEL_BEZEL_T`, `mcc_panel_fixing_pos()`, and every §9 assert other than
+T1-34/T1-35. This is a shape-and-bore ruling, not an envelope ruling — no golden bbox moves, though
+volumes will.
