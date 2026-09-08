@@ -15,15 +15,15 @@ That inversion drives most of the design decisions recorded in
 
 ## Status
 
-**First full case implemented: `pro-convert-for-ndi-to-hdmi`** (compact family, 193.9 × 159.85 ×
-51.0 mm). The L0/L1 library (`lib/mcc/**`: constants, ports, layout solver, Neutrik cutout,
-fasteners, fan, PoE-splitter envelope, ghost, panel dispatcher) and the L2 geometry (`shell.scad`,
-`cradle.scad`, `mounts.scad`, `vents.scad`) now exist alongside 8 device data files and the 6
-physical calibration coupons (`models/coupons/*.scad`, with goldens); `build.py all` is green
-(smoke/render/check/golden). Next: print and measure the coupons and the first case on the X1
-Carbon (every dimension below `measured` confidence is still `assumed`/`photo`), then the
-remaining 7 per-device case assemblies. See `.claude/knowledge/session-resume.md` for the ordered
-plan.
+**All eight priority cases are implemented** (`models/<slug>/case.scad`): Pro Convert HDMI TX,
+SDI TX, HDMI Plus, SDI Plus, and the NDI decoders to HDMI, HDMI 4K, SDI and AIO. Compact-family
+cases are ≈ 194–195 × 159–160 × 51 mm, Plus-family cases ≈ 210–212 × 165–166 × 51 mm with a
+Noctua NF-A4x10 fitted by default. Every merge to `main` publishes a pre-release with one zip per
+device (STL + 3MF + STEP + manifest) — see "Releases" below. **Every dimension below `measured`
+confidence is still `assumed`/`photo`**: the next step is physical — print and measure the six
+calibration coupons (`models/coupons/*.scad`) on the X1 Carbon, measure the device's side 1/4"-20
+hole, the PoE splitter and the E-clip, write the values into `lib/mcc/constants.scad`, then print
+the first full case. See `.claude/knowledge/session-resume.md` for the ordered plan.
 
 ## Repo map
 
