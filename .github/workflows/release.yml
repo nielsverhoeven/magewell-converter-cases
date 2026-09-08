@@ -10,12 +10,16 @@ name: release
 #   3. scripts/build.py confidence --json reports every port below "measured" confidence and
 #      sets `prerelease=true` if any are found — this SOFTENS the old release gate (which used to
 #      fail the build on any WARNING: unmeasured) into a pre-release marker instead, per the issue.
-#   4. scripts/package_release.py builds one zip per device case plus a coupons zip.
+#   4. scripts/package_release.py builds one zip per device case plus a coupons zip, copies every
+#      rendered STEP file into dist/step/<slug>-<part>.step (unique, self-describing names — the
+#      old loose `<part>.step` names, e.g. base.step/lid.step/panel.step, collided across the now
+#      eight-plus device cases, since GitHub release assets must be unique repo-wide; see issue
+#      #10), and writes dist/SHA256SUMS.txt covering every dist/ file.
 #   5. An annotated git tag is created and pushed (CONTRIBUTING.md: "Tags are annotated ... never
 #      lightweight" — softprops/action-gh-release would create a lightweight tag on its own if
 #      given a tag_name that doesn't exist yet, so the tag is created explicitly first).
-#   6. softprops/action-gh-release publishes the GitHub Release with the zips and the loose
-#      *.step files attached.
+#   6. softprops/action-gh-release publishes the GitHub Release with the per-model/coupon zips,
+#      the loose dist/step/*.step files, and dist/SHA256SUMS.txt attached.
 #
 # See CONTRIBUTING.md's release section and .claude/knowledge/architecture.md §8 (export policy).
 
@@ -100,4 +104,5 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*.zip
-            exports/**/*.step
+            dist/step/*.step
+            dist/SHA256SUMS.txt
