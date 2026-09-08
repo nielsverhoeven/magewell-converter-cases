@@ -1,6 +1,13 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 4, 2026-09-08.** Baseline 2026-09-07 (before any code); rev 2 added the patch-wall
+Status: **revision 5, 2026-09-08.** Rev 5 is the L2 architecture gate for
+`docs/plans/2026-09-08-l2-first-case.md` (first full case, Pro Convert for NDI to HDMI). It adds
+`lib/mcc/layout.scad` at L1 and the `shell.scad`-as-L2-composition-root rule (§3), settles what the
+patch-wall aperture actually is (§5), corrects the family `W` figures to 159.85 / 166.35 (§1), and
+logs deviations **D5–D8** (§13). Every rev-5 ruling, including the eight `PLAN-ASSUMPTION` verdicts,
+is collected in **`layout-patch-wall.md` §15** — read that before implementing L2.
+
+Rev 4 history follows. Baseline 2026-09-07 (before any code); rev 2 added the patch-wall
 topology; rev 3 recorded the user's decisions on R11 (dongle-class splitter), R12 (**side** bolt
 retention), D-04 (accepted), D-06 (**vetoed** → H = 51), D-08 (**vetoed** → straight-plug end zones)
 and the dropped `develop` branch. **Rev 4 closes the last two blockers:** R15 → the splitter
@@ -48,8 +55,13 @@ the end zones. Full derivation, coordinate frame, slot rule, keep-outs and asser
 
 | Family | Shell envelope = printed bbox, L × W × H | Lid fasteners | Bed margin vs 256 | Margin vs the 250 assert limit |
 |---|---|---|---|---|
-| `compact` (device 100.9 × 60.2 × 23.3) | **194.9 × 159.9 × 51.0 mm** | 6 | 61.1 / 96.1 mm | 55.1 / 90.1 mm |
-| `plus` (device 117.5 × 66.7 × 23.4) | **211.5 × 166.4 × 51.0 mm** | 6 | 44.5 / 89.6 mm | 38.5 / 83.6 mm |
+| `compact` (device 100.9 × 60.2 × 23.3) | **194.9 × 159.85 × 51.0 mm** | 6 | 61.1 / 96.15 mm | 55.1 / 90.15 mm |
+| `plus` (device 117.5 × 66.7 × 23.4) | **211.5 × 166.35 × 51.0 mm** | 6 | 44.5 / 89.65 mm | 38.5 / 83.65 mm |
+
+> **Rev-5 correction (2026-09-08).** The `W` figures were 159.9 / 166.4 through rev 4. The HDMI bay
+> depth in the table below is rounded to "75.7"; `constants.scad` gives the exact `40.65 + 35 = 75.65`,
+> so `d_bay_free = 70.65` and `W = 159.85 / 166.35`. **The code computes the exact value; do not round
+> it back to match a doc.** `layout-patch-wall.md` §8 carries the per-SKU table.
 | `ip_decoder` (120 × 79.3 × 24.5) | future — not derived | — | — | — |
 
 Per-SKU L/W vary within the family (they are computed from the port map, not hand-typed); the figures
@@ -131,7 +143,11 @@ L2  lib/mcc/shell.scad                    base + lid, tongue-and-groove, apertur
     lib/mcc/vents.scad                    chimney slot arrays
         │
         ▼
-L1  lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
+L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS ONLY, NO MODULES
+                                          (envelope L/W/H, device placement, slot assignment,
+                                          end zones, plate/fixing positions, fan/splitter/
+                                          side-bolt/lid-fastener positions). Added rev 5.
+    lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
     lib/mcc/fasteners.scad                heat-set bosses, captive thumbscrew, 1/4"-20 boss
     lib/mcc/fan.scad                      fan bay envelope, grille, finger guard
     lib/mcc/poe_splitter.scad             splitter bay envelope + tie-down
@@ -158,6 +174,20 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
   cycles).
 - `lib/mcc/devices/*.scad` must import **nothing** except `ports.scad`. If a device file needs
   geometry, the design is wrong.
+- **`layout.scad` (L1, added rev 5, 2026-09-08).** The one place the case-layout formulas live, so
+  `shell`/`panel`/`cradle`/`mounts`/`vents` never re-derive `L`/`W`/`H`/slot/end-zone maths
+  independently. Constrained so it can never grow into a second shell: **functions only, never a
+  module**; it may `use` only `constants.scad`, `ports.scad` and `util.scad`, and **never** an L1
+  geometry provider (`neutrik`, `fasteners`, `fan`, `poe_splitter`, `ghost`). It returns positions and
+  numbers; callers fetch geometry/keep-outs from the providers themselves.
+- **`shell.scad` is the composition root of L2 (sanctioned exception, rev 5).** It — and only it — may
+  `use` its L2 peers `cradle.scad`, `mounts.scad`, `vents.scad`. Those three, plus `panel.scad`, must
+  **never** `use` each other or `shell.scad`; that keeps the L2 graph an acyclic tree rooted at
+  `shell.scad` and keeps `models/<slug>/case.scad` the ~40–80-line thin assembly §4 promises. The
+  alternative — composing base = shell ∪ cradle ∪ floor − vents in every L4 file — duplicates real
+  composition logic per SKU and is rejected.
+- **`shell.scad` must not `use <neutrik.scad>`.** If the shell ever needs a connector-shaped void it
+  goes through `mcc_panel_cutout()` (§5 dispatcher rule). Today it needs neither.
 
 ### Naming (mandatory — OpenSCAD has one global namespace)
 
@@ -275,6 +305,13 @@ are part of the design contract:
   the M3 screws. The screws only resist pull-out.
 - The aperture roof is a **≤45° self-supporting chamfer**, never a flat bridge. This is a general
   shell rule: *no unsupported horizontal span over 10 mm anywhere in the shell.*
+- **What "the aperture" actually is (rev 5, 2026-09-08 — resolves the ambiguity this rule exposed).**
+  One plate, **one continuous stepped rabbet**, and **`n_slots` discrete windows** through the 3 mm
+  structural lip — *not* one 162–186 mm opening, which has no legal roof, and *not* one rabbet per
+  window. Each window is the minimal clearance envelope (connector body ∪ the plate's two rear screw
+  bosses), self-supporting roof, ≤10 mm bridge. Solid lip material survives in the inter-slot webs,
+  which is what carries the `n_fast = 6` mid-span lid-fastener boss at `x_gap`. Full normative spec
+  and the arithmetic that rules out the naive rectangle: `layout-patch-wall.md` §2.5 + T1-34.
 - Seam sealing, if ever needed, is a gasket channel in the rabbet — not a tighter fit.
 
 **Fallback rule:** a face carrying exactly one connector *may* be integral to the shell with a local
@@ -921,6 +958,10 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | D2 | 2026-09-08 | §6 floor rule: the floor no longer carries a device through-bolt | `lib/mcc/fasteners.scad:100-120` `mcc_tripod_boss()` is a boss with a ⌀6.6 **clearance** through-hole — i.e. exactly the withdrawn floor through-bolt geometry. The floor's remaining 1/4"-20 feature is a *threaded* one (case → tripod plate) | An unused module whose contract contradicts the design will be picked up by the first developer who greps for "tripod" | **Resolved 2026-09-08** (commit bb1497f retired `mcc_tripod_boss()` in favour of `mcc_case_tripod_insert_boss/_bore()`; flush reconciliation in the follow-up commit). Original note: same task that adds `mcc_captive_side_bolt_boss/cut()` to `fasteners.scad`. Either repurpose it as a 1/4"-20 *insert* boss for the floor, or retire it. Re-verify at the end of that task |
 | D3 | 2026-09-08 | §8 branching: `develop` is dropped | `CONTRIBUTING.md`, `.claude/skills/git-flow`, the PR template, `CHANGELOG.md` and the `gitflow.*` git config still described `develop`. `.github/workflows/render.yml:11-17` was already correct | An agent reading `git-flow` will open a PR against a branch that should not exist | **RESOLVED 2026-09-08.** Branching docs rewritten: `CONTRIBUTING.md:4-6` and `.claude/skills/git-flow/SKILL.md:9-11` now state "There is no `develop`, `release/*`, `hotfix/*`, or `support/*` branch"; `CLAUDE.md:116-117`, the PR template, `CHANGELOG.md`, `README.md` and `.claude/knowledge/ticket-source.md` updated; CI triggers already `main` + `v*` + PRs to `main`; the `gitflow.*` git config was removed. Verified by grep: the only remaining `develop` hits in tracked non-BOSL2 files are negations or the English word "developer" |
 | D4 | 2026-09-08 | Nothing but source and small text goldens in the working tree (§8) | Two untracked junk files in the repo root, `5` and `RJ45,` (`git status`), almost certainly the debris of a mis-quoted PowerShell redirect | They will be swept into a commit by a `git add -A`, and CI's stray-file guard may or may not catch them | **Open — trivial housekeeping, teamlead's call.** Delete them (architect is read-only; I have not touched them). Not a design issue |
+| D5 | 2026-09-08 | §7 / `layout-patch-wall.md` §3 slot rule: block A = `face.x < 0` takes the leftmost slots | `layout-patch-wall.md` §3's own "Worked results" table contradicted the rule on **6 of 8 rows** (both TX rows, all four decoder rows; HDMI Plus had slots 3/4 swapped). Root cause: the table was built from Magewell's "Face A", which is the *video* end on the decoders, not the case frame's −X block | The BOM's per-slot connector labelling, the panel plate render and any hand-check of `mcc_slot_for_port()` would all have been wrong; on the decoders it put the etherCON at the +X end, i.e. the opposite end of the case from the PoE splitter that must be fed from it | **Resolved 2026-09-08 (doc fix).** Table replaced in `layout-patch-wall.md` §3 + a naming warning added to step 3. **No device file changes** — the data is correct. Ruling detail: §15 ruling 8 |
+| D6 | 2026-09-08 | `layout-patch-wall.md` §2.3 plate retention vs. the implemented plate | `lib/mcc/panel.scad:102-104` cuts the plate's 4 M3 holes at `(±(w/2 − rim_w/2), ±(h/2 − rim_w/2))` = `(±(plate_l/2 − 3), ±16.5)`; the contract said `z = z_conn_c ± 14` and implied `x = ±(plate_l/2 − 4)` | `shell.scad` placing its heat-set bosses from the doc would put them 1.0 mm out in X and 2.5 mm out in Z — the screws would not line up with the printed plate | **Resolved 2026-09-08 (doc fix + a required code change).** The plate wins; the expression moves into `mcc_panel_fixing_pos()` in the new `layout.scad`, `use`d by both `panel.scad` and `shell.scad` so they cannot drift. See `layout-patch-wall.md` §2.3 |
+| D7 | 2026-09-08 | §6 reservation rule / `layout-patch-wall.md` §5 on-edge splitter (`H→X, L→Y, W→Z`) | `lib/mcc/poe_splitter.scad:38-45,62-72` — both `mcc_splitter_envelope()` and `mcc_splitter_tiedown()` are authored **flat** (`L→X, W→Y, H→Z`), and the envelope additionally inflates `size[0]` by `2 × cable_allow`, so a naive call reserves a 115 × 40 × 20 box on the wrong axes instead of §5's 20 × 75 × 40 | `shell.scad` would reserve the wrong volume and `mounts.scad` would cut the tie-downs on the wrong axis — a silent, invisible failure that only shows up when the splitter is fitted | **Open — approved fix, developer task.** Add `orient = "edge"` to both modules and a `cable_allow` toggle to the envelope; `mounts.scad` calls the module rather than hand-rolling holes. Re-verify at the end of the L2 milestone |
+| D8 | 2026-09-08 | §5 "the aperture roof is a ≤45° self-supporting chamfer … no unsupported horizontal span over 10 mm" | `layout-patch-wall.md` rev 1–4 specified "a full-length rectangular aperture with a rabbet" with no window/opening distinction, which is unbuildable at 162–186 mm | Would have produced either an unprintable roof or an ad-hoc improvisation in `shell.scad` — and would have removed the wall material the `n_fast = 6` patch-wall mid fastener needs | **Resolved 2026-09-08 (doc fix).** `layout-patch-wall.md` §2.5 is now normative: one plate, one stepped rabbet, `n_slots` discrete minimal windows, T1-34 |
 
 ---
 
@@ -980,6 +1021,16 @@ free area — not duct depth — is the flow bottleneck; size the intake slots a
 **Floor.** VESA 75×75 and the case's own 1/4"-20 insert default to the case plan centre; `vesa_pos`
 is a shell parameter so a colliding SKU can shift it; `mcc_floor_keepout()` asserts non-overlap. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
+
+**Architect verdict, 2026-09-08 (rev 5): the L2 implementation plan
+`docs/plans/2026-09-08-l2-first-case.md` is APPROVED WITH CHANGES.** The envelope arithmetic
+(193.9 × 159.85 × 51.0), the coordinate frame, the slot/pitch/end-zone maths, the 6-fastener
+placement including the far-wall displacement to −12.64, and the `part=="assembly"` export exclusion
+are all correct. Changes required before a developer starts: the corrected slot order (§3), the
+aperture spec (§2.5), `MCC_TG_W/H = 1.6/2.0`, `MCC_VENT_INTAKE_BAND_H = 18.0`, the deterministic
+far-flank rib rule (§7), an `orient` parameter on `poe_splitter.scad` instead of hand-rolled
+tie-downs, and the ten further corrections in `layout-patch-wall.md` §15. Nothing structural is
+blocked; `shell.scad` may be written against `layout-patch-wall.md` **rev 5**.
 
 **Architect verdict, 2026-09-08 (rev 4): APPROVED.** Both remaining design blockers are closed by
 user decision — **D-12** (R15: reservation allowances sum, `ez_neg = 47`, +20 mm `L`, 6 thumbscrews on
