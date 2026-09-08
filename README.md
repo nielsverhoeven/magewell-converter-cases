@@ -82,13 +82,21 @@ Or equivalently via the wrapper: `scripts\render.ps1 doctor`, etc. Full command 
 Every merge to `main` triggers `.github/workflows/release.yml`, which computes the next `vX.Y.Z`
 from [Conventional Commits](https://www.conventionalcommits.org/) since the last release, builds
 and tests everything (including STEP export), tags `main`, and publishes a GitHub Release —
-**there is no manual tagging step**. Each release ships:
+**there is no manual tagging step**. Each release ships three kinds of asset, all with unique,
+self-describing names (with eight-plus device cases, the pre-v0.1.0 release's bare `base.step` /
+`lid.step` / `panel.step` names collided across models — GitHub release assets must be unique
+repo-wide, see issue #10):
 
-- One `<device-slug>-vX.Y.Z.zip` per case (e.g. `pro-convert-for-ndi-to-hdmi-v0.1.0.zip`), containing
-  every part's `.stl`, `.3mf`, `.step`, and `.manifest.json`, plus a `README.txt` naming the device,
-  the version, and the git SHA.
-- One `coupons-vX.Y.Z.zip` with every calibration coupon's exports.
-- The loose `*.step` files, attached directly to the release as well.
+- **`<device-slug>-vX.Y.Z.zip`** — one per case (e.g. `pro-convert-for-ndi-to-hdmi-v0.1.0.zip`),
+  containing that model's `.stl`, `.3mf`, `.step`, and `.manifest.json` for every part
+  (base/lid/panel), plus a `README.txt` naming the device, the version, and the git SHA. Also
+  `coupons-vX.Y.Z.zip`, with every calibration coupon's exports.
+- **`<slug>-<part>.step`** — every part's STEP file again, loose (not zipped), named
+  `<device-slug>-<part>.step` for a case (e.g. `pro-convert-for-ndi-to-hdmi-base.step`) or
+  `coupons-<coupon-name>.step` for a coupon (e.g. `coupons-neutrik-tile.step`) — for anyone who
+  wants a single part in another CAD tool without downloading the whole zip.
+- **`SHA256SUMS.txt`** — one `<sha256>  <relative/path>` line per asset above, to verify a
+  downloaded file wasn't corrupted or tampered with.
 
 **A release is marked pre-release** on GitHub whenever any device still has a port below `measured`
 confidence — true for every device today (nobody has physically measured a port position yet, see
