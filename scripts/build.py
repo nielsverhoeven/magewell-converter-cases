@@ -165,8 +165,33 @@ def discover_models() -> list[Target]:
             text = ""
         if 'part == "panel"' in text:
             parts.append("panel")
+        for extra in _extra_parts(text):
+            if extra not in parts:
+                parts.append(extra)
         targets.append(Target(name=slug, scad_path=case_path, parts=parts, kind="model"))
     return targets
+
+
+# A model's case.scad can declare additional `-D part="..."` values beyond the hardcoded
+# base/lid(/panel) set above via a `// build.py: extra_parts = <name>[, <name>...]` comment marker
+# (issue #11 — e.g. `base_fan`, a fixed-config variant of an existing part=="base" branch, added so
+# CI renders/checks/golden-tracks it like any other part without build.py needing to know what the
+# variant actually configures — that stays entirely inside case.scad's own `if (part == ...)`
+# dispatch). Each declared name becomes an ordinary Target.parts entry: rendered with plain
+# `-D part="<name>"` (render_part() never needs a part-specific `-D` override — the .scad file's own
+# dispatch is what makes "base_fan" behave differently from "base"), then checked and golden-tracked
+# exactly like base/lid/panel.
+_EXTRA_PARTS_MARKER_RE = re.compile(r"//\s*build\.py:\s*extra_parts\s*=\s*(.+)")
+
+
+def _extra_parts(case_scad_text: str) -> list[str]:
+    names: list[str] = []
+    for m in _EXTRA_PARTS_MARKER_RE.finditer(case_scad_text):
+        for raw in m.group(1).split(","):
+            name = raw.strip()
+            if name and name not in names:
+                names.append(name)
+    return names
 
 
 def discover_all() -> list[Target]:
