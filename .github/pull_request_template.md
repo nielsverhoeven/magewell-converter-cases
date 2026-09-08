@@ -1,8 +1,7 @@
 <!--
 Target-branch reminder (see CONTRIBUTING.md for the full model):
-  feature/*          -> develop
-  release/*, hotfix/* -> main  (plus a back-merge PR into develop)
-Never target main from a feature branch, and never commit directly on main or develop.
+  feature/*  -> main   (this includes urgent fixes: feature/hotfix-<topic>)
+Never commit directly on main — every change reaches it through this kind of PR.
 -->
 
 ## Summary

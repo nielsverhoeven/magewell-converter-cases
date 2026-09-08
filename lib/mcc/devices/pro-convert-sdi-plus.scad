@@ -32,8 +32,10 @@ MCC_DEV_PRO_CONVERT_SDI_PLUS = [
         // End B top row: 16-position rotary switch (flanked by Tally PREVIEW/PROGRAM LEDs, not modelled as ports)
         [["id", "rotary"],    ["face", [ 1, 0, 0]], ["pos", [  0, 10]], ["kind", "rotary16"],
          ["dir", "none"],     ["panel", "none"],      ["confidence", "photo"]],
-        // Bottom: 1/4"-20 threaded hole, position undocumented for the Plus family (architecture.md §11 R8)
-        [["id", "tripod"],    ["face", [0, 0, -1]], ["pos", [30, 0]], ["kind", "tripod_1_4_20"],
+        // 1/4"-20 thread is on a long side face (user-verified 2026-09-08); u/v position
+        // unmeasured — measure X from the nearest short end, Z from the bottom, and which side
+        // seen from the USB/RJ45 end; the case yaw puts this face at -Y (layout-patch-wall.md).
+        [["id", "side_bolt"], ["face", [0, -1, 0]], ["pos", [0, 0]], ["kind", "tripod_1_4_20"],
          ["dir", "none"],     ["panel", "none"],      ["confidence", "assumed"]]
     ]]
 ];

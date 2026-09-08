@@ -70,6 +70,34 @@ module test_device(dev) {
         }
     }
 
+    // T1-22 (architecture.md §7 side_bolt convention, layout-patch-wall.md §9): every device has
+    // exactly one port with id "side_bolt", face [0,-1,0], kind "tripod_1_4_20", panel "none"; no
+    // port remains with the pre-decision id "tripod" or with kind "tripod_1_4_20" on a +-Z face
+    // (deviation D1, architecture.md §13, must be fully resolved on every device file).
+    side_bolts = [for (p = ports) if (mcc_port_kind(p) == "tripod_1_4_20") p];
+    assert(len(side_bolts) == 1,
+        str("mcc test_ports: T1-22 device \"", slug, "\" has ", len(side_bolts),
+            " port(s) of kind \"tripod_1_4_20\", expected exactly 1"));
+    sb = side_bolts[0];
+    assert(mcc_port_id(sb) == "side_bolt",
+        str("mcc test_ports: T1-22 device \"", slug, "\" side-bolt port id is \"", mcc_port_id(sb),
+            "\", expected \"side_bolt\" (D1 -- the pre-decision \"tripod\" id must be renamed)"));
+    assert(mcc_port_face(sb) == [0, -1, 0],
+        str("mcc test_ports: T1-22 device \"", slug, "\" side-bolt port face is ", mcc_port_face(sb),
+            ", expected [0,-1,0] (architecture.md §7 side_bolt convention)"));
+    assert(mcc_port_panel(sb) == "none",
+        str("mcc test_ports: T1-22 device \"", slug, "\" side-bolt port panel is \"", mcc_port_panel(sb),
+            "\", expected \"none\""));
+    for (p = ports) {
+        assert(mcc_port_id(p) != "tripod",
+            str("mcc test_ports: T1-22 device \"", slug, "\" still has a port with the pre-decision id \"tripod\""));
+        if (mcc_port_kind(p) == "tripod_1_4_20") {
+            f = mcc_port_face(p);
+            assert(!(f == [0, 0, 1] || f == [0, 0, -1]),
+                str("mcc test_ports: T1-22 device \"", slug, "\" has a \"tripod_1_4_20\" port on a +-Z face ", f));
+        }
+    }
+
     // Required warning surfacing (architecture.md:288).
     weak = mcc_warn_unmeasured(dev);
     echo(str("mcc test_ports: \"", slug, "\" has ", len(weak), " port(s) below \"measured\" confidence"));

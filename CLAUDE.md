@@ -38,18 +38,23 @@ Two knowledge trees, do not merge them:
   for a possible future variant only, do not wire it up by default.
 - **Layout**: side-exit with **one patch wall** — all external connectors sit in a single long side
   wall; the other long wall and both end walls carry none. Not in line with the device (an in-line
-  layout exceeds the 256 mm bed for the Plus family, see architecture.md §11 R1). Envelope
-  ≈ 190 × 150 × 45 mm; max 4 D-connectors per model; lids over 180 mm get 6 thumbscrews.
+  layout exceeds the 256 mm bed for the Plus family, see architecture.md §11 R1). Family envelopes
+  (layout-patch-wall.md rev 3): compact 194.9 × 159.9 × 51 mm, Plus 211.5 × 166.4 × 51 mm — base
+  and lid print on separate plates; max 4 D-connectors per model; 6 lid thumbscrews on both.
 - **Cooling**: passive-first; parametric fan bay (Noctua NF-A4x10 5V default); reserved PoE-splitter
   bay (802.3af→5 V USB, gigabit) with a **dongle-class default envelope 75×40×20 mm** (`assumed`,
   e.g. UCTRONICS U6114/U6115 — buy one and measure; the GAT-USBC 114×51×25 does not fit, see
-  architecture.md §11 R11). Both bays are reserved in every variant even when unused (§6 rule).
-- **Closure**: tongue-and-groove lid, captive M3 knurled thumbscrews into M3 heat-set inserts (6 on
-  lids >180 mm, 4 on compact). **Retention: captive 1/4"-20 SLOTTED bolt through the far (non-patch)
-  long wall into the device's side thread** — the user verified the device's 1/4"-20 hole is on a
-  long side face; the bolt must stay in the case when unscrewed; the device lies flat in a ribbed
-  cradle. No floor through-bolt. Floor features (one owner, `mounts.scad`): 1/4"-20 insert for the
-  case itself, VESA 75×75 + Magewell-Fishtail-compatible M4 holes, strap slots, stacking profile.
+  architecture.md §11 R11). Both bays are reserved in every variant even when unused (§6 rule);
+  the splitter reservation adds 20 mm to the −X end zone on every variant (D-12).
+- **Closure**: tongue-and-groove lid, 6 captive M3 knurled thumbscrews into M3 heat-set inserts
+  (rule: 6 above 180 mm lid span; both families are above it). **Retention: captive 1/4"-20
+  SLOTTED bolt + DIN 6799 E-clip through the far (non-patch) long wall into the device's side
+  thread** — the user verified the device's 1/4"-20 hole is on a long side face; the bolt must stay
+  in the case when unscrewed; the boss is **flush** (far wall moved 10 mm outward, `MCC_GAP_FAR`
+  16, no external lug — D-13); the device lies flat in a ribbed cradle. No floor through-bolt. Floor
+  features (one owner, `mounts.scad`): 1/4"-20 threaded insert for the case itself, VESA 75×75 +
+  Magewell-Fishtail-compatible M4 holes, strap slots, stacking profile. Hole position per SKU is
+  `assumed` until measured (X from the short end, Z from the bottom, which side).
   Case height stays **51 mm** (4 mm Z web; 49 mm proposal vetoed); **no right-angle HDMI adapter in
   the default BOM** — end zones are sized for straight plugs, measured with the `depth-mockup` coupon.
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
@@ -91,7 +96,7 @@ python scripts/build.py all           # doctor + smoke + render + check + golden
 | Scaffold a new `models/<slug>/` case assembly | `new-case-variant` |
 | Pre-slice go/no-go before printing | `print-check` |
 | Regenerate `BOM.md` | `bom-update` |
-| Pick a branch, sequence a commit/PR/release/hotfix | `git-flow` |
+| Pick a branch, sequence a commit/PR/release | `git-flow` |
 
 ## Team routing
 
@@ -114,13 +119,12 @@ explains what to do when a dependency is missing: stop and report, don't improvi
 ## Branching (Git Flow)
 
 This repo uses a simplified Git Flow **without a `develop` branch** (user decision 2026-09-08):
-`main` is the integration *and* release branch; work happens on `feature/*` (and `hotfix/*`)
-branches that reach `main` via PR; releases are annotated `vX.Y.Z` tags on `main`. Recipes in
-`CONTRIBUTING.md` and the `git-flow` skill (see the table above) — where those still mention
-`develop`, read `main`. Three non-negotiables:
+`main` is the integration *and* release branch; all work happens on `feature/*` branches (a hotfix
+is simply a feature branch off `main`) that reach `main` via PR; releases are annotated `vX.Y.Z`
+tags on `main`. Recipes in `CONTRIBUTING.md` and the `git-flow` skill (see the table above). Three
+non-negotiables:
 
-- **Never commit directly on `main`.** All work happens on `feature/*` or `hotfix/*` and reaches
-  `main` via PR.
+- **Never commit directly on `main`.** All work happens on `feature/*` and reaches `main` via PR.
 - **Releases only via annotated `vX.Y.Z` tags on `main`.** No other path produces a GitHub Release.
 - **A PR into `main` must be CI-green** (`render` check) before it merges — no exceptions for
   "small" changes.

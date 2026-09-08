@@ -247,10 +247,27 @@ retailer listings that mirror them):
 | Model | Max speed | Max airflow | Max noise | Low-noise-adapter noise | Source |
 |---|---|---|---|---|---|
 | NF-A4x10 FLX | 4500 RPM | 4.8 CFM | 17.9 dB(A) | 12.9 dB(A) @ 3700 RPM | [QuietPC](https://www.quietpc.com/nf-a4x10) (fetched 2026-09-07) |
-| NF-A4x20 FLX | 5000 RPM | 5.5 CFM | 14.9 dB(A) | 12.2 dB(A) (LNA) / 8.5 dB(A) (ULNA) | [QuietPC](https://www.quietpc.com/nf-a4x20-flx) (fetched 2026-09-07) |
-| NF-A6x25 FLX | 3000 RPM | 17.2 CFM | 19.3 dB(A) | 14.5 dB(A) (LNA) / 8.2 dB(A) (ULNA) | [QuietPC](https://www.quietpc.com/nf-a6x25) (fetched 2026-09-07) |
+| NF-A4x20 FLX | 5000 RPM | 5.5 CFM | 14.9 dB(A) | 12.2 dB(A) (LNA) / 8.5 dB(A) (ULNA)† | [QuietPC](https://www.quietpc.com/nf-a4x20-flx) (fetched 2026-09-07) |
+| NF-A6x25 5V‡ | 3000 RPM | 17.2 CFM | 19.3 dB(A) | 14.5 dB(A) (LNA) / 8.2 dB(A) (ULNA) | [QuietPC](https://www.quietpc.com/nf-a6x25) (fetched 2026-09-07) |
 | NF-A8 ULN | 1400 RPM | 34.8 m³/h (20.48 CFM) | 10.4 dB(A) | 6.5 dB(A) @ 1100 RPM | [QuietPC USA](https://www.quietpcusa.com/Noctua-NF-A8-ULN-Quiet-Computer-Fan-80mm) (fetched 2026-09-07) |
 | NF-A8 PWM | 2200 RPM | 55.5 m³/h (25.83 CFM) | 17.7 dB(A) | 13.8 dB(A) @ 1750 RPM (LNA) | [Coolerguys](https://www.coolerguys.com/products/noctua-nf-a8-pwm-fan-80x25mm-12v-4-pin) (fetched 2026-09-07) |
+
+† **NF-A4x20 ULNA figure — corroborated by QuietPC only, not by a first-party Noctua page (corrected
+2026-09-08).** `knowledge/components/fans.md`'s own NF-A4x20 table (fetched directly from Noctua's
+product pages) lists a standard Low-Noise Adaptor for this frame size but has no ULNA row at all. A
+same-session re-fetch of the QuietPC page cited above re-confirmed it still states "Ultra-Low-Noise
+Adaptor (U.L.N.A.) ... 8.5 dB(A)", but two attempts to fetch Noctua's own NF-A4x20 5V PWM and 12V PWM
+spec pages directly — to settle whether Noctua itself publishes a ULNA option for this fan — both
+returned HTTP 429 ("too many requests") on 2026-09-07. Per `knowledge/design/README.md`'s resolution
+for this item: treat the 8.5 dB(A) figure as **unconfirmed against a first-party Noctua source**
+(effectively `unknown` at manufacturer level) rather than deleting it outright, since it remains a
+real, re-verified figure from the retailer page already cited here.
+
+‡ **Renamed from "NF-A6x25 FLX" (corrected 2026-09-08).** The RPM/airflow/noise figures in this row
+match `knowledge/components/fans.md:50` (the NF-A6x25 **5V** row) exactly; "FLX" is not a Noctua-
+published variant name for this frame size — fans.md's own NF-A6x25 table (fetched directly from
+Noctua's product pages) lists only **5V**, **5V PWM**, and **12V PWM** variants, no "FLX". See §8
+below for the matching correction to this fan's power/current figures.
 
 **Conclusion:** the entire Noctua small-fan range tops out around 20 dB(A) at full speed (8–13 dB(A)
 with the bundled low-noise adapters). Even the loudest of these, run at maximum speed, sits roughly
@@ -280,24 +297,37 @@ the USB-IF SuperSpeed specification's power-delivery figures directly.
 **Budget remaining after a small fan.** Using the directly-verified Noctua power draws from §7's
 sources (all measured at 12V; see caveat below):
 
-| Fan | Max input power | Approx. current if run at **5V** (P/V, order-of-magnitude — not a vendor-published 5V figure) | % of USB 2.0 500 mA budget | % of USB 3.0 900 mA budget |
+| Fan | Max input power | Current at the voltage shown | % of USB 2.0 500 mA budget | % of USB 3.0 900 mA budget |
 |---|---|---|---|---|
-| NF-A4x10 FLX | 0.6 W | ≈120 mA | 24% | 13% |
-| NF-A4x20 FLX | 0.6 W | ≈120 mA | 24% | 13% |
-| NF-A6x25 FLX | 1.44 W | ≈288 mA | 58% | 32% |
-| NF-A8 PWM | 0.96 W | ≈192 mA | 38% | 21% |
+| NF-A4x10 5V (real 5V-native SKU)§ | 0.22 W typ / 0.25 W max | 0.044 A typ / 0.05 A max | 10% (at max) | 6% (at max) |
+| NF-A4x20 FLX (12V, scaled to 5V — estimate, unchanged)¶ | 0.6 W | ≈120 mA | 24% | 13% |
+| NF-A6x25 5V (real 5V-native SKU)§ | 0.935 W typ / 1.3 W max | 0.187 A typ / 0.26 A max | 52% (at max) | 29% (at max) |
+| NF-A8 PWM (12V, scaled to 5V — estimate, unchanged)¶ | 0.96 W | ≈192 mA | 38% | 21% |
 
-Caveat: the Noctua spec pages cited in §7 publish power/current at their native 12V rating; a fan
-run at 5V does not necessarily draw exactly `P(12V)/5V` — motor current-vs-voltage behavior is
-non-linear (this is exactly the reason resistor-based control is unsuitable, see §9) — but this
-order-of-magnitude estimate is useful for USB budget planning, and Noctua does sell purpose-built
-5V-native variants for USB-powered use (e.g., "NF-A4x10 5V" appears as a distinct SKU in Noctua's
-catalog, confirming 5V/USB operation is an intended, supported use case for this fan family) —
-[Noctua NF-A4x10 5V product listing](https://www.noctua.at/en/products/nf-a4x10-5v/specifications)
-(URL confirmed via search index; the page itself returned HTTP 429 "too many requests" on repeated
-automated fetch attempts and its specific 5V current figure could not be directly verified in this
-session — treat the exact mA figure for the 5V SKU as unknown, but its *existence* as a real Noctua
-product is confirmed).
+§ **Corrected 2026-09-08 (previously an order-of-magnitude 12V→5V estimate under a "FLX" label; see
+`knowledge/design/README.md`'s resolved-inconsistencies list).** Noctua sells purpose-built 5V-native
+SKUs for both of these frame sizes, and `knowledge/components/fans.md` has their real, directly-
+fetched Noctua-published figures — used directly above instead of scaling the 12V rating down:
+
+- **NF-A4x10 5V:** 0.044 A typ / 0.05 A max, 0.22 W typ / 0.25 W max — `knowledge/components/fans.md:22`.
+- **NF-A6x25 5V:** 0.187 A typ / 0.26 A max, 0.935 W typ / 1.3 W max — `knowledge/components/fans.md:50`.
+  The NF-A6x25 **12V PWM** variant is a separate SKU with its own, lower figures — 0.08 A max
+  (typ `unknown`), 0.96 W max (typ `unknown`) — `knowledge/components/fans.md:52` — not directly
+  comparable to the 5V figure since it is natively 12V, not 5V-scaled. The row previously here read
+  "1.44 W, NF-A6x25 FLX", a figure that matched neither the real 5V nor 12V PWM Noctua numbers and
+  used a variant name ("FLX") that does not appear anywhere in fans.md's NF-A6x25 table; both the
+  number and the name have been corrected.
+
+¶ The NF-A4x20 and NF-A8 rows above are **not** corrected in this pass — fans.md's real 5V-native
+figures for those two families were out of scope for this fix (see `knowledge/design/README.md`).
+They still use the older 12V-power-scaled, order-of-magnitude estimate method and should not be
+treated as vendor-published 5V figures.
+
+Underlying caveat (unchanged, applies to the two still-estimated rows above): a fan's 12V-rated
+power/current does not scale linearly to 5V — motor current-vs-voltage behavior is non-linear (this
+is exactly the reason resistor-based control is unsuitable, see §9) — so the NF-A4x20/NF-A8
+"Approx." current figures remain order-of-magnitude only, useful for USB budget planning but not a
+vendor-published 5V number.
 
 **Conclusion:** any of these small Noctua fans leaves 60%+ of even the more conservative USB 2.0
 budget free, so USB bus power is a comfortable option for the smaller three models if the Magewell
@@ -517,7 +547,7 @@ level down even further, useful for the quiet-environment edge cases noted there
 - [QuietPC USA — Noctua NF-A8 ULN](https://www.quietpcusa.com/Noctua-NF-A8-ULN-Quiet-Computer-Fan-80mm) — NF-A8 ULN full specifications (1400 RPM, 34.8 m³/h, 10.4 dB(A)). Fetched 2026-09-07.
 - [Coolerguys — Noctua NF-A8 PWM](https://www.coolerguys.com/products/noctua-nf-a8-pwm-fan-80x25mm-12v-4-pin) — NF-A8 PWM full specifications (2200 RPM, 55.5 m³/h, 17.7 dB(A)). Fetched 2026-09-07.
 - [Wikipedia — USB 3.0](https://en.wikipedia.org/wiki/USB_3.0) — USB 2.0 (500 mA/5 unit loads) and USB 3.0 (900 mA/6 unit loads) current budgets per USB-IF spec. Fetched 2026-09-07.
-- [Noctua — NF-A4x10 5V product/specifications page](https://www.noctua.at/en/products/nf-a4x10-5v/specifications) — confirms existence of a 5V-native Noctua SKU intended for USB-type use; specific current draw not retrievable (HTTP 429 on repeated fetch attempts). URL confirmed via search index 2026-09-07, full page not verified.
+- [Noctua — NF-A4x10 5V product/specifications page](https://www.noctua.at/en/products/nf-a4x10-5v/specifications) — real Noctua-published input current (0.044 A typ / 0.05 A max) and input power (0.22 W typ / 0.25 W max), now cited directly in §8 from `knowledge/components/fans.md:22`, which fetched this page successfully on 2026-09-07. This document's earlier note that the page returned HTTP 429 described a *separate*, later fetch attempt made directly from this document's own research session — that attempt did fail, and two further attempts from this session on 2026-09-07 (while resolving this inconsistency) also returned HTTP 429, but `fans.md`'s own successful fetch is the authoritative account for this URL; see `knowledge/design/README.md`'s resolved-inconsistencies list.
 - [Tripp Lite / Eaton — PoE to USB Micro-B, RJ45, Active Splitter (NPOE-SPL-G-5VMU)](https://tripplite.eaton.com/poe-to-usb-micro-b-rj45-active-splitter-802af-48v-to-5v-1a-raspberry-pi-up-to-328ft-100m~NPOESPLG5VMU) — confirmed real PoE-to-5V/1A-USB splitter product example. Fetched 2026-09-07.
 
 ### Figures explicitly marked `unknown` / unverified in this document
@@ -531,7 +561,13 @@ level down even further, useful for the quiet-environment edge cases noted there
 - The precise "5–10 W/m²K" natural-convection rule of thumb for electronics enclosures (§2) —
   indexed via search snippet only, primary source (Eng-Tips.com thread) blocked automated fetch
   (HTTP 403), and an archive.org mirror was unreachable from this tool environment.
-- The exact current draw (mA) of Noctua's native-5V fan SKUs (e.g., NF-A4x10 5V) — Noctua's own spec
-  page returned HTTP 429 ("too many requests") on every fetch attempt in this session; §8's 5V
-  current figures are order-of-magnitude estimates derived from the fans' published 12V power
-  ratings, not vendor-published 5V figures.
+- ~~The exact current draw (mA) of Noctua's native-5V fan SKUs (e.g., NF-A4x10 5V)~~ — **Resolved
+  2026-09-08:** `knowledge/components/fans.md` (fetched 2026-09-07) has real, directly-fetched
+  Noctua-published current/power figures for the NF-A4x10 5V and NF-A6x25 5V SKUs; §8's table now
+  cites those directly (`knowledge/components/fans.md:22` and `:50`) instead of a 12V-scaled
+  estimate. §8's NF-A4x20 and NF-A8 rows are **still** order-of-magnitude estimates derived from
+  12V power ratings scaled to 5V, not vendor-published 5V figures — that part of the original
+  limitation still applies to those two fans only.
+- The NF-A4x20 ULNA figure (8.5 dB(A), §7) — corroborated only by a QuietPC retailer listing, not by
+  a first-party Noctua page; two direct-fetch attempts against Noctua's own NF-A4x20 spec pages on
+  2026-09-07 both returned HTTP 429. Treat as unconfirmed at manufacturer level (see §7 footnote).

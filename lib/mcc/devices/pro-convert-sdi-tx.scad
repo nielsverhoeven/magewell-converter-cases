@@ -30,8 +30,10 @@ MCC_DEV_PRO_CONVERT_SDI_TX = [
         // Long-edge side face (knowledge/magewell/models/pro-convert-sdi-tx.md:23): 16-position rotary switch
         [["id", "rotary"],    ["face", [0, -1, 0]], ["pos", [30, 0]], ["kind", "rotary16"],
          ["dir", "none"],     ["panel", "none"],      ["confidence", "photo"]],
-        // Bottom (knowledge/magewell/models/pro-convert-sdi-tx.md:25): 1/4"-20 threaded hole, "estimated from image"
-        [["id", "tripod"],    ["face", [0, 0, -1]], ["pos", [30, 0]], ["kind", "tripod_1_4_20"],
+        // 1/4"-20 thread is on a long side face (user-verified 2026-09-08); u/v position
+        // unmeasured — measure X from the nearest short end, Z from the bottom, and which side
+        // seen from the USB/RJ45 end; the case yaw puts this face at -Y (layout-patch-wall.md).
+        [["id", "side_bolt"], ["face", [0, -1, 0]], ["pos", [0, 0]], ["kind", "tripod_1_4_20"],
          ["dir", "none"],     ["panel", "none"],      ["confidence", "assumed"]]
     ]]
 ];

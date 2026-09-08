@@ -39,6 +39,25 @@ assert(mcc_cutout_d("NAUSB-W-B") >= 23.6 && mcc_cutout_d("NAUSB-W-B") <= 24.2,
 assert(mcc_cutout_d("NBB75DFGB") >= 23.6 && mcc_cutout_d("NBB75DFGB") <= 24.2,
     str("mcc test_constants: NBB75DFGB cutout_d out of range: ", mcc_cutout_d("NBB75DFGB")));
 
+// D-13 (layout-patch-wall.md rev 3 §7.1/§11): MCC_GAP_FAR and MCC_SIDE_BOLT_PROUD are DERIVED, not
+// chosen -- pin their evaluated values here so a future edit to any input constant that silently
+// drifts the flush design (T1-29) is caught at smoke-test time, not only at render time.
+assert(MCC_GAP_FAR == 16.0,
+    str("mcc test_constants: MCC_GAP_FAR = ", MCC_GAP_FAR, ", expected 16.0 (D-13)"));
+assert(MCC_SIDE_BOLT_PROUD == 0.0,
+    str("mcc test_constants: MCC_SIDE_BOLT_PROUD = ", MCC_SIDE_BOLT_PROUD, ", expected 0.0 (D-13, flush)"));
+
+// D-12 (layout-patch-wall.md §4/§11): MCC_END_ZONE_NEG_EXTRA_SPLITTER is DERIVED from
+// MCC_SPLITTERS[MCC_SPLITTER_DEFAULT].size[2], not hard-typed -- pin it too.
+assert(MCC_END_ZONE_NEG_EXTRA_SPLITTER == 20.0,
+    str("mcc test_constants: MCC_END_ZONE_NEG_EXTRA_SPLITTER = ", MCC_END_ZONE_NEG_EXTRA_SPLITTER,
+        ", expected 20.0 (", MCC_SPLITTER_DEFAULT, " default)"));
+
+echo(str("mcc test_constants: MCC_GAP_FAR=", MCC_GAP_FAR,
+    " MCC_SIDE_BOLT_PROUD=", MCC_SIDE_BOLT_PROUD,
+    " MCC_END_ZONE_NEG_EXTRA_SPLITTER=", MCC_END_ZONE_NEG_EXTRA_SPLITTER,
+    " MCC_SPLITTER_DEFAULT=", MCC_SPLITTER_DEFAULT));
+
 echo("mcc test_constants: OK");
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

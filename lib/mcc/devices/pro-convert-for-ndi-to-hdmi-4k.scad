@@ -34,8 +34,10 @@ MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K = [
         // Top, near Face B: 16-position rotary switch (Tally Preview/Program LEDs not modelled), order uncertain
         [["id", "rotary"],    ["face", [0, 0, 1]], ["pos", [-15, 0]], ["kind", "rotary16"],
          ["dir", "none"],     ["panel", "none"],       ["confidence", "photo"]],
-        // Top, near Face A: SD slot (not modelled) + 1/4"-20 hole
-        [["id", "tripod"],    ["face", [0, 0, 1]], ["pos", [20, 0]], ["kind", "tripod_1_4_20"],
+        // 1/4"-20 thread is on a long side face (user-verified 2026-09-08); u/v position
+        // unmeasured — measure X from the nearest short end, Z from the bottom, and which side
+        // seen from the USB/RJ45 end; the case yaw puts this face at -Y (layout-patch-wall.md).
+        [["id", "side_bolt"], ["face", [0, -1, 0]], ["pos", [0, 0]], ["kind", "tripod_1_4_20"],
          ["dir", "none"],     ["panel", "none"],       ["confidence", "assumed"]]
     ]]
 ];
