@@ -109,14 +109,18 @@ paths, module names, ordered steps). Tests → `tester`.
 
 ## Current status
 
-Knowledge base, tooling (`scripts/build.py`, CI), the L0/L1 library (`constants`, `util`, `ports`,
-`neutrik`, `fasteners`, `fan`, `poe_splitter`, `ghost`, `panel`, barrel `mcc.scad`), 8 device data
-files (`lib/mcc/devices/*.scad`, all positions `photo`/`assumed`), 5 coupons (`models/coupons/**`)
-with goldens, and 4 smoke tests exist and pass `build.py all`. **Not yet written**: the L2 geometry
-(`shell.scad`, `cradle.scad`, `mounts.scad`, `vents.scad`) and the `models/<slug>/case.scad`
-assemblies — that is the next milestone, and it starts only after the coupons are printed on the
-X1C and measured (see `.claude/knowledge/session-resume.md` for the ordered plan). `new-case-variant`
-explains what to do when a dependency is missing: stop and report, don't improvise geometry.
+**All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,
+HDMI/SDI Plus, NDI to HDMI / HDMI 4K / SDI / AIO), built on the full library: L0 (`constants`,
+`util`, `ports`, `layout`), L1 (`neutrik`, `fasteners`, `fan`, `poe_splitter`, `ghost`), L2
+(`shell`, `panel`, `cradle`, `mounts`, `vents`), 8 device data files (all positions `photo`/
+`assumed`), 6 calibration coupons, 7 smoke tests, goldens for every part. `build.py all --with-step`
+is green locally and in CI; every merge to `main` publishes a pre-release with per-device zips
+(STL + 3MF + STEP + manifest). Plus-family cases ship with the fan. **Next milestone is physical
+(Tier 4)**: print and measure the six coupons on the X1C, measure the side 1/4"-20 hole per SKU, the
+dongle splitter and the E-clip, write the measured values into `constants.scad` (confidence →
+`measured`), then the first full-size print. Later: the IP-decoder family (120 × 79.3 × 24.5). See
+`.claude/knowledge/session-resume.md` for the ordered plan; `new-case-variant` explains the
+thin-assembly workflow and when to stop and report instead of improvising geometry.
 
 ## Branching (Git Flow)
 
