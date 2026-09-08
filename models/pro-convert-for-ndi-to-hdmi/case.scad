@@ -47,6 +47,25 @@ L_dims = mcc_case_dims(dev, variant);
 echo(str("pro-convert-for-ndi-to-hdmi: L=", L_dims[0], " W=", L_dims[1], " H=", L_dims[2]));
 echo(str("pro-convert-for-ndi-to-hdmi: slots=", mcc_slot_assignment(dev)));
 
+// Place children at the device's assembled position (layout-patch-wall.md §2 frame): the device
+// box is centred at (x_dev_c, y_dev_c, z_dev_lo + h/2).
+module _mcc_case_at_device(layout) {
+    translate([struct_val(layout, "x_dev_c"), struct_val(layout, "y_dev_c"),
+               struct_val(layout, "z_dev_lo") + mcc_dev_size(dev)[2] / 2])
+        children();
+}
+
+// The panel plate at its assembled position in the patch wall. Plate's local frame: front
+// (connector) face at local Z=0, field/rim extend into local -Z; local X = plate width (= world X);
+// local Y = plate height. rotate([-90,0,0]) maps local Z -> world Y and local Y -> world -Z (same
+// rotation shell.scad uses for the side-bolt boss). The front face lands on the bezel-recessed
+// plane W/2 - MCC_PANEL_BEZEL_T at connector centreline height z_conn_c.
+module _mcc_case_panel_placed(layout) {
+    translate([0, struct_val(layout, "W") / 2 - MCC_PANEL_BEZEL_T, struct_val(layout, "z_conn_c")])
+        rotate([-90, 0, 0])
+            mcc_panel_plate(size = mcc_panel_plate_dims(dev), slots = _mcc_case_slot_list(dev, variant));
+}
+
 if (part == "base") {
     mcc_shell_base(dev = dev, cfg = variant);
 
@@ -66,28 +85,25 @@ if (part == "base") {
     color("SlateGray") mcc_shell_base(dev = dev, cfg = variant);
     translate([0, 0, explode])
         color("LightSteelBlue", 0.9) mcc_shell_lid(dev = dev, cfg = variant);
-    plate_sz = mcc_panel_plate_dims(dev);
-    // Plate's local frame: front (connector) face at local Z=0, field/rim extend into local -Z;
-    // local X = plate width (already world X, slot_x is authored in world X directly); local Y =
-    // plate height (screw-hole offset axis). rotate([-90,0,0]) maps local Z -> world Y and local Y
-    // -> world -Z (see shell.scad's own derivation of this same rotation, used for the side-bolt
-    // boss/patch-wall fixing bosses) -- translate the front face (local Z=0) to the patch wall's
-    // actual proud-bezel-recessed front plane (W/2 - MCC_PANEL_BEZEL_T), and z_conn_c to correct
-    // for the Y-axis sign flip the rotation introduces.
-    translate([0, struct_val(layout, "W") / 2 - MCC_PANEL_BEZEL_T, struct_val(layout, "z_conn_c")])
-        rotate([-90, 0, 0])
-            color("DimGray") mcc_panel_plate(size = plate_sz, slots = _mcc_case_slot_list(dev, variant));
-    mcc_ghost(dev, show = true); // device + plug envelopes; %-rendered, excluded from CSG anyway
+    color("DimGray") _mcc_case_panel_placed(layout);
+    // device + plug envelopes at the device's assembled position; %-rendered, excluded from CSG
+    _mcc_case_at_device(layout) mcc_ghost(dev, show = MCC_SHOW_GHOST);
+
+} else if (part == "panel_placed") {
+    // The plate at its assembled position (web viewer only; build.py exports the flat "panel").
+    _mcc_case_panel_placed(mcc_case_layout(dev, variant));
 
 } else if (part == "ghost_device") {
-    // SOLID (no %) export of the device bounding box, for the web viewer only -- never rendered by
-    // build.py (not in its "base"/"lid"/"panel" part set).
-    cube(mcc_dev_size(dev), center = true);
+    // SOLID (no %) export of the device bounding box at its assembled position, for the web viewer
+    // only -- never rendered by build.py (not in its "base"/"lid"/"panel" part set).
+    _mcc_case_at_device(mcc_case_layout(dev, variant))
+        cube(mcc_dev_size(dev), center = true);
 
 } else if (part == "ghost_plugs") {
-    // SOLID (no %) export of every external port's plug/bend keep-out envelope, for the web viewer
-    // only.
+    // SOLID (no %) export of every external port's plug/bend keep-out envelope at the device's
+    // assembled position, for the web viewer only.
     size = mcc_dev_size(dev);
+    _mcc_case_at_device(mcc_case_layout(dev, variant))
     for (p = mcc_dev_ports(dev)) {
         panel = mcc_port_panel(p);
         if (panel != "none") {
