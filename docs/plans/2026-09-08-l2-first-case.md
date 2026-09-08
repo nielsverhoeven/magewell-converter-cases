@@ -834,3 +834,5 @@ of `build.py`).
   aperture geometry, and a genuine contract self-contradiction) and should be resolved **before**
   `shell.scad`/`panel.scad` work starts; #3-#7 are narrow, low-risk numeric defaults that can be
   confirmed in parallel with implementation.
+
+> **Note (2026-09-08, after implementation):** `cfg.external_ports` was dropped as inert (architecture.md §13 D12) — the slot set comes from the device file's `panel` field. The `variant` template below is historical; see `models/pro-convert-for-ndi-to-hdmi/case.scad` for the current keys (`fan`, `splitter`, `vesa`).
