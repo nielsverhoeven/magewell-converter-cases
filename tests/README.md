@@ -61,12 +61,20 @@ automation for the print-and-measure step itself.
 ## Running everything
 
 ```
-python scripts/build.py all             # smoke -> render --all -> check --all -> golden
-python scripts/build.py all --release   # same, plus fails on any WARNING: unmeasured port
+python scripts/build.py all              # smoke -> render --all -> check --all -> golden
+python scripts/build.py all --release    # same, plus fails on any WARNING: unmeasured port
+python scripts/build.py all --with-step  # same, plus STEP export (build.py step --all) at the end
 ```
 
-This is exactly what CI (`.github/workflows/render.yml`) runs on every push/PR (`all`) and on
-`v*` tags (`all --release`).
+This is exactly what CI runs: `.github/workflows/render.yml` runs `all` on every push/PR (`all
+--release` on `v*` tag pushes) plus `step --all` separately so a broken STEP conversion fails the
+PR; `.github/workflows/release.yml` runs `all --with-step` on every push to `main` as part of
+building a release. STEP export is not a fifth test tier — it's release packaging, not a
+correctness check — but note that `step` does re-validate the STEP it just wrote (re-reads it via
+OCP, or at minimum checks the file starts with `ISO-10303-21`) before calling a conversion
+successful. See `scripts/README.md`'s "Release tooling" section and `CONTRIBUTING.md`'s "Release"
+section for the rest of the release pipeline (`release_version.py`, `confidence`,
+`package_release.py`).
 
 ## "Green" means
 

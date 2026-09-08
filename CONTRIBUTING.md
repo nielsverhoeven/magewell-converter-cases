@@ -119,47 +119,82 @@ history is worth keeping. Either way:
 - The `render` CI check must be green on the PR first.
 - Delete the feature branch after merging (locally and on `origin`).
 
-### Release (tag on `main`)
+### Release (automatic, on merge to `main`)
 
-A version bump is a normal change and goes through a normal `feature/*` branch and PR — `main` is
-never committed to directly, not even for a release.
+**There is no manual tagging step any more.** `.github/workflows/release.yml` runs on every push to
+`main` (i.e. every merged PR) and does the whole thing:
 
-1. On `feature/release-vX.Y.Z` (branched from `main`): move `CHANGELOG.md`'s `[Unreleased]` entries
-   into a new `## [X.Y.Z] - YYYY-MM-DD` section, and bump the version wherever else it's recorded.
-2. `python scripts/build.py all --release` must be green locally — this also enforces the release
-   gate (fails on any `WARNING: unmeasured port`).
-3. PR into `main` like any other change; merge only once `render` is green.
-4. `git checkout main && git pull`
-5. `git tag -a vX.Y.Z -m "vX.Y.Z"`
-6. `git push origin vX.Y.Z`
-7. Pushing the tag triggers `render.yml`'s release job (`on: tags: v*`) — verify the GitHub Release
-   was created with the expected `*.stl` / `*.3mf` / `*.manifest.json` assets attached before
-   announcing the release; don't assume the job succeeded just because it started.
+1. `scripts/release_version.py` computes the next `vX.Y.Z` from
+   [Conventional Commits](https://www.conventionalcommits.org/) since the last `v*` tag reachable
+   from `HEAD` — a `BREAKING CHANGE:` footer or a `!` before the `:` (`feat!:`, `fix(scope)!:`)
+   bumps MAJOR, a `feat` commit bumps MINOR, anything else bumps PATCH.
+2. `python scripts/build.py all --with-step` builds and tests everything, including STEP export
+   (`scripts/mesh_to_step.py`, `build.py step`).
+3. `python scripts/build.py confidence --json` reports every port below `measured` confidence
+   across all device data files. Unlike the old `--release` gate (which used to **fail** the build
+   on any `WARNING: unmeasured`), this only sets the GitHub Release's **pre-release** flag —
+   see "Pre-release" below.
+4. `scripts/package_release.py vX.Y.Z` builds one zip per device case (STL + 3MF + STEP + manifest
+   + a `README.txt`) plus a `coupons-vX.Y.Z.zip`.
+5. An **annotated** tag `vX.Y.Z` is created and pushed (never lightweight — see "Versioning" above).
+6. `softprops/action-gh-release` publishes the GitHub Release with the zips and the loose `*.step`
+   files attached.
+
+**Nothing to do locally to cut a release** beyond merging a PR into `main` with commit messages
+that follow Conventional Commits — the bump type is read from them. If you want a specific bump
+that doesn't match your commits' actual types, that's a signal to reconsider the commit messages,
+not to hand-edit a version number somewhere.
+
+**Pre-release.** A release is marked **pre-release** on GitHub whenever any port in any device data
+file (`lib/mcc/devices/*.scad`) is below `measured` confidence — which, per
+`.claude/knowledge/architecture.md` §7, is every port on every device today (nobody has measured
+one yet). This is expected during early development; it stops once a device's ports are physically
+measured and its record's `confidence` fields are upgraded to `"measured"`.
+
+**Verifying a release actually happened:** after a PR merges to `main`, check the `release` workflow
+run — don't assume it succeeded just because it started. Confirm the GitHub Release exists with the
+expected `dist/*.zip` and `exports/**/*.step` assets attached, and that its `vX.Y.Z` matches what you
+expected from the merged commits.
+
+**Hotfix note:** there is no separate hotfix release path either — a `feature/hotfix-<topic>` branch
+merges to `main` like any other PR and the next push-to-`main` release picks it up automatically
+(a `fix:` commit bumps PATCH).
 
 ## Definition of done (PR into `main`)
 
 - [ ] `python scripts/build.py all` passes locally.
+- [ ] `python scripts/build.py step --all` succeeds locally, or the STEP backend genuinely isn't
+      available on your machine (`build.py doctor` reports which) — CI always has one and will
+      catch a broken conversion either way (`render.yml` runs `step --all` on every PR).
 - [ ] The `render` CI check is green on the PR.
 - [ ] Any golden change (`tests/golden/*.json` diff) is called out explicitly in the PR description
-      and justified — a silent golden diff is treated as a regression, not approved by omission.
+      and justified, and is scoped to the device(s) the PR actually touches — a silent golden diff,
+      or one outside the intended device, is treated as a regression, not approved by omission.
 - [ ] `BOM.md` is updated when parts, connectors, inserts, or fasteners change (see the `bom-update`
       skill).
 - [ ] Any deviation from `.claude/knowledge/architecture.md` is recorded in that file's §13
       Deviations log (date, rule, `file:line`, why, resolution) — not silently absorbed.
 - [ ] Every Neutrik panel connector is the black `-B` variant, no exceptions.
 - [ ] Docs and code comments are English.
+- [ ] `CHANGELOG.md`'s `[Unreleased]` section has an entry for this change — releasing is now
+      automatic (see "Release" above), so this is the only changelog step a PR author does; a
+      maintainer periodically retitles `[Unreleased]` into a dated `## [X.Y.Z] - YYYY-MM-DD` section
+      matching whatever `release.yml` actually tagged, as separate housekeeping.
 
-## Release checklist
+## Release checklist (verifying an automatic release, after merge)
 
-- [ ] `CHANGELOG.md`: `[Unreleased]` entries moved into a new `## [X.Y.Z] - YYYY-MM-DD` section.
-- [ ] Goldens frozen/reviewed — no unexplained diffs.
-- [ ] `python scripts/build.py all --release` green (this also fails on any `WARNING: unmeasured
-      port`, per `render.yml`'s release gate).
-- [ ] Version bumped everywhere it's recorded.
-- [ ] Tag `vX.Y.Z` (annotated) pushed to `main`.
-- [ ] CI release job ran on the tag; GitHub Release exists with `exports/**/*.stl`, `*.3mf`, and
-      `*.manifest.json` attached — spot-check the asset list, don't assume the job succeeded just
+There is no pre-release checklist to run before merging any more — merging the PR *is* what starts
+a release (see "Release" above). After merge:
+
+- [ ] The `release` GitHub Actions run for the merge commit succeeded — don't assume it did just
       because it started.
+- [ ] The computed `vX.Y.Z` (workflow run's "Compute next version" step output) matches what you
+      expected from the merged commits' Conventional Commits types.
+- [ ] The GitHub Release exists with `dist/*.zip` (one per device + `coupons-vX.Y.Z.zip`) and the
+      loose `exports/**/*.step` files attached — spot-check the asset list.
+- [ ] The release's pre-release flag matches expectations: pre-release if any device still has a
+      port below `measured` confidence (true for every device today), not pre-release once a
+      device's ports are fully measured.
 
 ## Branch protection (GitHub recommendation)
 

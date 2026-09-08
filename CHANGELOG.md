@@ -31,6 +31,18 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 - Simplified Git Flow: feature branches → main, releases via tags — `CONTRIBUTING.md`,
   `.github/pull_request_template.md`, the `git-flow` skill, and the CI trigger set for `main`
   and `v*` tags.
+- STEP export: `scripts/mesh_to_step.py` (STL → B-rep STEP, `cadquery-ocp` preferred backend with
+  a FreeCAD `freecadcmd` fallback; coplanar facets merged via `ShapeUpgrade_UnifySameDomain`,
+  curved surfaces stay faceted) and `scripts/build.py step`/`step --all`/`all --with-step`.
+- Automated per-push releases: `.github/workflows/release.yml` computes the next `vX.Y.Z` from
+  Conventional Commits (`scripts/release_version.py`), builds everything, packages one zip per
+  device case plus a coupons zip (`scripts/package_release.py`), creates the annotated tag, and
+  publishes a GitHub Release — marked pre-release while any port is below `measured` confidence
+  (`scripts/build.py confidence`). Manual `v*` tagging is no longer needed.
+- `.github/actions/setup-openscad` composite action, factored out of `render.yml` so `render.yml`
+  and `release.yml` install the pinned OpenSCAD nightly identically.
+- `render.yml` also runs `build.py step --all` on every PR, so a broken STEP conversion fails the
+  PR; the tag-triggered release step moved out of `render.yml` into `release.yml`.
 
 <!-- No Changed / Deprecated / Removed / Fixed / Security entries yet. Keep a Changelog convention:
      add a subsection only once it has an entry; don't carry empty headings forward release to

@@ -41,7 +41,9 @@ Two knowledge trees, do not merge them:
   layout exceeds the 256 mm bed for the Plus family, see architecture.md §11 R1). Family envelopes
   (layout-patch-wall.md rev 3): compact 194.9 × 159.9 × 51 mm, Plus 211.5 × 166.4 × 51 mm — base
   and lid print on separate plates; max 4 D-connectors per model; 6 lid thumbscrews on both.
-- **Cooling**: passive-first; parametric fan bay (Noctua NF-A4x10 5V default); reserved PoE-splitter
+- **Cooling**: passive-first on the compact family (`fan = false`, bay reserved); **Plus-family cases
+  ship with the Noctua NF-A4x10 5V fitted by default** (`fan = true`, user decision 2026-09-08 per
+  risk R5); parametric fan bay (Noctua NF-A4x10 5V default); reserved PoE-splitter
   bay (802.3af→5 V USB, gigabit) with a **dongle-class default envelope 75×40×20 mm** (`assumed`,
   e.g. UCTRONICS U6114/U6115 — buy one and measure; the GAT-USBC 114×51×25 does not fit, see
   architecture.md §11 R11). Both bays are reserved in every variant even when unused (§6 rule);

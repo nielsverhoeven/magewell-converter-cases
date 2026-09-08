@@ -77,6 +77,49 @@ venv itself is otherwise unaffected):
 Or equivalently via the wrapper: `scripts\render.ps1 doctor`, etc. Full command reference in
 `scripts/README.md`.
 
+## Releases
+
+Every merge to `main` triggers `.github/workflows/release.yml`, which computes the next `vX.Y.Z`
+from [Conventional Commits](https://www.conventionalcommits.org/) since the last release, builds
+and tests everything (including STEP export), tags `main`, and publishes a GitHub Release —
+**there is no manual tagging step**. Each release ships:
+
+- One `<device-slug>-vX.Y.Z.zip` per case (e.g. `pro-convert-for-ndi-to-hdmi-v0.1.0.zip`), containing
+  every part's `.stl`, `.3mf`, `.step`, and `.manifest.json`, plus a `README.txt` naming the device,
+  the version, and the git SHA.
+- One `coupons-vX.Y.Z.zip` with every calibration coupon's exports.
+- The loose `*.step` files, attached directly to the release as well.
+
+**A release is marked pre-release** on GitHub whenever any device still has a port below `measured`
+confidence — true for every device today (nobody has physically measured a port position yet, see
+`.claude/knowledge/architecture.md` §7). Download from this repository's
+[Releases page](../../releases); pick the `<device-slug>-vX.Y.Z.zip` for the case you want to print,
+or `coupons-vX.Y.Z.zip` to print the calibration coupons first (recommended — see "Coupons before
+cases" below). Full release-flow detail: `CONTRIBUTING.md`'s "Release" section.
+
+## Open in Bambu Studio
+
+Each device zip contains `base`, `lid`, and (where the variant has one) `panel`, each as `.stl`,
+`.3mf`, and `.step`:
+
+1. **File → Import → Import 3MF/STL/STEP...** (`Ctrl+I`).
+2. Pick `base.3mf` and `lid.3mf` — both import **open side up**, exactly as exported; no
+   reorientation needed. `panel.3mf` is authored with its outward (connector) face at `Z=0`, the
+   *top* of its bounding box (`lib/mcc/panel.scad`'s `mcc_panel_plate()`: "front (outward) face at
+   Z=0"), so it imports connector-face-up — rotate it 180° in the slicer so the connector face
+   prints **down**, flat on the bed (`.claude/skills/print-check/SKILL.md` §3 for why that
+   orientation matters).
+3. Select the **Bambu Lab X1 Carbon** printer with the **0.4 mm nozzle**, and a **Bambu ASA** (or
+   **Generic ASA**) filament profile. Keep the enclosure closed — ASA needs it.
+4. The `.3mf` is plain geometry only — it carries no print settings, supports, or plate layout, so
+   there's nothing to strip before applying your own profile. The `.step` is a faceted B-rep (planar
+   facets merged into single faces where coplanar; cylindrical/curved surfaces stay faceted, not
+   NURBS-fitted) — use it if you want the part in another CAD tool rather than straight in the
+   slicer; Bambu Studio can import it too, but the `.3mf`/`.stl` are the tested path.
+
+See `.claude/skills/print-check/SKILL.md` for the full pre-slice checklist (orientation, ASA
+profile hints, coupons-before-cases).
+
 ## Design decisions
 
 The full rationale — layered module architecture, why the connector panel is a separate printed
@@ -111,6 +154,6 @@ legal text.
 
 This repo uses a simplified Git Flow: `main` is the only long-lived branch (integration and release
 both), and everything else — including urgent fixes — is a short-lived `feature/*` branch merged in
-via PR. Releases are annotated `vX.Y.Z` tags on `main`. Never commit directly to `main`. See
-[`CONTRIBUTING.md`](CONTRIBUTING.md) for the full model, step-by-step recipes, and the release
-checklist.
+via PR. Releases are annotated `vX.Y.Z` tags on `main`, created **automatically** on every merge —
+see "Releases" above. Never commit directly to `main`. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for
+the full model, step-by-step recipes, and how to verify an automatic release after merge.
