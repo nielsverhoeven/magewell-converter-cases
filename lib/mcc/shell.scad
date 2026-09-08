@@ -198,8 +198,17 @@ module _mcc_patch_wall_window(part, y_lo, y_hi, x_c, z_c) {
                     union() {
                         if (!is_blank)
                             teardrop2d(d = d_win, ang = 45, cap_h = cap_h, $fn = 96);
-                        translate([-sx, sz]) circle(d = d_rel, $fn = 64);
-                        translate([sx, -sz]) circle(d = d_rel, $fn = 64);
+                        // Relief positions must coincide with the PLACED plate's rear bosses, not
+                        // with the plate's authored front-view pattern. The plate is authored with
+                        // its screw holes/bosses at local (-9.5, +12) and (+9.5, -12) (Neutrik
+                        // front view, mcc_neutrik_d_cutout()); case.scad places it with
+                        // rotate([-90,0,0]), which maps local (x, y) -> world (x, z = -y). This 2-D
+                        // frame is (x, z) (rotate([90,0,0]) above maps 2-D y -> world z), so the
+                        // bosses land at (-sx, -sz) and (+sx, +sz). Using the un-flipped diagonal
+                        // here mirrors the pattern against the plate (user-reported 2026-09-08:
+                        // "screw holes look rotated 90 deg vs the holes in the base").
+                        translate([-sx, -sz]) circle(d = d_rel, $fn = 64);
+                        translate([sx, sz]) circle(d = d_rel, $fn = 64);
                     }
 }
 
