@@ -338,8 +338,11 @@ module _mcc_patch_wall_fixing_bosses(plate_size, rim_w, y_outer, z_c) {
 //   mounts.scad's tie-down and the reservation asserts below touch it).
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list (keys: "external_ports", "fan", "splitter", optionally
-//         "fan_y", "vesa").
+//   cfg = variant-config assoc-list (keys: "fan", "splitter", optionally "fan_y", "vesa" — see
+//         models/pro-convert-for-ndi-to-hdmi/case.scad's own top-of-file comment for the full
+//         contract. NOT "external_ports": that key is INERT/DROPPED, D12, architecture.md §13 —
+//         the slot set comes solely from mcc_ports_external(dev), i.e. the device file's own
+//         `panel` field per port).
 module mcc_shell_base(dev, cfg) {
     l = mcc_case_layout(dev, cfg);
     L = struct_val(l, "L"); W = struct_val(l, "W"); H = struct_val(l, "H");
@@ -355,12 +358,20 @@ module mcc_shell_base(dev, cfg) {
         str("mcc: mcc_shell_base bbox ", [L, W, H], " exceeds the printable envelope"));
     assert(MCC_SIDE_BOLT_PROUD == 0,
         "mcc: T1-29 MCC_SIDE_BOLT_PROUD must be 0 (flush, D-13) for the production shell");
-    // T1-18(c), re-scoped (layout-patch-wall.md §9): axial cable clearance for the +X end zone vs.
-    // the fan bay's own clearance depth.
+    // T1-18(c), re-scoped (layout-patch-wall.md §9), BNC double-count FIXED (§16.3 / §15 ruling
+    // 2026-09-08c C3, architecture.md §13 blocking pre-flight change): axial cable clearance for
+    // the +X end zone vs. the fan bay's own clearance depth. The axial term now reads
+    // mcc_plug_axial(kind) uniformly for every kind — no `kind == "bnc"` special case. The old
+    // code charged BNC's mcc_plug_len("NBB75DFGB") (= 40.6, the Belden 4855R bend radius, a
+    // LATERAL figure re-used for that part's plug_len/bend table entries) against this AXIAL
+    // budget, which double-counted a lateral allowance and failed by 14.60 mm on every BNC-ended
+    // SKU. mcc_plug_axial() carries its own dedicated, `assumed`, per-kind axial table
+    // (constants.scad MCC_PLUG_AXIAL) so no geometry moves for hdmi_a (still 25.0, matching the
+    // old non-BNC branch's 40-15 decomposition exactly — T1-18(c) stays at 0.00 mm slack on every
+    // HDMI-ended SKU) while bnc gets its own honest (if still assumed) axial figure instead of a
+    // borrowed lateral one.
     pos_ext = [for (p = mcc_ports_external(dev)) if (mcc_port_face(p)[0] > 0) p];
-    axial_terms = [for (p = pos_ext)
-        let(kind = mcc_port_kind(p), panel = mcc_port_panel(p))
-        (kind == "bnc") ? mcc_plug_len("NBB75DFGB") : mcc_dev_side_allow(kind) - mcc_bend_envelope(panel)];
+    axial_terms = [for (p = pos_ext) mcc_plug_axial(mcc_port_kind(p))];
     fan_env_depth = struct_val(mcc_fan_spec("NF-A4x10"), "frame")[2] + 5;
     assert(struct_val(l, "x_dev_hi") + max(concat([0], axial_terms)) <= L / 2 - MCC_WALL - fan_env_depth + MCC_EPS,
         str("mcc: T1-18(c) +X axial cable clearance fails on \"", mcc_dev_slug(dev), "\""));

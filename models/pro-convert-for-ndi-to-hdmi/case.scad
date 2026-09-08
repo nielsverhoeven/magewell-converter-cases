@@ -21,14 +21,38 @@ part = "base"; // overridden via -D part="..."
 // base/lid/panel exports.
 explode = 0;
 
-// Variant config: every physical port from the device's own ["ports",...] list that is brought
-// out to a panel connector, plus case-level options. Fan/splitter are RESERVED regardless
-// (architecture.md §6 reservation rule) -- "false" only controls whether the live cutout/hardware
-// is drawn, never whether the volume is kept clear.
+// Variant config (cfg): case-level options only. The connector slot set is NEVER driven by this
+// config -- it comes solely from the device file's own `panel` field per port
+// (mcc_ports_external(dev) / mcc_slot_assignment(dev), lib/mcc/layout.scad). An earlier
+// "external_ports" key that purported to let a variant blank or omit a physical port was found to
+// be INERT -- mcc_slot_assignment()/mcc_case_layout() never read it (architecture.md §13
+// deviation D12, layout-patch-wall.md §16.4) -- and has been DROPPED here rather than wired up;
+// implementing it would be a library change, out of scope for a variant branch. To omit a port
+// from this case, remove/edit it in lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad instead
+// (device-portmap skill) -- or, if it must stay in the port map but never get a cutout, give it
+// `["panel","none"]` there (same convention the Mini-DIN-8/rotary/button ports already use).
+//
+// Documented cfg keys (all consulted by lib/mcc/**, see mcc_shell_base()'s own doc comment):
+//   "fan"       (bool, REQUIRED) -- draws the live +X fan aperture when true. The fan BAY is
+//               reserved as internal keep-out volume regardless of this flag (architecture.md §6
+//               reservation rule) -- "false" only skips the live cutout, never the reservation.
+//               Fed from the top-level `fan` variable below so `-D fan=true` overrides it for a
+//               quick fan-cutout check without editing this file.
+//   "splitter"  (bool, REQUIRED) -- reserved for a future live PoE-splitter cutout; the splitter
+//               BAY is reserved as keep-out volume regardless of this flag today (same
+//               reservation rule -- no live splitter geometry is drawn by any flag value yet).
+//               Fed from the top-level `splitter` variable below, likewise overridable via
+//               `-D splitter=true`.
+//   "vesa"      (bool, optional, default true) -- draws the 4 VESA 75x75 M4 heat-set bosses in
+//               the floor (mounts.scad, layout-patch-wall.md §15 ruling H). Pass false to omit.
+//   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
+//               the fan aperture's Y position (layout-patch-wall.md §5).
+fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
+splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
+
 variant = [
-    ["external_ports", ["hdmi_out", "usb_host", "usb_b", "rj45"]], // all 4 physical ports brought out
-    ["fan",             false],
-    ["splitter",        false],
+    ["fan",       fan],
+    ["splitter",  splitter],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;

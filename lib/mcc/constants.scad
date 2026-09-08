@@ -396,6 +396,69 @@ function mcc_dev_side_allow(kind) =
     assert(ind != [], str("mcc: unknown port kind \"", kind, "\" in mcc_dev_side_allow()"))
     MCC_DEV_SIDE_ALLOW[ind][1];
 
+// -----------------------------------------------------------------------------------------
+// Section: Axial straight-plug lengths (T1-18(c) fix, layout-patch-wall.md §16.3 / §15 ruling
+// 2026-09-08c C3, architecture.md §13 blocking pre-flight change).
+//
+// BUG THIS REPLACES: shell.scad's +X end-zone assert (T1-18(c)) used to special-case
+// `kind == "bnc"` and charge it `mcc_plug_len("NBB75DFGB")` (= 40.6 mm) as the AXIAL plug term —
+// but that 40.6 is the Belden 4855R bend radius, a LATERAL figure re-used for BNC's `plug_len`/
+// `bend` table entries (see the MCC_PANEL_PARTS "NBB75DFGB" row comment above: "for BNC the bend
+// radius genuinely governs both axial and lateral clearance simultaneously"). Charging a lateral
+// allowance against an axial budget double-counts it, and the assert failed by 14.60 mm on every
+// BNC-ended SKU (SDI TX, SDI Plus, NDI to SDI, NDI to AIO — layout-patch-wall.md §16.3 worked
+// table). The non-BNC branch's `mcc_dev_side_allow(kind) - mcc_bend_envelope(panel)` computation
+// was itself only ever correct for hdmi_a (40 - 15 = 25, the assumed straight-plug axial length);
+// it is retired here too so every kind reads its axial figure from ONE table, no per-kind
+// special case in shell.scad.
+//
+// Sourced/assumed per kind (layout-patch-wall.md §16.3 option (a), ADOPTED):
+//   hdmi_a: 25.0 assumed straight-plug axial length — cables.md:121 records the true figure as
+//           "unknown — physically measure"; 25.0 matches the pre-existing `ez(hdmi_a) - bend`
+//           decomposition (40 - 15 = 25) so T1-18(c) is numerically unchanged on every HDMI-ended
+//           SKU (still exactly 0.00 mm slack, layout-patch-wall.md §16.3).
+//   bnc:    25.0 assumed — knowledge/components/cables.md gives NO BNC male plug body length at
+//           all (cables.md:64 "unknown"); pending physical measurement M6 (depth-mockup coupon).
+//           Deliberately the SAME class/value of placeholder as hdmi_a (both "assumed straight
+//           plug, unmeasured") rather than reusing the bend-radius figure a second time.
+//   rj45:   21.5 — knowledge/components/cables.md:119 "21.5 mm max plug" (TIA-568.2-D, verified).
+//           Never exercised by T1-18(c) today (RJ45 is always in the -X block per the slot rule's
+//           own cross-check, layout-patch-wall.md §3), included for completeness/future-proofing.
+//   usb_a/usb_b: 12.0 — knowledge/components/cables.md:125 "USB-A ... 12 mm" verified; USB-B
+//           assumed equal (no USB-B-specific figure exists), same convention as
+//           MCC_DEV_SIDE_ALLOW's own usb_b row above.
+// -----------------------------------------------------------------------------------------
+
+MCC_PLUG_AXIAL = [
+    ["hdmi_a", 25.0], // assumed — cables.md:121 "unknown — physically measure" (M6)
+    ["bnc",    25.0], // assumed — cables.md has no BNC plug-body length at all (M6)
+    ["rj45",   21.5], // cables.md:119, verified (TIA-568.2-D max plug length)
+    ["usb_a",  12.0], // cables.md:125, verified
+    ["usb_b",  12.0], // assumed equal to usb_a — no USB-B-specific figure sourced
+];
+
+// Function: mcc_plug_axial()
+// Usage:
+//   axial = mcc_plug_axial(kind_or_part);
+// Description:
+//   AXIAL (straight-plug) clearance to budget for a port, mm — the T1-18(c) end-zone-vs-fan-bay
+//   assert's own input (shell.scad), tracked separately from mcc_bend_envelope()'s LATERAL figure
+//   per architecture.md:295-297. Accepts either a port `kind` (a direct key of MCC_PLUG_AXIAL,
+//   e.g. "bnc") or a MCC_PANEL_PARTS part number (e.g. "NBB75DFGB", resolved to its `kind` via
+//   mcc_panel_kind() and looked up from there) — so a caller holding either a port's `kind` or its
+//   `panel` value can use this function without first normalising which one it has.
+// Arguments:
+//   kind_or_part = a port kind string, or a MCC_PANEL_PARTS part number.
+function mcc_plug_axial(kind_or_part) =
+    let(ind = search([kind_or_part], MCC_PLUG_AXIAL)[0])
+    (ind != []) ? MCC_PLUG_AXIAL[ind][1] :
+    let(
+        kind = mcc_panel_kind(kind_or_part), // treat the argument as a panel part number instead
+        ind2 = search([kind], MCC_PLUG_AXIAL)[0]
+    )
+    assert(ind2 != [], str("mcc: unknown plug-axial kind/part \"", kind_or_part, "\" in mcc_plug_axial()"))
+    MCC_PLUG_AXIAL[ind2][1];
+
 MCC_CRADLE_RIB_T = 3.0;    // locating-rib thickness, mm. layout-patch-wall.md §7 cradle table
                             // "Locating ribs | 3.0 mm thick x 9.0 mm tall".
 MCC_CRADLE_RIB_H = 9.0;    // locating-rib height, mm. Same table; <= 3x thickness rule

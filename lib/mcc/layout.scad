@@ -300,9 +300,10 @@ function mcc_floor_keepout(dev, cfg) =
 //   mcc_side_bolt_keepout() from fasteners.scad themselves and translate it to this position.
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list, e.g. [["external_ports",[...]],["fan",false],
-//         ["splitter",false]]. Pass [] where only dev-driven fields are needed (they are the vast
-//         majority).
+//   cfg = variant-config assoc-list, e.g. [["fan",false],["splitter",false]]. NOT
+//         "external_ports": that key is INERT/DROPPED (D12, architecture.md §13) — the slot set
+//         comes solely from mcc_ports_external(dev). Pass [] where only dev-driven fields are
+//         needed (they are the vast majority).
 function mcc_case_layout(dev, cfg) =
     let(
         dev_size = mcc_dev_size(dev),

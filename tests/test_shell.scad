@@ -15,13 +15,13 @@ include <mcc/mcc.scad>
 include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
 
 DEV = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
+// "external_ports" is DROPPED from cfg (D12, architecture.md §13 -- inert, never implemented; the
+// slot set comes solely from mcc_ports_external(dev)). Real cfg keys only.
 VARIANT = [
-    ["external_ports", ["hdmi_out", "usb_host", "usb_b", "rj45"]],
     ["fan",             false],
     ["splitter",        false],
 ];
 VARIANT_FAN = [
-    ["external_ports", ["hdmi_out", "usb_host", "usb_b", "rj45"]],
     ["fan",             true],
     ["splitter",        false],
 ];

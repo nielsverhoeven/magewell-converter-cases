@@ -14,8 +14,9 @@ include <mcc/mcc.scad>
 include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
 
 DEV = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
+// "external_ports" is DROPPED from cfg (D12, architecture.md §13 -- inert, never implemented; the
+// slot set comes solely from mcc_ports_external(dev)). Real cfg keys only.
 VARIANT = [
-    ["external_ports", ["hdmi_out", "usb_host", "usb_b", "rj45"]],
     ["fan",             false],
     ["splitter",        false],
 ];
@@ -96,5 +97,101 @@ echo(str("mcc test_layout: L=", struct_val(l, "L"), " W=", struct_val(l, "W"), "
     " n_slots=", struct_val(l, "n_slots"), " pitch=", struct_val(l, "pitch"),
     " x_dev_c=", struct_val(l, "x_dev_c"), " lid_n_fast=", struct_val(l, "lid_n_fast")));
 echo("mcc test_layout: OK");
+
+// -----------------------------------------------------------------------------------------
+// Section: §16 pre-flight gate -- ALL 8 device files (layout-patch-wall.md §16.1/§16.2/§16.5
+// step 4: "render all eight devices and confirm this table" before any of the seven parallel
+// branches is opened). For each device this: (a) evaluates mcc_case_layout()/
+// mcc_slot_assignment() and cross-checks L/W/H/ez_neg/ez_pos/n_slots/slot-part-order against the
+// §16.1 fit-check table; (b) instantiates mcc_shell_base() so every Tier-1 assert baked into
+// shell.scad -- NOT just the ones inside mcc_case_layout() itself -- actually fires, in
+// particular T1-18(c), the BLOCKING BNC axial double-count this pre-flight branch exists to fix
+// (constants.scad MCC_PLUG_AXIAL / mcc_plug_axial(), shell.scad's T1-18(c) block above). Running
+// this via `python scripts/build.py smoke` (-o out.csg: evaluates the full CSG tree, asserts
+// fire, no tessellation) is exactly the "render all eight and confirm §16" step, repeated on
+// every CI run.
+// -----------------------------------------------------------------------------------------
+
+include <mcc/devices/pro-convert-hdmi-tx.scad>
+include <mcc/devices/pro-convert-sdi-tx.scad>
+include <mcc/devices/pro-convert-hdmi-plus.scad>
+include <mcc/devices/pro-convert-sdi-plus.scad>
+include <mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad>
+include <mcc/devices/pro-convert-for-ndi-to-sdi.scad>
+include <mcc/devices/pro-convert-for-ndi-to-aio.scad>
+// pro-convert-for-ndi-to-hdmi.scad is already included above (DEV/VARIANT).
+
+CFG8 = [["fan", false], ["splitter", false]];
+
+// Module: _t16_check()
+// Description:
+//   Test-local. One §16.1 table row: cross-checks mcc_case_layout()'s L/W/H/ez_neg/ez_pos/n_slots
+//   and mcc_slot_assignment()'s per-slot `part` order against the expected values, then
+//   instantiates mcc_shell_base() (translated clear of every other device in this file, x_off mm
+//   along +X, so none of their CSG trees share a coincident face -- shell.scad's own comments flag
+//   that class of degeneracy) so shell.scad's own Tier-1 asserts -- T1-18(c) foremost -- run for
+//   real, not just layout.scad's.
+// Arguments:
+//   dev, cfg           = device record / variant config.
+//   x_off               = translation along +X so this device's shell doesn't overlap the next.
+//   exp_L/W/H           = expected envelope, mm.
+//   exp_n               = expected n_slots.
+//   exp_parts           = expected slots[i]["part"], i=0..exp_n-1, in slot order.
+//   exp_ez_neg/ez_pos    = expected end zones, mm.
+module _t16_check(dev, cfg, x_off, exp_L, exp_W, exp_H, exp_n, exp_parts, exp_ez_neg, exp_ez_pos) {
+    slug = mcc_dev_slug(dev);
+    l = mcc_case_layout(dev, cfg);
+    assert(_mcc_near(struct_val(l, "L"), exp_L, 1e-2), str("§16 ", slug, ": L=", struct_val(l, "L"), " expected ", exp_L));
+    assert(_mcc_near(struct_val(l, "W"), exp_W, 1e-2), str("§16 ", slug, ": W=", struct_val(l, "W"), " expected ", exp_W));
+    assert(_mcc_near(struct_val(l, "H"), exp_H, 1e-6), str("§16 ", slug, ": H=", struct_val(l, "H"), " expected ", exp_H));
+    assert(struct_val(l, "n_slots") == exp_n, str("§16 ", slug, ": n_slots=", struct_val(l, "n_slots"), " expected ", exp_n));
+    assert(_mcc_near(struct_val(l, "ez_neg"), exp_ez_neg, 1e-6), str("§16 ", slug, ": ez_neg=", struct_val(l, "ez_neg"), " expected ", exp_ez_neg));
+    assert(_mcc_near(struct_val(l, "ez_pos"), exp_ez_pos, 1e-6), str("§16 ", slug, ": ez_pos=", struct_val(l, "ez_pos"), " expected ", exp_ez_pos));
+
+    slots = mcc_slot_assignment(dev);
+    for (i = [0 : 1 : exp_n - 1])
+        assert(struct_val(slots[i], "part") == exp_parts[i],
+            str("§16 ", slug, ": slot ", i + 1, " part=", struct_val(slots[i], "part"), " expected ", exp_parts[i]));
+
+    // Instantiating mcc_shell_base() runs EVERY Tier-1 assert in shell.scad, not just
+    // mcc_case_layout()'s own -- in particular T1-18(c) (the +X axial-cable-vs-fan-bay check this
+    // pre-flight branch exists to fix for the four BNC-ended SKUs), T1-29 (side-bolt boss flush)
+    // and the splitter/device-envelope collision guard.
+    translate([x_off, 0, 0]) mcc_shell_base(dev = dev, cfg = cfg);
+
+    echo(str("mcc §16 pre-flight OK: ", slug, " L=", struct_val(l, "L"), " W=", struct_val(l, "W"),
+        " H=", struct_val(l, "H"), " n_slots=", struct_val(l, "n_slots"),
+        " ez_neg/pos=", struct_val(l, "ez_neg"), "/", struct_val(l, "ez_pos")));
+}
+
+// #3 -- HDMI-ended, compact, 3 slots.
+_t16_check(MCC_DEV_PRO_CONVERT_HDMI_TX, CFG8, 0,
+    193.9, 159.85, 51.0, 3, ["NE8FDP-B", "NAUSB-W-B", "NAHDMI-W-B"], 47, 40);
+// #4 -- BNC-ended, compact, 3 slots. T1-18(c) FAILED here before the fix (-14.60 mm).
+_t16_check(MCC_DEV_PRO_CONVERT_SDI_TX, CFG8, 300,
+    194.9, 158.80, 51.0, 3, ["NE8FDP-B", "NAUSB-W-B", "NBB75DFGB"], 47, 41);
+// #5 -- HDMI-ended, plus, 4 slots (plus family's first shell.scad render in this repo's history).
+_t16_check(MCC_DEV_PRO_CONVERT_HDMI_PLUS, CFG8, 600,
+    210.5, 166.35, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAHDMI-W-B", "NAHDMI-W-B"], 47, 40);
+// #6 -- BNC-ended (two BNC, one end), plus, 4 slots. T1-18(c) FAILED here before the fix.
+_t16_check(MCC_DEV_PRO_CONVERT_SDI_PLUS, CFG8, 900,
+    211.5, 165.30, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NBB75DFGB", "NBB75DFGB"], 47, 41);
+// #7 -- HDMI-ended, plus, 4 slots (usb_host + hdmi_out share the +X end; HDMI's axial term governs).
+_t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K, CFG8, 1200,
+    210.5, 166.35, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NAHDMI-W-B"], 47, 40);
+// #8 -- BNC-ended (sdi_out + usb_host share the +X end), compact, 4 slots. T1-18(c) FAILED here
+// before the fix.
+_t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_SDI, CFG8, 1500,
+    194.9, 158.80, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NBB75DFGB"], 47, 41);
+// #9 -- mixed HDMI+BNC on the +X end (governs W via HDMI's deeper bay, L via BNC's wider ez_pos),
+// compact, 4 slots. T1-18(c) FAILED here before the fix.
+_t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_AIO, CFG8, 1800,
+    194.9, 159.85, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAHDMI-W-B", "NBB75DFGB"], 47, 41);
+// (8th device) pro-convert-for-ndi-to-hdmi -- the already-shipped SKU, re-checked here too so all
+// 8 device files are covered by one loop-free, deterministic list in a single place.
+_t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI, CFG8, 2100,
+    193.9, 159.85, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NAHDMI-W-B"], 47, 40);
+
+echo("mcc test_layout §16 pre-flight (8/8 devices): OK");
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
