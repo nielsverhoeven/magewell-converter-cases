@@ -156,6 +156,43 @@ function mcc_panel_plate_dims(dev) =
     struct_val(mcc_case_layout(dev, []), "plate_size");
 
 // -----------------------------------------------------------------------------------------
+// Section: Patch-wall aperture window (layout-patch-wall.md §2.5/§11 rev 6, §15 ruling
+// 2026-09-08b -- deviation D9, retires the rev-5 hull()ed "crown")
+// -----------------------------------------------------------------------------------------
+
+// Function: mcc_aperture_window()
+// Usage:
+//   aw = mcc_aperture_window(part);
+// Description:
+//   The patch-wall lip-window shape parameters for panel part `part`, rev 6: a plain round body
+//   opening, truncated-teardropped above its 45 deg tangent line, plus two plain boss-relief
+//   circles at the plate's own screw positions -- a union() of three profiles, NEVER a hull()
+//   (architecture.md §5, D9). Returns [d_win, d_rel, cap_h, w_flat]:
+//     d_win  = body-opening diameter, mm (the connector's own clearanced cutout,
+//              mcc_cutout_d(part) + 2*MCC_CLR_SLIDE).
+//     d_rel  = boss-relief circle diameter, mm -- same for every part (the M3 heat-set boss OD +
+//              2*MCC_CLR_SLIDE), since the plate's own rear bosses are identical across parts.
+//     cap_h  = truncated-teardrop cap height above the body circle's own centre, mm
+//              (d_win/2 + MCC_APERTURE_CAP_RISE).
+//     w_flat = the cap's flat bridge width, mm -- architecture.md §5's <=10 mm unsupported-span
+//              rule, checked as T1-34a where this shape is actually drawn (shell.scad).
+//   Guarded for DBA-BL-B (mcc_panel_hole_d(part) == 0): the blank has no body opening -- d_win,
+//   cap_h and w_flat all read 0; only d_rel is meaningful (the blank still gets the plate's usual
+//   rear screw bosses per panel.scad's mcc_panel_plate(), so its window still needs the two
+//   reliefs -- "For DBA-BL-B emit only the two relief circles").
+// Arguments:
+//   part = panel part number, key into MCC_PANEL_PARTS (constants.scad).
+function mcc_aperture_window(part) =
+    let(
+        is_blank = mcc_panel_hole_d(part) == 0,
+        d_win = is_blank ? 0 : mcc_cutout_d(part) + 2 * MCC_CLR_SLIDE,
+        d_rel = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od") + 2 * MCC_CLR_SLIDE,
+        cap_h = is_blank ? 0 : d_win / 2 + MCC_APERTURE_CAP_RISE,
+        w_flat = is_blank ? 0 : 2 * (d_win / 2 * sqrt(2) - cap_h)
+    )
+    [d_win, d_rel, cap_h, w_flat];
+
+// -----------------------------------------------------------------------------------------
 // Section: Cradle deck (layout-patch-wall.md §1)
 // -----------------------------------------------------------------------------------------
 
@@ -306,6 +343,59 @@ function mcc_case_layout(dev, cfg) =
         span  = plate_l - MCC_D_FLANGE[0] - 2 * MCC_PLATE_END_PAD,
         pitch = (n_slots > 1) ? span / (n_slots - 1) : 0,
         slot_x = [for (i = [0:1:n_slots - 1]) (n_slots > 1) ? (-span / 2 + i * pitch) : 0],
+
+        // Patch-wall aperture shape (rev 6, layout-patch-wall.md §2.5/§9, D9) -- per-slot window
+        // parameters and the three asserts that pin the shape/containment/lip-clearance the
+        // rev-5 hull() left unverified (T1-34 retired in favour of T1-34a-d; T1-34a itself lives
+        // where the shape is actually drawn, shell.scad's _mcc_patch_wall_window()).
+        slots_assigned = mcc_slot_assignment(dev),
+        apertures = [for (i = [0:1:n_slots - 1]) mcc_aperture_window(struct_val(slots_assigned[i], "part"))],
+        fix_pos_plate = mcc_panel_fixing_pos(plate_size, MCC_PLATE_RIM_W),
+        insert_hole_r = struct_val(MCC_INSERT_M3, "hole_d") / 2,
+
+        // T1-34b (roundness): the only part of the lip window visible through the plate's own
+        // cutout is the two relief crescents -- the numeric form of "the D slots must read as
+        // exactly round" (the user's rejection, 2026-09-08).
+        _t134b_check = [for (i = [0:1:n_slots - 1])
+            let(
+                part = struct_val(slots_assigned[i], "part"),
+                d_rel = apertures[i][1],
+                intrusion = (mcc_panel_hole_d(part) == 0) ? 0 :
+                    mcc_cutout_d(part) / 2 - (norm([MCC_D_SCREW_PITCH[0] / 2, MCC_D_SCREW_PITCH[1] / 2]) - d_rel / 2)
+            )
+            assert(intrusion <= MCC_APERTURE_RELIEF_INTRUSION_MAX + MCC_EPS,
+                str("mcc: T1-34b aperture relief intrusion=", intrusion, " exceeds MCC_APERTURE_RELIEF_INTRUSION_MAX=",
+                    MCC_APERTURE_RELIEF_INTRUSION_MAX, " for slot ", i + 1, " (\"", part, "\") on \"", mcc_dev_slug(dev), "\""))
+            0],
+
+        // T1-34c (containment): the whole window stays inside the plate silhouette with
+        // MCC_APERTURE_LIP_WEB_MIN of lip left all round.
+        _t134c_check = [for (i = [0:1:n_slots - 1])
+            let(cap_h = apertures[i][2], d_rel = apertures[i][1])
+            assert(cap_h + MCC_APERTURE_LIP_WEB_MIN <= MCC_PLATE_H / 2 + MCC_EPS,
+                str("mcc: T1-34c aperture cap containment fails for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
+            assert(MCC_D_SCREW_PITCH[1] / 2 + d_rel / 2 + MCC_APERTURE_LIP_WEB_MIN <= MCC_PLATE_H / 2 + MCC_EPS,
+                str("mcc: T1-34c aperture relief Z-containment fails for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
+            assert(abs(slot_x[i]) + MCC_D_SCREW_PITCH[0] / 2 + d_rel / 2 + MCC_APERTURE_LIP_WEB_MIN <= plate_l / 2 + MCC_EPS,
+                str("mcc: T1-34c aperture relief X-containment fails for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
+            0],
+
+        // T1-34d: every lip window clears every plate-fixing boss's insert bore by >=
+        // MCC_APERTURE_LIP_WEB_MIN of lip material (measured to the bore, not the boss OD).
+        _t134d_check = [for (i = [0:1:n_slots - 1])
+            let(
+                d_rel = apertures[i][1],
+                reliefs = [
+                    [slot_x[i] - MCC_D_SCREW_PITCH[0] / 2, z_conn_c + MCC_D_SCREW_PITCH[1] / 2],
+                    [slot_x[i] + MCC_D_SCREW_PITCH[0] / 2, z_conn_c - MCC_D_SCREW_PITCH[1] / 2],
+                ]
+            )
+            [for (r = reliefs) for (f = fix_pos_plate)
+                let(fw = [f[0], z_conn_c + f[1]], clr = norm(fw - r) - d_rel / 2 - insert_hole_r)
+                assert(clr >= MCC_APERTURE_LIP_WEB_MIN - MCC_EPS,
+                    str("mcc: T1-34d aperture-to-fixing-bore clearance=", clr, " below MCC_APERTURE_LIP_WEB_MIN=",
+                        MCC_APERTURE_LIP_WEB_MIN, " mm for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
+                0]],
 
         // Fan bay, +X end wall. fan_y is a shell parameter, default y_dev_c (R20).
         fan_y_cfg = struct_val(cfg, "fan_y"),

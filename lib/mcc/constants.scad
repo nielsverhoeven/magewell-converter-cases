@@ -293,6 +293,41 @@ MCC_PANEL_BEZEL_T = 3.0; // proud sacrificial-bezel layer of the patch-wall Y st
                           // layout-patch-wall.md §2.1 "Proud sacrificial bezel ... 3.0 assumed";
                           // §15 addendum "the proud sacrificial-bezel layer of MCC_T_PATCH; needed
                           // explicitly now that the rabbet is stepped (§2.5)".
+
+// Rev 6 (2026-09-08) aperture-shape constants — layout-patch-wall.md §11 rev-6 addendum / §2.5 /
+// §15 ruling 2026-09-08b. All five/six are print-process figures, `assumed` (not sourced
+// dimensions); none of them changes L/W/H, the plate size, the slot pitch or any fixing position —
+// this ruling is shape-and-bore-only. Deliberately NOT added here: MCC_APERTURE_TOP_OPEN -- the
+// top-open (U-notch) aperture is rejected, not parameterised (§15 ruling 2026-09-08b).
+MCC_APERTURE_BRIDGE_MAX = 10.0; // max unsupported horizontal span anywhere in the patch-wall
+                          // aperture, mm — the one place architecture.md §5's "no unsupported
+                          // horizontal span over 10 mm anywhere in the shell" becomes a number.
+                          // Used by T1-34a (window apex flat-bridge width w_flat).
+MCC_APERTURE_SELF_SUPPORT_MAX_D = 10.0; // assumed -- round-hole diameter below which a
+                          // horizontally-printed hole needs NO teardrop of its own (same 10 mm span
+                          // rule, read as a diameter). Used by T1-34a to justify the plain-circle
+                          // boss reliefs (d_rel = 8.88 < 10.0).
+MCC_APERTURE_CAP_RISE = 0.4; // assumed -- how far the truncated-teardrop cap sits above the body
+                          // circle's own top, mm: cap_h = d_win/2 + MCC_APERTURE_CAP_RISE. Chosen as
+                          // the smallest rise that still hides the cap behind the plate
+                          // (cap_h > mcc_cutout_d(part)/2, margin 0.7 mm) while keeping w_flat under
+                          // MCC_APERTURE_BRIDGE_MAX. Calibrate with the neutrik-tile coupon.
+MCC_APERTURE_RELIEF_INTRUSION_MAX = 1.5; // assumed -- maximum radial intrusion of a boss relief
+                          // inside the plate's own cutout silhouette, mm -- the numeric form of "the
+                          // D slots must read as exactly round" (the user's rejection, 2026-09-08).
+                          // Actual worst case today 1.235 mm (NE8FDP-B). T1-34b.
+MCC_APERTURE_LIP_WEB_MIN = 2.0; // minimum lip material between any part of a window and the plate's
+                          // own edge, mm. knowledge/design/fdm-rugged-enclosure-guidelines.md:127.
+                          // T1-34c.
+MCC_INSERT_BORE_EXTRA = 0.5; // assumed -- extra bore depth past a heat-set insert's own length so
+                          // the insert seats fully, mm. Replaces the bare "+ 1" literal in
+                          // mcc_neutrik_d_bosses() (deviation D10 / T1-35).
+MCC_PLATE_RIM_W = 6.0; // the panel plate's rim (border) width, mm. Named once so
+                          // mcc_panel_plate()'s rim_w default, _mcc_patch_wall_aperture()'s local
+                          // rim_w and the literal passed to _mcc_patch_wall_fixing_bosses() cannot
+                          // drift apart across the two L2 files that used to hardcode "6"
+                          // independently -- the exact drift hazard that produced deviation D6.
+
 MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL;
                           // total patch-wall Y stack at the panel band, mm. DERIVED —
                           // layout-patch-wall.md §2.1 "MCC_T_PATCH total = 8.0" =

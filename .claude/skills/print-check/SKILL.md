@@ -135,6 +135,9 @@ Before slicing for real, in Bambu Studio:
 - [ ] Bbox fits 256 mm cube minus margin, confirmed in-slicer at the actual print orientation
 - [ ] Orientation matches the table in §3 for this part type
 - [ ] No unsupported span >10 mm; all roofs ≤45°
+- [ ] For a case base: a head-on orthographic elevation of the patch wall from OUTSIDE (assembly
+      with `panel_placed`, `--projection=o`, camera along −Y) shows exactly round D holes with their
+      two screw holes and no window outline around them (architecture.md §13 D11)
 - [ ] Slicer profile matches §4 (enclosure on, 260°/105-110°, 5 walls, 3 mm walls, brim)
 - [ ] Relevant coupons (§6) already printed and measured back into `constants.scad`, if this is a
       full case rather than a coupon itself

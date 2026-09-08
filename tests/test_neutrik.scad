@@ -13,6 +13,11 @@ $fa = 1; $fs = 0.4;
 include <mcc/mcc.scad>
 
 // --- Default parameters -------------------------------------------------------------------
+// T1-35 (layout-patch-wall.md §9, rev 6 / deviation D10): mcc_neutrik_d_bosses()'s bore is now
+// SPLIT -- an insert bore from the rear tip (depth insert.len + MCC_INSERT_BORE_EXTRA) plus an
+// MCC_M3_CLR_D screw-clearance through-bore for the remainder of boss_h, so no solid material
+// remains anywhere on the screw axis between the flange face and the insert. At the default
+// boss_h=7: insert_bore_depth = 5.7+0.5 = 6.2, thru_depth = 0.8 (both > 0).
 mcc_neutrik_d_cutout("NE8FDP-B");
 mcc_neutrik_d_bosses("NE8FDP-B");
 mcc_neutrik_d_flange_outline();
@@ -21,12 +26,18 @@ mcc_neutrik_d_flange_outline();
 translate([40, 0, 0])
     mcc_neutrik_d_cutout("NAHDMI-W-B", mirror = true, seat_t = 1.0, panel_t = 1.0);
 translate([40, 0, 0])
-    mcc_neutrik_d_bosses("NAHDMI-W-B", mirror = true, boss_h = struct_val(MCC_INSERT_M3, "len") + 1); // boss_h == bore_depth exactly
+    // boss_h == insert_bore_depth exactly (thru_depth == 0, the T1-35 boundary: the insert bore
+    // alone reaches all the way to the panel-side face, so the `if (thru_depth > 0)` branch in
+    // mcc_neutrik_d_bosses() is skipped without leaving any solid on the screw axis).
+    mcc_neutrik_d_bosses("NAHDMI-W-B", mirror = true,
+        boss_h = struct_val(MCC_INSERT_M3, "len") + MCC_INSERT_BORE_EXTRA);
 
 // --- Maximum-ish parameters: etherCON at its full 4 mm panel-thickness rating --------------
 translate([80, 0, 0])
     mcc_neutrik_d_cutout("NE8FDP-B", mirror = false, seat_t = 2.0, panel_t = 4.0);
 translate([80, 0, 0])
+    // boss_h=12 well past insert_bore_depth (6.2) -- exercises a long screw-clearance through-bore
+    // (thru_depth = 5.8) on top of the insert bore.
     mcc_neutrik_d_bosses("NE8FDP-B", mirror = false, boss_h = 12);
 
 // --- Panel plate: single slot and a 2-slot plate at the minimum D-series pitch -------------

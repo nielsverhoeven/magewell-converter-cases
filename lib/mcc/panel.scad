@@ -62,8 +62,8 @@ module mcc_panel_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, panel_t
 //           number, mirror flag). Default: [].
 //   t     = field (flange-seat) thickness, mm. Default: MCC_PANEL_SEAT_T (2.0).
 //   rim_t = rim thickness, mm. Default: MCC_WALL (3.0).
-//   rim_w = rim (border) width, mm. Default: 6.
-module mcc_panel_plate(size, slots = [], t = MCC_PANEL_SEAT_T, rim_t = MCC_WALL, rim_w = 6) {
+//   rim_w = rim (border) width, mm. Default: MCC_PLATE_RIM_W (6.0).
+module mcc_panel_plate(size, slots = [], t = MCC_PANEL_SEAT_T, rim_t = MCC_WALL, rim_w = MCC_PLATE_RIM_W) {
     w = size[0];
     h = size[1];
 

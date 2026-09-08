@@ -157,36 +157,56 @@ module _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c) {
 // Module: _mcc_patch_wall_window()
 // Description:
 //   Private, SUBTRACTIVE. ONE discrete window through the 3 mm structural lip behind the rabbet
-//   (layout-patch-wall.md §2.5/T1-34): the minimal clearance envelope for one connector slot — a
-//   hull() of the connector-body clearance circle and the two rear-boss relief circles (at the
-//   plate's own screw positions), giving a continuously-curved, self-supporting "crown" opening
-//   rather than a flat-topped rectangle (T1-34's whole point: a 45 deg-gabled rectangle here is
-//   NOT self-supporting at the boss positions).
+//   (layout-patch-wall.md §2.5, rev 6 — deviation D9, §15 ruling 2026-09-08b). REV 6: a union() of
+//   three separate 2-D profiles — NEVER a hull() — so the assembled patch wall reads as *exactly
+//   round* from outside: (i) the body opening, a plain clearance circle truncated-teardropped
+//   above its 45 deg tangent line (mcc_aperture_window()'s d_win/cap_h — self-supporting, and the
+//   body-opening boundary hides entirely behind the plate's own smaller cutout); (ii)+(iii) two
+//   plain boss-relief circles at the plate's own screw positions, small enough
+//   (< MCC_APERTURE_SELF_SUPPORT_MAX_D) to need no teardrop of their own. The rev-5 hull() of the
+//   same three circles produced a diagonal blob *narrower than the plate's own D cutout on its
+//   two diagonal flanks*, so its outline showed through every plate hole — the user rejected it on
+//   sight (2026-09-08) and was right: the hull also removed ~35% more of the structural lip than
+//   the union, exactly where the plate's 2 mm flange seat needs backing (architecture.md §5 R4).
+//   For DBA-BL-B (a blank — no body opening) only the two relief circles are emitted, since the
+//   blank still carries the plate's usual rear screw bosses (panel.scad's mcc_panel_plate() gives
+//   every slot the same bosses regardless of part).
 // Arguments:
 //   part  = panel part number at this slot (key into MCC_PANEL_PARTS).
 //   y_lo, y_hi = the lip's own Y range to cut through (y_lo < y_hi).
 //   x_c, z_c   = slot centre (slot_x(i), z_conn_c), mm.
 module _mcc_patch_wall_window(part, y_lo, y_hi, x_c, z_c) {
-    hole_d = mcc_cutout_d(part) + 2 * MCC_CLR_SLIDE;
-    boss_od = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od");
-    relief_d = boss_od + 2 * MCC_CLR_SLIDE;
+    aw = mcc_aperture_window(part);
+    d_win = aw[0]; d_rel = aw[1]; cap_h = aw[2]; w_flat = aw[3];
+    is_blank = mcc_panel_hole_d(part) == 0;
     sx = MCC_D_SCREW_PITCH[0] / 2; sz = MCC_D_SCREW_PITCH[1] / 2;
+
+    // T1-34a (layout-patch-wall.md §2.5/§9, rev 6) -- the union's own shape rules, checked once
+    // per slot at render time. Retires T1-34 (satisfied, but under-specified, by the rejected
+    // hull()).
+    assert(is_blank || w_flat <= MCC_APERTURE_BRIDGE_MAX + MCC_EPS,
+        str("mcc: T1-34a window w_flat=", w_flat, " exceeds MCC_APERTURE_BRIDGE_MAX=", MCC_APERTURE_BRIDGE_MAX, " for \"", part, "\""));
+    assert(d_rel <= MCC_APERTURE_SELF_SUPPORT_MAX_D + MCC_EPS,
+        str("mcc: T1-34a relief d_rel=", d_rel, " exceeds MCC_APERTURE_SELF_SUPPORT_MAX_D=", MCC_APERTURE_SELF_SUPPORT_MAX_D, " for \"", part, "\""));
+    assert(is_blank || cap_h > mcc_cutout_d(part) / 2,
+        str("mcc: T1-34a cap_h=", cap_h, " does not clear mcc_cutout_d(part)/2=", mcc_cutout_d(part) / 2, " for \"", part, "\""));
 
     translate([0, (y_lo + y_hi) / 2, 0])
         rotate([90, 0, 0])
             linear_extrude(height = y_hi - y_lo, center = true)
                 translate([x_c, z_c])
-                    hull() {
-                        circle(d = hole_d, $fn = 64);
-                        translate([-sx, sz]) circle(d = relief_d, $fn = 32);
-                        translate([sx, -sz]) circle(d = relief_d, $fn = 32);
+                    union() {
+                        if (!is_blank)
+                            teardrop2d(d = d_win, ang = 45, cap_h = cap_h, $fn = 96);
+                        translate([-sx, sz]) circle(d = d_rel, $fn = 64);
+                        translate([sx, -sz]) circle(d = d_rel, $fn = 64);
                     }
 }
 
 // Module: _mcc_patch_wall_aperture()
 // Description:
 //   Private, SUBTRACTIVE. The whole patch-wall aperture for `dev`: one rabbet (see above) plus one
-//   window per slot (T1-34), plus the 4 plate-retention M3 heat-set bores at
+//   window per slot (T1-34a-d, rev 6), plus the 4 plate-retention M3 heat-set bores at
 //   mcc_panel_fixing_pos() (deviation D6 -- matches the ALREADY-IMPLEMENTED mcc_panel_plate()
 //   exactly, never the doc's own superseded numbers).
 // Arguments:
@@ -199,7 +219,7 @@ module _mcc_patch_wall_aperture(l, dev) {
     slot_x = struct_val(l, "slot_x");
     n_slots = struct_val(l, "n_slots");
     slots = mcc_slot_assignment(dev);
-    rim_w = 6; // mcc_panel_plate()'s own default rim_w.
+    rim_w = MCC_PLATE_RIM_W; // mcc_panel_plate()'s own default rim_w -- named once, constants.scad.
 
     y_outer = W / 2;
     y_lip_lo = W / 2 - MCC_T_PATCH; // patch-wall inner face
@@ -219,26 +239,39 @@ module _mcc_patch_wall_aperture(l, dev) {
 //   Private, ADDITIVE. Each of the 4 plate-retention M3 heat-set-insert bosses stands rearward off
 //   the rabbet lip's inner face (§2.3 "bosses standing rearward off the rabbet lip") at
 //   mcc_panel_fixing_pos() (deviation D6, matches the ALREADY-IMPLEMENTED mcc_panel_plate()
-//   exactly).
-//   KNOWN DEVIATION (reported, not silently absorbed — architecture.md §13): this boss is
-//   currently a PLAIN, UNBORED solid, not the boss+M3-heat-set-insert-bore the module contract
-//   calls for everywhere else in this repo (mcc_heat_set_boss()/mcc_heat_set_bore()). Every bore
-//   construction tried here (mcc_heat_set_boss()'s own combo; a locally pre-resolved
-//   difference(); a separate cut applied in the outer difference() a la the VESA/tripod pattern;
-//   render() at the boss level and/or the whole-union level; setback distances from 0.01 mm to
-//   15 mm; the wall built as a cube-minus-cavity vs. as unioned slabs) reliably produced a
-//   spurious disconnected zero/negative-volume mesh component (`build.py check`'s `n_parts>1`)
-//   the moment the SAME outer difference() also had to apply the patch-wall rabbet cut — even
-//   though the rabbet's own Y range (73.925-79.925 on this SKU) never spatially overlaps this
-//   boss (approx. y in [58,72]). A plain unbored boss + the SAME rabbet cut renders perfectly
-//   clean (single watertight shell) — isolated and confirmed during this milestone's own
-//   verification pass. This looks like a numerical-robustness limit of the pinned OpenSCAD
-//   2025.09.07 / Manifold combination when a small bore-bearing feature and a larger, more complex
-//   cutter coexist in one boolean tree, not a modelling error on this file's part — but it is
-//   unresolved, and the fix (adding the M3 bore back in) is deferred to a follow-up pass once
-//   the trigger is better understood (or a newer OpenSCAD/Manifold build is pinned). Until then:
-//   the boss is print-ready as a solid pilot for the insert (drill/tap during assembly, or add the
-//   bore as a manual STL post-process step), but do not assume the bore is modelled here.
+//   exactly). `anchor = BOTTOM` places the boss's own local Z=0 at the rear tip (deepest into the
+//   interior, world Y = y_lip_inner - boss_h) and local Z=boss_h at the front, plate-facing
+//   bearing face flush with the rabbet lip's inner face (world Y = y_lip_inner).
+//   DEVIATION D10, RESOLVED (rev 6, 2026-09-08 — architecture.md §13): this boss now carries a
+//   real M3 bore, resolved LOCALLY inside this module via a per-boss difference() rather than the
+//   split add-then-cut-in-the-outer-difference() pattern used for the tripod/VESA floor bosses
+//   (mcc_tripod_insert_bore_cut() / mcc_floor_bore_cut() in mcc_shell_base() — see that module's
+//   own comment for why that split exists there: an overlapping un-bored sibling solid backfills a
+//   bore cut only in the outer difference()). That split pattern is NOT needed here because
+//   nothing else in the union() overlaps one of these bosses — and it was independently retried
+//   and confirmed NOT to fix the failure below.
+//   ROOT CAUSE, diagnosed by isolated bisection (not merely "the rabbet cut interferes" — that
+//   turned out not to be it; the failure reproduces even with the aperture entirely absent): the
+//   boss's front (plate-facing) face is flush with y_lip_inner, exactly where the wall's own solid
+//   material begins. Unioning a PLAIN (unbored) cylinder there against the wall merges cleanly
+//   (`build.py check --all`: parts=1) with any amount of overlap, none, or several mm. The instant
+//   the boss carries ANY blind bore — mcc_heat_set_bore()'s own padded cylinder, or a bare
+//   hand-rolled one, regardless of overlap depth (MCC_EPS through 2 mm, all tried) — the union
+//   comes back with the boss adrift as its own disconnected component (`n_parts` = 1(shell) + one
+//   per bored boss). This is a genuine Manifold/pinned-OpenSCAD-2025.09.07 robustness limit for
+//   "solid-with-a-blind-cavity unioned flush against a face of another solid", not a modelling
+//   error in this file, and not fixable by re-ordering this file's own CSG tree (isolated,
+//   minimal repros confirm it — see this milestone's own verification notes).
+//   FIX (escalation option (a), generalised): make the bore a genuine THROUGH-hole, open at BOTH
+//   the front (plate-facing) face AND the boss's own rear tip, instead of a blind pocket. Nothing
+//   in this boss's own function needs the rear tip to stay solid (unlike mcc_neutrik_d_bosses(),
+//   this boss carries no other feature there), so there is no design cost. The bore keeps T1-35's
+//   two-diameter shape (insert.hole_d for the insert's own length, MCC_M3_CLR_D screw clearance for
+//   the remainder) — it simply no longer stops short of either end. Verified by isolated bisection
+//   AND by `build.py check --all`: `base.stl` watertight, parts=1. The insert side faces the rear
+//   tip (deepest into the interior, most accessible before the lid closes); the M3 clearance side
+//   faces the plate — the screw enters through the plate's own already-cut clearance hole
+//   (mcc_panel_plate()) and drives through the clearance bore into the insert. T1-35.
 // Arguments:
 //   plate_size = [w, h] plate footprint, mm.
 //   rim_w      = plate rim width, mm.
@@ -248,10 +281,34 @@ module _mcc_patch_wall_fixing_bosses(plate_size, rim_w, y_outer, z_c) {
     boss_h = 7; // matches mcc_neutrik_d_bosses()'s own default boss_h (architecture.md §5).
     boss_od = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od");
     y_lip_inner = y_outer - MCC_T_PATCH;
+    insert_hole_d = struct_val(MCC_INSERT_M3, "hole_d");
+
+    // T1-35: no solid material anywhere on the screw axis between the boss's own front (plate-
+    // facing) face and the insert. insert_bore_depth (from the rear tip) + thru_depth (screw
+    // clearance, to the front) together span the WHOLE boss_h -- a genuine through-hole, not a
+    // blind pocket (see the module comment above for why a blind pocket does not render here).
+    insert_bore_depth = struct_val(MCC_INSERT_M3, "len") + MCC_INSERT_BORE_EXTRA;
+    thru_depth = boss_h - insert_bore_depth;
+    assert(thru_depth >= 0,
+        str("mcc: T1-35 fixing-boss thru_depth=", thru_depth, " negative — boss_h=", boss_h,
+            " too short for insert_bore_depth=", insert_bore_depth));
+
     for (p = mcc_panel_fixing_pos(plate_size, rim_w))
         translate([p[0], y_lip_inner - boss_h, z_c + p[1]])
             rotate([-90, 0, 0])
-                cyl(h = boss_h, d = boss_od, circum = true, anchor = BOTTOM, $fn = 64);
+                difference() {
+                    cyl(h = boss_h, d = boss_od, circum = true, anchor = BOTTOM, $fn = 64);
+                    // Insert bore: opens past the rear tip (Z=-MCC_EPS, anchor=BOTTOM) so it
+                    // genuinely punches through rather than kissing the boss's own end cap, and
+                    // extends forward by insert_bore_depth.
+                    translate([0, 0, -MCC_EPS])
+                        cyl(h = insert_bore_depth + MCC_EPS, d = insert_hole_d, circum = true, anchor = BOTTOM, $fn = 64);
+                    // Screw-clearance through-bore: carries the axis the rest of the way past the
+                    // front (plate-facing) face, for the same reason.
+                    if (thru_depth > 0)
+                        translate([0, 0, insert_bore_depth])
+                            cyl(h = thru_depth + MCC_EPS, d = MCC_M3_CLR_D, circum = true, anchor = BOTTOM, $fn = 64);
+                }
 }
 
 // -----------------------------------------------------------------------------------------
@@ -333,7 +390,7 @@ module mcc_shell_base(dev, cfg) {
                 mcc_cradle(dev, cfg);
                 mcc_floor_features_add(dev, cfg);
 
-                _mcc_patch_wall_fixing_bosses(struct_val(l, "plate_size"), 6, W / 2, struct_val(l, "z_conn_c"));
+                _mcc_patch_wall_fixing_bosses(struct_val(l, "plate_size"), MCC_PLATE_RIM_W, W / 2, struct_val(l, "z_conn_c"));
             }
 
             _mcc_patch_wall_aperture(l, dev);
@@ -344,8 +401,9 @@ module mcc_shell_base(dev, cfg) {
             // mounts.scad's mcc_floor_bore_cut() for why: a bore differenced only against its own
             // boss's local geometry gets silently backfilled by an overlapping, un-bored sibling
             // solid (the floor slab). The 4 patch-wall plate-fixing bosses do NOT need this split
-            // — their bore is resolved locally inside _mcc_patch_wall_fixing_bosses() itself; see
-            // that module's own comment for why the split pattern actively hurts there instead.
+            // — their bore (D10, rev 6, resolved) is cut locally inside
+            // _mcc_patch_wall_fixing_bosses() itself, since nothing else in the union() overlaps
+            // one of those bosses; see that module's own comment for the fuller history.
             mcc_tripod_insert_bore_cut(dev, cfg);
             mcc_floor_bore_cut(dev, cfg);
 
