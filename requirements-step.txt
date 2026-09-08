@@ -1,0 +1,11 @@
+# Extra dependency for `scripts/build.py step` (STL -> STEP conversion, scripts/mesh_to_step.py).
+# Kept separate from requirements.txt because it's a heavy, platform-specific wheel (~50-150 MB
+# with its own transitive deps) that a plain render/check/golden workflow never needs — only CI's
+# release job (.github/workflows/release.yml) and anyone locally exercising `build.py step` should
+# install it. See scripts/mesh_to_step.py for the FreeCAD fallback used when no wheel is available
+# for the local Python version.
+#
+# Confirmed available as a prebuilt wheel for this repo's pinned local venv (Windows, Python
+# 3.14, cp314-win_amd64) and for CI (ubuntu-latest, Python 3.12, manylinux_2_28_x86_64) as of
+# 2026-09-08.
+cadquery-ocp>=8.0.1

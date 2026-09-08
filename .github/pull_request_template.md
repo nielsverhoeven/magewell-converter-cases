@@ -11,6 +11,7 @@ Never commit directly on main — every change reaches it through this kind of P
 ## Checklist (definition of done, CONTRIBUTING.md)
 
 - [ ] `python scripts/build.py all` passes locally
+- [ ] STEP export succeeds (`python scripts/build.py step --all`, or via `build.py all --with-step`)
 - [ ] The `render` CI check is green on this PR
 - [ ] Docs and code comments are English
 - [ ] Every Neutrik panel connector is the black `-B` variant, no exceptions
@@ -20,10 +21,12 @@ Never commit directly on main — every change reaches it through this kind of P
 ## Goldens changed?
 
 - [ ] No golden diff (`tests/golden/*.json` unchanged)
-- [ ] Golden diff present — justified below:
+- [ ] Golden diff present, scoped to the device(s) this PR actually touches — no golden changes
+      outside this device — and justified below:
 
 <!-- If a golden changed, explain what dimension/geometry changed and why the new value is correct,
-     not just that the diff exists. An unexplained golden diff is treated as a regression. -->
+     not just that the diff exists. An unexplained golden diff is treated as a regression, and so is
+     a golden diff on a device this PR didn't mean to touch. -->
 
 ## BOM changed?
 

@@ -86,11 +86,19 @@ module mcc_neutrik_d_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, pan
 // Usage:
 //   mcc_neutrik_d_bosses(part, [mirror=], [boss_h=]);
 // Description:
-//   Two rear bosses (ADDITIVE solid, union onto the panel) at the two screw positions, each with
-//   a blind M3 heat-set-insert bore. architecture.md:206-207 "local rear bosses at the two screw
-//   positions, protruding rearward from the 2.0 mm seat to ~7 mm total". Local Z convention: Z=0
-//   is the rear pocket floor (butts against the panel), the boss extends to Z=-boss_h, and the
-//   insert bore opens at the rear tip (Z=-boss_h) going forward.
+//   Two rear bosses (ADDITIVE solid, union onto the panel) at the two screw positions, each with a
+//   bore a screw can actually reach through end to end (T1-35, deviation D10 rev 6 fix — "there is
+//   no place to screw the D-connectors down", 2026-09-08). architecture.md:206-207 "local rear
+//   bosses at the two screw positions, protruding rearward from the 2.0 mm seat to ~7 mm total".
+//   Local Z convention: Z=0 is the rear pocket floor (butts against the panel), the boss extends to
+//   Z=-boss_h. The bore is SPLIT in two, unlike a plain blind pocket: an insert bore of diameter
+//   `insert.hole_d`, depth `insert.len + MCC_INSERT_BORE_EXTRA`, opens at the rear tip (Z=-boss_h)
+//   and goes forward; the REMAINDER of the boss, from there to the panel-side face (Z=0), is a
+//   `MCC_M3_CLR_D` screw-clearance through-bore — so there is NO solid material anywhere on the
+//   screw axis between the flange face and the insert. Before this fix the bore was a single
+//   `insert.len + 1` blind pocket cut from the rear tip only (`insert_len + 1 = 6.7` against
+//   `boss_h = 7`), leaving 0.3 mm of solid ASA across the screw axis right behind the panel's own
+//   M3 clearance hole — the screw physically could not reach the insert.
 // Arguments:
 //   part    = panel part number (only used to keep the call site symmetric with the cutout call;
 //             the boss geometry itself does not vary per connector).
@@ -111,21 +119,35 @@ module mcc_neutrik_d_bosses(part, mirror = false, boss_h = 7, boss_od = undef) {
         str("mcc: boss_od=", _boss_od, " below minimum ", MCC_BOSS_MIN_RATIO, "x insert OD (", insert_od, ")")
     );
 
-    mirror_x   = mirror ? -1 : 1;
-    screw_x    = mirror_x * MCC_D_SCREW_PITCH[0] / 2;
-    screw_y    = MCC_D_SCREW_PITCH[1] / 2;
-    bore_depth = insert_len + 1; // MCC_INSERT_M3 len (5.7) + 1 mm clearance past the insert's own length.
+    mirror_x = mirror ? -1 : 1;
+    screw_x  = mirror_x * MCC_D_SCREW_PITCH[0] / 2;
+    screw_y  = MCC_D_SCREW_PITCH[1] / 2;
 
-    assert(bore_depth <= boss_h,
-        str("mcc: insert bore_depth=", bore_depth, " exceeds boss_h=", boss_h));
+    // T1-35: insert bore from the rear tip, MCC_M3_CLR_D clearance through-bore the rest of the
+    // way to the panel-side face — the two together must exactly span boss_h so no solid remains
+    // on the screw axis anywhere between the flange face and the insert.
+    insert_bore_depth = insert_len + MCC_INSERT_BORE_EXTRA;
+    thru_depth = boss_h - insert_bore_depth;
+
+    assert(insert_bore_depth <= boss_h,
+        str("mcc: T1-35 insert_bore_depth=", insert_bore_depth, " exceeds boss_h=", boss_h));
+    assert(thru_depth >= 0,
+        str("mcc: T1-35 thru_depth=", thru_depth, " negative — boss_h=", boss_h, " too short for insert_bore_depth=", insert_bore_depth));
 
     for (pos = [[-screw_x, screw_y], [screw_x, -screw_y]]) {
         translate([pos[0], pos[1], 0])
         difference() {
             translate([0, 0, -boss_h / 2])
                 cyl(h = boss_h, d = _boss_od, circum = true, $fn = 64);
-            translate([0, 0, -boss_h + bore_depth / 2])
-                cyl(h = bore_depth + MCC_EPS, d = insert_hole_d, circum = true, $fn = 64);
+            // Insert bore: opens at the rear tip (Z=-boss_h), extends forward by insert_bore_depth.
+            translate([0, 0, -boss_h + insert_bore_depth / 2])
+                cyl(h = insert_bore_depth + MCC_EPS, d = insert_hole_d, circum = true, $fn = 64);
+            // Screw-clearance through-bore: carries the axis the rest of the way to Z=0 (the
+            // panel-side face / the panel's own MCC_M3_CLR_D clearance hole), so nothing solid
+            // remains on the screw axis.
+            if (thru_depth > 0)
+                translate([0, 0, -boss_h + insert_bore_depth + thru_depth / 2 + MCC_EPS])
+                    cyl(h = thru_depth + 2 * MCC_EPS, d = MCC_M3_CLR_D, circum = true, $fn = 64);
         }
     }
 }

@@ -23,6 +23,15 @@ choke on — do not "just try slicing it anyway" to see if it works. `golden` fa
 changed since the last reviewed baseline — that might be intentional (you just changed a dimension)
 or might be a regression; resolve which before printing, don't print through an unexplained diff.
 
+If you want a STEP file too (for a CAD tool other than the slicer, or to hand the part to someone
+without OpenSCAD) — not required just to slice and print, since Bambu Studio prints from the STL/3MF
+— run `python scripts/build.py step <target>` (or `step --all`) after `render`. It converts the
+already-rendered STL to `exports/<target>/<part>.step` via `scripts/mesh_to_step.py`
+(`cadquery-ocp`, falling back to FreeCAD's `freecadcmd` if no wheel is available for the local
+Python — `build.py doctor` reports which backend, if either, is available). Every device zip on the
+project's GitHub Releases page ships the STEP alongside the STL/3MF for exactly this reason — see
+`README.md`'s "Releases" and "Open in Bambu Studio" sections.
+
 ## 2. Bed-fit check
 
 The confirmed printer is a **Bambu Lab X1 Carbon** (user decision 2026-09-07): build volume
@@ -132,9 +141,13 @@ Before slicing for real, in Bambu Studio:
 - [ ] `build.py render` clean
 - [ ] `build.py check` clean (watertight, consistent winding, single shell)
 - [ ] `build.py golden` clean, or the diff is understood and expected
+- [ ] `build.py step` clean, if a STEP file is wanted (not required to slice/print from STL/3MF)
 - [ ] Bbox fits 256 mm cube minus margin, confirmed in-slicer at the actual print orientation
 - [ ] Orientation matches the table in §3 for this part type
 - [ ] No unsupported span >10 mm; all roofs ≤45°
+- [ ] For a case base: a head-on orthographic elevation of the patch wall from OUTSIDE (assembly
+      with `panel_placed`, `--projection=o`, camera along −Y) shows exactly round D holes with their
+      two screw holes and no window outline around them (architecture.md §13 D11)
 - [ ] Slicer profile matches §4 (enclosure on, 260°/105-110°, 5 walls, 3 mm walls, brim)
 - [ ] Relevant coupons (§6) already printed and measured back into `constants.scad`, if this is a
       full case rather than a coupon itself

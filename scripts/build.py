@@ -6,16 +6,20 @@ implementation, per .claude/knowledge/architecture.md §8 (export policy) and §
 policy). scripts/render.ps1 is a thin PowerShell wrapper over this file — do not duplicate this
 logic there.
 
-Subcommands: render, smoke, check, golden, all, doctor. Run `build.py --help` or
+Subcommands: render, step, smoke, check, golden, confidence, all, doctor. Run `build.py --help` or
 `build.py <subcommand> --help` for details.
 
-Requires Python 3.11+, stdlib + trimesh (see requirements.txt).
+Requires Python 3.11+, stdlib + trimesh (see requirements.txt). `step` additionally needs a STEP
+backend — `cadquery-ocp` (see requirements-step.txt) or FreeCAD's `freecadcmd` — see
+`scripts/mesh_to_step.py`.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +31,8 @@ try:
     import trimesh
 except ImportError:  # trimesh is optional for `doctor`; required for `check`/`golden`/`render`'s
     trimesh = None   # mesh measurement and for `all`.
+
+import mesh_to_step  # sibling module in scripts/ — STL -> STEP conversion, both backends
 
 # -----------------------------------------------------------------------------------------
 # Constants (single source of truth for build-time policy numbers; keep this the only place
@@ -57,6 +63,11 @@ RELEASE_WARNING_MARKER = "WARNING: unmeasured"
 
 EXPORT_EXT = {"stl": ".stl", "3mf": ".3mf"}
 
+# Mirrors lib/mcc/constants.scad:622 MCC_CONFIDENCE_ORDER. Python can't evaluate OpenSCAD, so
+# `confidence` (below) reads device data files as text instead of asking OpenSCAD to render them —
+# this list must be kept in sync with constants.scad by hand if that ever changes.
+CONFIDENCE_ORDER = ["assumed", "photo", "manual", "drawing", "measured"]
+
 
 # -----------------------------------------------------------------------------------------
 # Data model
@@ -84,6 +95,19 @@ class RenderResult:
     outputs: list[Path] = field(default_factory=list)
     summary_path: Path | None = None
     manifest_path: Path | None = None
+    error: str | None = None
+
+
+@dataclass
+class StepBuildResult:
+    target: str
+    part: str
+    ok: bool
+    backend: str | None = None
+    step_path: Path | None = None
+    faces_before_unify: int | None = None
+    faces_after_unify: int | None = None
+    size_bytes: int | None = None
     error: str | None = None
 
 
@@ -232,6 +256,12 @@ def bosl2_sha(repo_root: Path = REPO_ROOT) -> str | None:
     if not bosl2_dir.is_dir():
         return None
     return _git(["rev-parse", "HEAD"], bosl2_dir)
+
+
+def _running_in_ci() -> bool:
+    # GitHub Actions sets CI=true on every runner. Used to decide whether a missing STEP backend
+    # is a warn-and-skip (local dev machine) or a hard failure (`step` must succeed in CI).
+    return os.environ.get("CI", "").lower() == "true"
 
 
 # -----------------------------------------------------------------------------------------
@@ -458,6 +488,104 @@ def _print_result_table(label: str, results: list[RenderResult]) -> None:
 
 
 # -----------------------------------------------------------------------------------------
+# step  (STL -> STEP via scripts/mesh_to_step.py; see architecture.md §8 export policy)
+# -----------------------------------------------------------------------------------------
+
+def _update_manifest_with_step(target: Target, part: str, result) -> None:
+    """Merge a `step` sub-object into the part's existing `<part>.manifest.json` (written by
+    `render_part()`). Never overwrites the render-time fields — only adds/replaces `manifest["step"]`."""
+
+    manifest_path = target.export_dir / f"{part}.manifest.json"
+    manifest: dict = {}
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {}
+
+    manifest["step"] = {
+        "ok": result.ok,
+        "backend": result.backend,
+        "faces_before_unify": result.faces_before_unify,
+        "faces_after_unify": result.faces_after_unify,
+        "size_bytes": result.size_bytes,
+        "validated": result.validated,
+        "duration_s": round(result.duration_s, 2) if result.duration_s else None,
+        "error": result.error,
+        "path": (
+            str(result.step_path.relative_to(REPO_ROOT).as_posix())
+            if result.step_path is not None and result.step_path.is_file()
+            else None
+        ),
+    }
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def cmd_step(args: argparse.Namespace) -> int:
+    if args.all:
+        targets = discover_all()
+        if args.part:
+            targets = [Target(name=t.name, scad_path=t.scad_path, parts=args.part, kind=t.kind) for t in targets]
+    else:
+        if not args.targets:
+            raise SystemExit("error: step needs --all or at least one <target>")
+        targets = resolve_targets(args.targets, args.part)
+
+    if not targets:
+        print("no targets discovered/resolved — nothing to convert")
+        return 0
+
+    backend, detail = mesh_to_step.backend_available()
+    if backend is None:
+        if _running_in_ci():
+            print(f"error: no STEP backend available in CI — {detail}")
+            return 1
+        print(f"WARNING: no STEP backend available locally — {detail}")
+        print("WARNING: skipping STEP export (local dev only; CI must succeed) — see scripts/mesh_to_step.py")
+        return 0
+
+    print(f"STEP backend: {backend} ({detail})")
+
+    results: list[StepBuildResult] = []
+    for target in targets:
+        for part in target.parts:
+            stl_path = target.export_dir / f"{part}.stl"
+            if not stl_path.is_file():
+                results.append(StepBuildResult(
+                    target=target.name, part=part, ok=False,
+                    error=f"no STL at {stl_path.relative_to(REPO_ROOT)} — run `render` first",
+                ))
+                continue
+
+            step_path = target.export_dir / f"{part}.step"
+            product_name = f"{target.name}/{part}"
+            print(f"-> step {target.name} part={part}")
+            r = mesh_to_step.convert(stl_path, step_path, product_name, backend=backend)
+            _update_manifest_with_step(target, part, r)
+            results.append(StepBuildResult(
+                target=target.name, part=part, ok=r.ok, backend=r.backend, step_path=r.step_path,
+                faces_before_unify=r.faces_before_unify, faces_after_unify=r.faces_after_unify,
+                size_bytes=r.size_bytes, error=r.error,
+            ))
+
+    print("\nstep results:")
+    width = max((len(f"{r.target}:{r.part}") for r in results), default=10)
+    for r in results:
+        status = "PASS" if r.ok else "FAIL"
+        key = f"{r.target}:{r.part}".ljust(width)
+        if r.ok:
+            extra = f"  (faces {r.faces_before_unify}->{r.faces_after_unify}, {r.size_bytes} bytes)"
+        else:
+            extra = f"  ({r.error})"
+        print(f"  [{status}] {key}{extra}")
+    n_ok = sum(r.ok for r in results)
+    print(f"  {n_ok}/{len(results)} passed")
+
+    return 0 if all(r.ok for r in results) else 1
+
+
+# -----------------------------------------------------------------------------------------
 # smoke  (Tier 2 — headless smoke tests: -o *.csg evaluates the tree, asserts fire, no tessellation)
 # -----------------------------------------------------------------------------------------
 
@@ -646,6 +774,133 @@ def cmd_golden(args: argparse.Namespace) -> int:
 
 
 # -----------------------------------------------------------------------------------------
+# confidence  (release-softener: reports ports below "measured", never fails — see issue #10.
+# lib/mcc/devices/*.scad is DATA ONLY (architecture.md §3), so this reads it as text rather than
+# asking OpenSCAD to evaluate it; ports.scad's own mcc_warn_unmeasured() is the OpenSCAD-side
+# source of truth for the *format* of an unmeasured warning, but nothing in lib/models/**
+# currently calls it at render time, so its echo() output can't be relied on here.)
+# -----------------------------------------------------------------------------------------
+
+_DEVICE_INCLUDE_RE = re.compile(r"include\s*<mcc/devices/([^>]+)\.scad>")
+_PORT_ID_RE = re.compile(r'\[\s*"id"\s*,\s*"([^"]*)"\s*\]')
+_PORT_CONFIDENCE_RE = re.compile(r'\[\s*"confidence"\s*,\s*"([^"]*)"\s*\]')
+
+
+def confidence_rank(level: str) -> int:
+    try:
+        return CONFIDENCE_ORDER.index(level)
+    except ValueError:
+        return -1  # unrecognized level — treat as below everything ("definitely not measured")
+
+
+def _find_matching_bracket(text: str, open_idx: int) -> int:
+    """text[open_idx] must be '['. Returns the index of its matching ']'."""
+
+    depth = 0
+    for i in range(open_idx, len(text)):
+        if text[i] == "[":
+            depth += 1
+        elif text[i] == "]":
+            depth -= 1
+            if depth == 0:
+                return i
+    raise ValueError("unbalanced brackets")
+
+
+def _extract_top_level_bracket_items(text: str) -> list[str]:
+    """`text` is the inside of a `[ ... ]` list. Returns each top-level `[...]` item's substring
+    (nested brackets are not split on)."""
+
+    items = []
+    i, n = 0, len(text)
+    while i < n:
+        if text[i] == "[":
+            j = _find_matching_bracket(text, i)
+            items.append(text[i:j + 1])
+            i = j + 1
+        else:
+            i += 1
+    return items
+
+
+def parse_device_ports(device_path: Path) -> list[dict]:
+    """Regex-parse a DATA-ONLY device file's `["ports", [...]]` list into
+    `[{"id": ..., "confidence": ...}, ...]`, without evaluating any OpenSCAD."""
+
+    text = device_path.read_text(encoding="utf-8")
+    text = re.sub(r"//[^\n]*", "", text)  # strip line comments so commented-out examples don't match
+
+    idx = text.find('"ports"')
+    if idx == -1:
+        return []
+    bracket_start = text.find("[", idx)
+    if bracket_start == -1:
+        return []
+    bracket_end = _find_matching_bracket(text, bracket_start)
+    ports_list_text = text[bracket_start + 1:bracket_end]
+
+    ports = []
+    for item in _extract_top_level_bracket_items(ports_list_text):
+        id_m = _PORT_ID_RE.search(item)
+        conf_m = _PORT_CONFIDENCE_RE.search(item)
+        if id_m and conf_m:
+            ports.append({"id": id_m.group(1), "confidence": conf_m.group(1)})
+    return ports
+
+
+def device_file_for_model(target: Target) -> Path | None:
+    text = target.scad_path.read_text(encoding="utf-8")
+    m = _DEVICE_INCLUDE_RE.search(text)
+    if not m:
+        return None
+    return LIB_DIR / "mcc" / "devices" / f"{m.group(1)}.scad"
+
+
+def cmd_confidence(args: argparse.Namespace) -> int:
+    measured_rank = confidence_rank("measured")
+    report = []
+    any_below_measured = False
+
+    for target in discover_models():
+        entry = {"target": target.name, "device_file": None, "ports_below_measured": [], "error": None}
+        device_path = device_file_for_model(target)
+        if device_path is None:
+            entry["error"] = f"no `include <mcc/devices/...>` found in {target.scad_path.relative_to(REPO_ROOT)}"
+        elif not device_path.is_file():
+            entry["error"] = f"device file not found: {device_path}"
+        else:
+            entry["device_file"] = str(device_path.relative_to(REPO_ROOT).as_posix())
+            for port in parse_device_ports(device_path):
+                if confidence_rank(port["confidence"]) < measured_rank:
+                    entry["ports_below_measured"].append(port)
+
+        if entry["ports_below_measured"]:
+            any_below_measured = True
+        report.append(entry)
+
+    if args.json:
+        print(json.dumps({"prerelease": any_below_measured, "models": report}, indent=2, sort_keys=True))
+    else:
+        print("confidence report (ports below \"measured\"):")
+        for entry in report:
+            if entry["error"]:
+                print(f"  [WARN] {entry['target']}: {entry['error']}")
+            elif not entry["ports_below_measured"]:
+                print(f"  [OK]   {entry['target']}: all ports >= measured")
+            else:
+                names = ", ".join(f"{p['id']}={p['confidence']}" for p in entry["ports_below_measured"])
+                print(f"  [WARN] {entry['target']}: {names}")
+        print(f"\nprerelease={'true' if any_below_measured else 'false'}")
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a", encoding="utf-8") as f:
+            f.write(f"prerelease={'true' if any_below_measured else 'false'}\n")
+
+    return 0  # always 0 — this is a report, not a gate (issue #10 softens the release gate)
+
+
+# -----------------------------------------------------------------------------------------
 # all
 # -----------------------------------------------------------------------------------------
 
@@ -668,6 +923,11 @@ def cmd_all(args: argparse.Namespace) -> int:
     print("\n=== golden ===")
     golden_ns = argparse.Namespace(update=False, targets=[])
     overall_ok &= cmd_golden(golden_ns) == 0
+
+    if args.with_step:
+        print("\n=== step --all ===")
+        step_ns = argparse.Namespace(all=True, targets=[], part=None)
+        overall_ok &= cmd_step(step_ns) == 0
 
     return 0 if overall_ok else 1
 
@@ -704,6 +964,9 @@ def cmd_doctor(_args: argparse.Namespace) -> int:
     else:
         print("trimesh:       NOT AVAILABLE — pip install -r requirements.txt")
 
+    step_backend, step_detail = mesh_to_step.backend_available()
+    print(f"STEP backend:  {step_backend or 'NOT FOUND'}  ({step_detail})")
+
     coupons = discover_coupons()
     models = discover_models()
     print(f"\nDiscovered targets: {len(coupons)} coupon(s), {len(models)} model(s)")
@@ -734,6 +997,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
                            help="fail if OpenSCAD emits 'WARNING: unmeasured'")
     p_render.set_defaults(func=cmd_render)
 
+    p_step = sub.add_parser("step", help="convert rendered STL(s) to B-rep STEP via scripts/mesh_to_step.py")
+    p_step.add_argument("targets", nargs="*", help='coupons/<name>, <model-slug>, or a .scad path')
+    p_step.add_argument("--all", action="store_true", help="convert every discovered target")
+    p_step.add_argument("--part", action="append", help="override part list (repeatable)")
+    p_step.set_defaults(func=cmd_step)
+
     p_smoke = sub.add_parser("smoke", help="Tier 2: run every tests/test_*.scad with -o *.csg")
     p_smoke.set_defaults(func=cmd_smoke)
 
@@ -747,8 +1016,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_golden.add_argument("--update", action="store_true", help="(re)write goldens from current exports")
     p_golden.set_defaults(func=cmd_golden)
 
+    p_confidence = sub.add_parser(
+        "confidence",
+        help="list every model's ports below 'measured' confidence; sets prerelease=true if any "
+             "(report only — exit code 0 always)",
+    )
+    p_confidence.add_argument("--json", action="store_true", help="emit JSON instead of a human-readable table")
+    p_confidence.set_defaults(func=cmd_confidence)
+
     p_all = sub.add_parser("all", help="smoke -> render --all -> check --all -> golden")
     p_all.add_argument("--release", action="store_true")
+    p_all.add_argument("--with-step", action="store_true", help="also run step --all at the end")
     p_all.set_defaults(func=cmd_all)
 
     p_doctor = sub.add_parser("doctor", help="print resolved tool paths/versions and discovered targets")

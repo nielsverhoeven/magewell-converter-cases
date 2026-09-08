@@ -35,8 +35,8 @@ One section per `models/<slug>/`, driven by that model's device data file
 | <patch cable, per port> | 1 each | internal cable, length per bay depth | knowledge/components/cables.md |
 ```
 
-Fill `<n>` and quantities from the variant's actual `external_ports` list and case options — don't
-hand-guess a round number. Every row's connector count is `1:1` with the ports in `external_ports`
+Fill `<n>` and quantities from the device file's external ports (every port whose `panel` is not `"none"`) and the case options — don't
+hand-guess a round number. Every row's connector count is `1:1` with those external ports (`cfg.external_ports` was dropped on 2026-09-08)
 whose `panel` value is a real Neutrik part (not `"none"`); every omitted-but-physically-present port
 with a real `panel` value gets a DBA-BL-B blank row instead, not a silently dropped line.
 

@@ -7,8 +7,6 @@
 //   never this barrel (architecture.md:96-97 "importing the barrel from inside the library
 //   creates cycles").
 //
-//   NOTE: shell.scad / cradle.scad / mounts.scad / vents.scad (architecture.md's L2 layer) are
-//   not part of this build pass and are not referenced here.
 // Includes:
 //   include <mcc/mcc.scad>
 //////////////////////////////////////////////////////////////////////
@@ -18,11 +16,16 @@ include <BOSL2/std.scad>
 include <constants.scad>
 use <util.scad>
 use <ports.scad>
+use <layout.scad>
 use <neutrik.scad>
 use <fasteners.scad>
 use <fan.scad>
 use <poe_splitter.scad>
 use <ghost.scad>
 use <panel.scad>
+use <cradle.scad>
+use <mounts.scad>
+use <vents.scad>
+use <shell.scad>
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

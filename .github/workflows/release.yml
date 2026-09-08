@@ -1,0 +1,103 @@
+name: release
+
+# Creates the next SemVer release on every push to main (issue #10 — there is no more manual
+# `git tag` step; this workflow is the only path that produces a GitHub Release, replacing the
+# old tag-triggered release step that used to live in render.yml):
+#
+#   1. scripts/release_version.py computes the next vX.Y.Z from Conventional Commits since the
+#      last v* tag reachable from HEAD.
+#   2. scripts/build.py all --with-step builds and tests everything, including STEP export.
+#   3. scripts/build.py confidence --json reports every port below "measured" confidence and
+#      sets `prerelease=true` if any are found — this SOFTENS the old release gate (which used to
+#      fail the build on any WARNING: unmeasured) into a pre-release marker instead, per the issue.
+#   4. scripts/package_release.py builds one zip per device case plus a coupons zip.
+#   5. An annotated git tag is created and pushed (CONTRIBUTING.md: "Tags are annotated ... never
+#      lightweight" — softprops/action-gh-release would create a lightweight tag on its own if
+#      given a tag_name that doesn't exist yet, so the tag is created explicitly first).
+#   6. softprops/action-gh-release publishes the GitHub Release with the zips and the loose
+#      *.step files attached.
+#
+# See CONTRIBUTING.md's release section and .claude/knowledge/architecture.md §8 (export policy).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout (full history + tags + BOSL2 submodule)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-step.txt
+
+      - name: Setup OpenSCAD
+        uses: ./.github/actions/setup-openscad
+
+      - name: Build everything (smoke -> render --all -> check --all -> golden -> step --all)
+        run: python scripts/build.py all --with-step
+
+      - name: Compute next version
+        id: version
+        run: python scripts/release_version.py
+
+      - name: Guard against re-tagging an existing version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag $VERSION already exists — nothing to release (no commits since the last tag bump the version, or a version collision). Investigate before re-running."
+            exit 1
+          fi
+
+      - name: Confidence report (pre-release gate — never fails the build, only flags)
+        id: confidence
+        run: python scripts/build.py confidence --json
+
+      - name: Package release zips
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: python scripts/package_release.py "$VERSION"
+
+      - name: Create annotated tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "${{ steps.version.outputs.version }} — Magewell Pro Convert cases"
+          prerelease: ${{ steps.confidence.outputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            dist/*.zip
+            exports/**/*.step

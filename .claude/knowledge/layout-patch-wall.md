@@ -1,6 +1,32 @@
 # Patch-wall layout contract
 
-Status: **revision 3, 2026-09-08.** Derived 2026-09-07 by solution-architect from the user's fixed
+Status: **revision 7, 2026-09-08.** Rev 7 is the pre-implementation architecture gate for the seven
+remaining SKUs (GitHub issues #3–#9), built in parallel on seven branches. It adds **§16** (the
+per-SKU fit-check table, the per-SKU ruling, and the parallel-work rules), and makes two record
+corrections: **§2.5's boss-relief positions** (the *placed* plate puts its rear bosses at
+`(−9.5, −12)` and `(+9.5, +12)` relative to the slot centre — rev 6's `(∓9.5, ±12)` described the
+mirrored pattern; the code was corrected in `shell.scad` on 2026-09-08, commit 2a7e0b0, after the
+user saw the mirror), and **D10's resolution** (the four patch-wall plate-fixing bosses carry a
+genuine *through*-bore, insert side at the rear tip — §15 ruling 2026-09-08c). One **BLOCKING**
+library defect was found: **T1-18(c) fails on all four BNC-ended SKUs** (§16.3). Rev-6 history
+follows.
+
+Rev 6 answers the user's rejection of the first rendered case's
+connector openings (Pro Convert for NDI to HDMI). It **replaces §2.5**: the lip window stops being a
+`hull()`-ed "crown" and becomes a **plain round hole (truncated-teardrop above the 45° line) plus two
+separate boss reliefs**, so the only thing visible through the plate's own D cutout is ≤ 1.5 mm of
+relief crescent. It **retires T1-34** in favour of T1-34a–d and adds T1-35 (the connector screw must
+actually reach its insert). It **rejects the proposed top-open (U-notch) aperture** — reasons in §15
+ruling 2026-09-08b. §2.3 fixing positions are **unchanged**. Rev-5 history follows.
+
+Rev 5 is the L2 architecture gate for
+`docs/plans/2026-09-08-l2-first-case.md`: it rules on that plan's eight `PLAN-ASSUMPTION`s, **replaces
+the §3 worked-results slot table (it was wrong on six of eight rows)**, adds §2.5 (the patch-wall
+aperture is one rabbet + `n_slots` discrete windows), re-scopes T1-18, adds T1-23b/T1-32/T1-33/T1-34,
+corrects the HDMI-bearing `W` figures to 159.85 / 166.35, and records ten further corrections. **All
+rev-5 rulings are collected in §15** — read that first if you are implementing.
+
+Rev 3 history follows. Derived 2026-09-07 by solution-architect from the user's fixed
 topology decision; rev 2 recorded the user's decisions on the dongle-class PoE splitter (D-10),
 **side-bolt device retention** (D-09), D-04 accepted, **D-06 vetoed** (case height 51 mm) and
 **D-08 vetoed** (straight-plug end zones). **Rev 3 records the last two user decisions and their
@@ -199,9 +225,34 @@ deliberate: the widest possible pitch gives every cable the longest possible run
 puts the two outer slots as close as possible to the end-zone corners where the turns happen.
 
 Plate retention: 4 × M3 into heat-set inserts, screws **along +Y**, through tabs in the plate's two
-`MCC_PLATE_END_PAD` regions (two per end, at `z = z_conn_c ± 14`), into bosses standing rearward off
+`MCC_PLATE_END_PAD` regions (two per end), into bosses standing rearward off
 the rabbet lip. Those X positions are always outboard of every flange, so the bosses never intrude
 into a connector bay.
+
+> **Correction, rev 5 (2026-09-08).** Rev 1–3 said the retaining tabs sit at `z = z_conn_c ± 14` and
+> implied an X of `±(plate_l/2 − MCC_PLATE_END_PAD/2)`. **Neither matches the plate that is already
+> implemented.** `mcc_panel_plate()` (`lib/mcc/panel.scad:102-104`) cuts its four M3 clearance holes
+> at `(±(w/2 − rim_w/2), ±(h/2 − rim_w/2))` = **`(±(plate_l/2 − 3), ±16.5)`** at the default
+> `rim_w = 6`. The plate is the physical part; **the plate wins.** `shell.scad` must place its four
+> heat-set bosses from the *same expression*, not from the numbers in this paragraph. To make drift
+> impossible, that expression is published once as a pure function
+> **`mcc_panel_fixing_pos(plate_size, rim_w)` in `layout.scad` (L1)**, `use`d by both `panel.scad`
+> and `shell.scad`; `panel.scad` stops hardcoding it. (An L1 file is the right home — both consumers
+> are L2, so the edge stays downward.)
+
+> **Rev 6, 2026-09-08 — the fixing positions are UNCHANGED.** The user's rejection of the connector
+> openings does not touch plate retention: it stays **4 × M3 at `mcc_panel_fixing_pos(plate_size,
+> rim_w)` = `(±(plate_l/2 − 3), ±16.5)`**, through the plate's rim into heat-set bosses standing
+> rearward off the rabbet lip. The top-open aperture that would have forced this down to "2 lower
+> bosses + lid capture" is rejected (§15 ruling 2026-09-08b). Rev 6 recorded those four shell bosses
+> as plain UNBORED solids — deviation **D10**, a print blocker. **RESOLVED 2026-09-08 (rev 7): the
+> four plate-fixing bosses carry a genuine THROUGH-bore** — `MCC_INSERT_M3.len +
+> MCC_INSERT_BORE_EXTRA` at `MCC_INSERT_M3.hole_d` open at the **rear tip**, then `MCC_M3_CLR_D`
+> the rest of the way out through the front (plate-facing) face
+> (`lib/mcc/shell.scad:289-321`). It is a through-bore, not the blind pocket T1-35 nominally
+> describes, because Manifold on the pinned OpenSCAD 2025.09.07 cannot union a *blind-bored* boss
+> flush against a wall face. Full reasoning and the consequence for assembly: **§15 ruling
+> 2026-09-08c**. Assert **T1-35** stands and is satisfied.
 
 > **Correction, 2026-09-08.** Revision 1 recorded `L_panel_min = 172` (4 slots) / `140` (3 slots).
 > Those do not follow from the formula above, which gives **164** and **132**
@@ -219,7 +270,126 @@ into a connector bay.
 | Slots | up to 4, `pitch = (L - 68)/(n_slots - 1)`, asserted ≥ `MCC_D_PITCH_H` (32, `constants.scad:65`) |
 | Parts dispatchable | `NE8FDP-B`, `NAHDMI-W-B`, `NAUSB-W-B`, `NBB75DFGB`, `DBA-BL-B` only |
 | Print orientation | flat, face-down (`architecture.md` §5) |
-| Rim | 3 mm ribbed rim around the whole outline |
+| Rim | 3 mm ribbed rim around the whole outline (`mcc_panel_plate()` default `rim_t = MCC_WALL`, `rim_w = 6`) |
+
+### 2.5 The patch-wall aperture — ONE rabbet, `n_slots` ROUND WINDOWS + 2 BOSS RELIEFS (rev 6, 2026-09-08)
+
+> **Rev 6 replaces rev 5's `hull()`ed "crown" window.** Rev 5's shape was the convex hull of the
+> connector circle and the two rear-boss relief circles — a 27.9 × 32.4 mm diagonal blob. The user
+> rejected it on sight ("the 4 D-slots must be exactly round — not the weird round/diamond-like
+> shape they have now"), and the user is right on the merits as well as on looks. See §15 ruling
+> 2026-09-08b for the full ruling, including why the proposed **top-open U-notch aperture is
+> rejected**.
+
+**What the assembled patch wall must look like from outside — the acceptance criterion.** A flat
+plate face recessed `MCC_PANEL_BEZEL_T` (3.0 mm) behind the wall's outer face, carrying `n_slots`
+**exactly round** ⌀`mcc_cutout_d(part)` cutouts (24.2 for `NE8FDP-B`, 23.8 for the 23.6-class parts)
+and, per slot, two ⌀`MCC_M3_CLR_D` (3.4) screw holes on the Neutrik diagonal **`(−9.5, −12)` and
+`(+9.5, +12)`** in case `(x, z)` — see the frame rule below. Each
+26 × 31 flange seats flat on that plate face and screws into an M3 heat-set insert in the plate's own
+rear boss. **Nothing else may be visible through a D cutout** except the two relief crescents
+quantified in T1-34b, which the fitted connector body covers completely.
+
+The wall itself still cannot be one long opening — the three rev-5 reasons stand and are not
+re-litigated:
+
+- `architecture.md` §5 is a hard shell rule — "the aperture roof is a ≤45° self-supporting chamfer,
+  never a flat bridge … no unsupported horizontal span over 10 mm anywhere in the shell." A single
+  161.9 mm-wide void 39 mm tall has no legal roof: a 45° chamfer converging from both top corners
+  needs ~81 mm of rise and only 39 mm exists.
+- §6's `n_fast = 6` mid-span lid fastener sits at `x_gap`, a *slot-gap centre* on the patch wall. Its
+  boss runs floor-to-lid and its gusset needs solid wall material at that X across the aperture band.
+- T1-13 ("every lid-fastener boss clears every flange edge by ≥ `boss_od/2 + 2`") only means anything
+  if the boss is embedded in wall material *between* flanges.
+
+> ### The frame rule — write this down once and stop re-deriving it (rev 7, 2026-09-08)
+>
+> **The outside viewer's right is world −X, and a "front-view" `+y` on the plate becomes world −Z.**
+>
+> The plate is authored in `mcc_panel_plate()`/`mcc_neutrik_d_cutout()` in the Neutrik **front view**:
+> local `+x` right, local `+y` up, screw holes and rear bosses at local `(−9.5, +12)` and
+> `(+9.5, −12)` (`lib/mcc/neutrik.scad:72-73,137`). `models/<slug>/case.scad` places it with
+> `rotate([-90,0,0])`, which maps **local `(x, y)` → world `(x, z = −y)`**. So on the assembled case
+> the plate's rear bosses sit at
+>
+> ```
+> world (x, z) = (slot_x(i) − 9.5, z_conn_c − 12)   and   (slot_x(i) + 9.5, z_conn_c + 12)
+> ```
+>
+> i.e. the **lower-left / upper-right** diagonal when the case is viewed from *inside*, along +Y.
+> `_mcc_patch_wall_window()` draws its two boss reliefs in a 2-D `(x, z)` frame
+> (`rotate([90,0,0])` maps 2-D `y` → world `z`), so it must use `(−sx, −sz)` and `(+sx, +sz)` — which
+> is what `lib/mcc/shell.scad:210-211` does since commit **2a7e0b0** (2026-09-08).
+>
+> **Rev 6 wrote the diagonal as `(∓9.5, ±12)`, which is the plate's *authored* pattern, not its
+> *placed* pattern.** Following the doc literally produced reliefs mirrored about `z = z_conn_c`;
+> the user saw it as "screw holes look rotated 90° vs the holes in the base" and the code was fixed
+> on 2026-09-08. **The doc is now corrected.** Rules that follow from it, so this is not repeated:
+>
+> 1. Any position quoted for a patch-wall feature is in **case coordinates**, never in the plate's
+>    authored front view. If a paragraph gives a plate-local figure it must say so explicitly.
+> 2. A "left/right" in prose about the patch wall means **the outside viewer's** left/right, i.e.
+>    `+X` is the viewer's *left*. Slot 1 (the −X block) is therefore on the viewer's **right**.
+> 3. The window's *containment* and *clearance* asserts (T1-34c/T1-34d) are numerically invariant
+>    under this mirror, because the four `mcc_panel_fixing_pos()` points are symmetric about both
+>    `x = 0` and `z = z_conn_c` — which is exactly why the mirror survived every assert and had to be
+>    caught by eye. `lib/mcc/layout.scad:388-391` still evaluates T1-34d against the *mirrored*
+>    relief pair; harmless today, latent tomorrow (deviation **D14**, `architecture.md` §13).
+
+**Normative:**
+
+| Element | Ruling |
+|---|---|
+| Panel plate | **ONE** continuous `plate_l × MCC_PLATE_H` part, flat-printed face-down, retained by 4 × M3 at `mcc_panel_fixing_pos()` (§2.3, **unchanged by rev 6**). Do **not** split it into `n_slots` plates. |
+| Rabbet | **ONE** continuous pocket in the wall's outer layers, spanning the whole plate footprint + `MCC_CLR_SLIDE` per side. **Stepped, not flat-bottomed:** `MCC_PANEL_BEZEL_T (3) + rim_t (3) = 6 mm` deep over the plate's `rim_w` border ring, `MCC_PANEL_BEZEL_T (3) + MCC_PANEL_SEAT_T (2) = 5 mm` deep over the field. Unchanged from rev 5 — it is correct and it is what puts the plate face 3.0 mm behind the wall face (the sacrificial bezel). |
+| Structural lip behind the plate | 3 mm behind the field, **2 mm behind the rim ring**. Assert `residual lip >= 2.0`. Unchanged. |
+| Windows | `n_slots` **discrete openings through the 3 mm structural lip only**, one per `slot_x(i)`, with solid lip material in the inter-slot webs and out to `MCC_PANEL_FRAME_MIN`. **Not one long opening, and NOT one rabbet per window.** Unchanged. |
+| **Window shape (CHANGED, rev 6)** | A **`union()` of three separate 2-D profiles — never a `hull()`**: (i) the **body opening**, a plain circle `⌀ d_win = mcc_cutout_d(part) + 2·MCC_CLR_SLIDE` centred on `(slot_x(i), z_conn_c)`, **truncated-teardropped above the 45° tangent line** (below 45° it is exactly the circle); (ii) + (iii) two **boss reliefs**, plain circles `⌀ d_rel = boss_od + 2·MCC_CLR_SLIDE = 8.88` centred on the **placed** plate's rear-boss positions, **`(slot_x(i) − 9.5, z_conn_c − 12)` and `(slot_x(i) + 9.5, z_conn_c + 12)`** in case `(x, z)` — corrected rev 7; see the frame rule above. |
+| **Body-opening apex (CHANGED, rev 6)** | Truncated teardrop: `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE (0.4)` above the centre, flat bridge width `w_flat = 2·(d_win/2·√2 − cap_h)`. At `d_win = 24.8` (etherCON): `cap_h = 12.8`, `w_flat = 9.48`; at `d_win = 24.4`: `cap_h = 12.6`, `w_flat = 9.30`. Both ≤ `MCC_APERTURE_BRIDGE_MAX (10.0)`, so `architecture.md` §5's span rule holds **and** the apex stays hidden behind the plate (`cap_h > mcc_cutout_d(part)/2` by 0.7 mm). A full 45° teardrop apex (`r·√2` = 17.5) is **not** used: it would leave only 0.26 mm to the plate's top edge (T1-34c). |
+| **Boss reliefs (CHANGED, rev 6)** | Plain circles, **no teardrop**: `d_rel = 8.88 < MCC_APERTURE_SELF_SUPPORT_MAX_D (10.0)`, so they are self-supporting by this repo's own 10 mm span rule. They stay **separate** from the body opening — they overlap it geometrically (centre distance `hypot(9.5,12) = 15.305`, sum of radii `12.4 + 4.44 = 16.84`), so the union is one connected void and the plate's bosses still slide straight in along −Y, but the *silhouette* is a circle with two small satellites instead of a diagonal blob. |
+| Rabbet-pocket roof | A 5–6 mm-deep horizontal ledge, supported along its whole back edge by the lip — an overhang, not a bridge, and inside the 10 mm rule. A ≤45° relief chamfer on the **bezel layer only** (outer 3 mm, leaving the seat plane intact) is recommended; it improves the 168 mm-long top edge and costs nothing. Optional, not asserted. |
+
+**Why `union` beats `hull` — three independent reasons, in priority order.**
+
+1. **Roundness (the user's objection).** With `hull()`, the whole boundary of the diagonal blob is
+   visible through the plate's ⌀23.8/24.2 cutout from any oblique angle: the blob is *smaller* than
+   the plate hole along the two diagonal flanks. With `union()`, the body opening is a circle
+   0.3 mm larger in radius than the plate hole and the teardrop apex is larger still, so **the whole
+   body-opening boundary is hidden behind the plate.** Only the two relief circles intrude:
+   `mcc_cutout_d/2 − (15.305 − 4.44)` = **1.04 mm** (23.6-class) / **1.24 mm** (etherCON) of crescent,
+   2.0 mm behind the plate face and covered by the fitted connector body. That is T1-34b.
+2. **Lip material.** The hull removes ~35 % more of the 3 mm structural lip than the union, and it
+   removes it exactly on the diagonal flanks where the plate's 2 mm flange seat most needs backing
+   against plug-insertion load (`architecture.md` §11 R4).
+3. **The hull never bought printability.** The rev-5 code comment claims a "continuously-curved,
+   self-supporting crown". It is not: the top of the hull near the upper relief circle is still a
+   circular arc with a horizontal tangent — exactly the overhang a plain circle has. The
+   self-supporting job is done by the truncated teardrop above, not by hulling.
+
+**Why a plain rectangle + 45° top chamfer still does not work** (kept from rev 5 — the trap the
+first plan fell into): with the window top at `z = 45` and a ≤45° roof, the clear width at height `z`
+is at most `bridge + 2·(45 − z)`, **independent of the window's nominal width**. The plate's rear
+bosses reach `z = z_conn_c + 12 + boss_od/2 = 41.64`, where that gives at most `10 + 6.72 = 16.72 mm`
+— but the boss pair spans `2·(9.5 + 4.14) = 27.28 mm`. No rectangle width fixes it; the two local
+boss reliefs are the fix.
+
+**Where the flange-fixing bosses live, and why they stay on the plate (rev 6, settled).** The two M3
+heat-set bosses per slot stay on the **rear of the panel plate** (`mcc_neutrik_d_bosses()`, called
+from `mcc_panel_plate()`), at `(∓9.5, ±12)` in the front-view diagonal, `boss_h = 7` rearward from
+the plate's rear face. The alternative — moving them into the shell's structural lip, which would
+delete the reliefs and make the window a single perfect circle — was evaluated and **rejected**:
+it forces 8 heat-set inserts to be set blind from inside a 45 mm-deep box against the wall instead of
+on a flat bench plate, it needs longer non-stock M3 screws, and it destroys the "load the plate with
+all four connectors on the bench, then drop it in" assembly sequence that makes a `L − 26` mm plate
+handleable at all. The 1.0–1.24 mm crescent is the price and it is cheap. Recorded so it is not
+re-opened (§15 ruling 2026-09-08b, option C).
+
+**Nothing in the shell needs a relief for the plate's bosses other than the two window circles.** The
+bosses run from `y = W/2 − 5` to `y = W/2 − 12`; the lip occupies `y ∈ [W/2 − 8, W/2 − 5]`, so the
+reliefs must be **through-holes** in the lip (a blind pocket cannot work — the boss is 7 mm long and
+the lip is 3 mm thick) and the remaining 4 mm sits in free interior. No other shell feature is
+affected: the nearest neighbour is the plate-fixing boss at `mcc_panel_fixing_pos()`, whose insert
+bore is **3.18 mm** clear of the outermost relief on NDI to HDMI (T1-34d).
 
 ---
 
@@ -239,9 +409,16 @@ mcc_slot_for_port(dev, port_id) -> integer 1..n_slots
    The side-exit topology has no answer for a port on a long face or on the top/bottom; fail loudly
    rather than guess. (The `side_bolt` port is *not* external — `panel:"none"` — so it is never in
    `ext` and never trips this assert.)
-3. Partition: `A = {p : face.x < 0}` (end A, the −X end), `B = {p : face.x > 0}`.
+3. Partition: `A = {p : face.x < 0}` (**block A = the case's −X end**), `B = {p : face.x > 0}`
+   (**block B = the case's +X end**).
+   > **Naming warning (rev 5, 2026-09-08).** "Block A / block B" here mean *the sign of `face.x` in the
+   > case frame* and nothing else. They are **not** Magewell's "Face A / Face B" from
+   > `knowledge/magewell/models/*.md`. On the encoders Magewell's Face A happens to be the −X
+   > (data/power) end, so the two readings coincide; **on the four decoders Magewell's "Face A" is the
+   > *video* end, which the device files author on `face [+1,0,0]`, i.e. block B.** Conflating the two
+   > is what produced the wrong worked-results table that stood here until rev 5 — see §15 ruling 8.
 4. Slot block allocation: **A takes slots `1 .. len(A)`; B takes slots `n_slots-len(B)+1 .. n_slots`.**
-   Ports therefore never cross the case; a port on end A always lands in the −X half of the wall.
+   Ports therefore never cross the case; a port on the −X end always lands in the −X half of the wall.
 5. Ordering inside a block — **stiffest cable outermost**:
    `rank(p) = [ mcc_bend_envelope(panel(p)), mcc_plug_len(panel(p)) ]`, compared lexicographically,
    descending. Ties broken by `mcc_port_pos(p)[0]` ascending, then `mcc_port_id(p)` lexicographically
@@ -268,21 +445,38 @@ hand-maintained table and updates automatically when the `depth-mockup` coupon r
 | `NAUSB-W-B` | 8 | 20 | 4 |
 | `DBA-BL-B` | 0 | 0 | 5 |
 
-**Worked results for the priority SKUs** (end A = the device's data/power end for encoders, per
-`knowledge/magewell/housing-families.md:57-67` and `:126-149`):
+**Worked results for the priority SKUs — CORRECTED, rev 5 (2026-09-08).** Every row below is the
+mechanical output of steps 1–6 above applied to the *actual* `face`/`pos`/`panel` fields in
+`lib/mcc/devices/*.scad` (re-derived port by port by the architect, 2026-09-08). The rev-3 table that
+stood here was wrong on **six of eight rows** and is superseded; see §15 ruling 8.
 
-| SKU | slot 1 | slot 2 | slot 3 | slot 4 |
+| SKU | slot 1 (−X) | slot 2 | slot 3 | slot 4 (+X) |
 |---|---|---|---|---|
-| HDMI Plus / HDMI 4K Plus | NE8FDP-B (etherCON) | NAUSB-W-B (USB-B 5 V) | NAHDMI-W-B (HDMI IN) | NAHDMI-W-B (HDMI loop-OUT) |
+| HDMI Plus / HDMI 4K Plus | NE8FDP-B (etherCON) | NAUSB-W-B (USB-B 5 V) | NAHDMI-W-B (HDMI loop-OUT) | NAHDMI-W-B (HDMI IN) |
 | SDI Plus / SDI 4K Plus / 12G SDI 4K Plus | NE8FDP-B | NAUSB-W-B | NBB75DFGB (SDI OUT) | NBB75DFGB (SDI IN) |
-| HDMI TX | NAHDMI-W-B (HDMI IN) | NAUSB-W-B | NE8FDP-B | — (3 slots) |
-| SDI TX | NBB75DFGB (SDI IN) | NAUSB-W-B | NE8FDP-B | — (3 slots) |
-| NDI to HDMI | NAHDMI-W-B (HDMI OUT) | NAUSB-W-B (USB-A host) | NAUSB-W-B (USB-B) | NE8FDP-B |
-| NDI to SDI | NBB75DFGB (SDI OUT) | NAUSB-W-B (USB-A host) | NAUSB-W-B (USB-B) | NE8FDP-B |
-| NDI to AIO | NBB75DFGB (SDI OUT) | NAHDMI-W-B (HDMI OUT) | NAUSB-W-B (USB-B) | NE8FDP-B |
-| NDI to HDMI 4K (Plus chassis) | NAHDMI-W-B (HDMI OUT) | NAUSB-W-B (USB-A host) | NAUSB-W-B (USB-B) | NE8FDP-B |
+| HDMI TX | NE8FDP-B | NAUSB-W-B | NAHDMI-W-B (HDMI IN) | — (3 slots) |
+| SDI TX | NE8FDP-B | NAUSB-W-B | NBB75DFGB (SDI IN) | — (3 slots) |
+| **NDI to HDMI** | **NE8FDP-B (etherCON)** | **NAUSB-W-B (USB-B 5 V)** | **NAUSB-W-B (USB-A host)** | **NAHDMI-W-B (HDMI OUT)** |
+| NDI to SDI | NE8FDP-B | NAUSB-W-B (USB-B) | NAUSB-W-B (USB-A host) | NBB75DFGB (SDI OUT) |
+| NDI to AIO | NE8FDP-B | NAUSB-W-B (USB-B) | NAHDMI-W-B (HDMI OUT) | NBB75DFGB (SDI OUT) |
+| NDI to HDMI 4K (Plus chassis) | NE8FDP-B | NAUSB-W-B (USB-B) | NAUSB-W-B (USB-A host) | NAHDMI-W-B (HDMI OUT) |
+
+Cross-checks that confirm the corrected table is the intended design, not just the literal algorithm:
+
+- **etherCON is slot 1 (−X) on every SKU.** §5 places the reserved PoE-splitter bay at the −X end
+  precisely because "the splitter's three connections all terminate at the device's data/power end".
+  Under the rev-3 table the decoders' etherCON sat at slot 4, i.e. at the opposite end of the case
+  from the splitter that has to be fed from it — self-contradictory.
+- **Every port reaches its slot with one 90° L, never an S.** That is the whole rationale in
+  "Why 'stiffest outermost'" below; a −X port routed to a +X slot crosses the case.
+- The two Plus encoder rows are unchanged in *parts*; only the HDMI Plus slot-3/4 identities swap
+  (the `hdmi_in`/`hdmi_out` tie on `[bend, plug_len]` is broken by `pos[0]` ascending, so `hdmi_in`
+  at `pos[0] = −22` sorts first and takes the outermost slot 4).
 
 Note the Mini-DIN-8 PTZ/Tally port does **not** appear: `panel:"none"` on every SKU (decision D-01).
+
+**No device file changes.** The four decoder files are correct as authored — Magewell's Face A really
+is their video end. The defect was in this table, not in the data.
 
 ---
 
@@ -443,12 +637,13 @@ bay_z  = [MCC_FLOOR_T,              MCC_FLOOR_T + env[1]]       // = [3, 43]
 
 | Band | Face | Z range (case coords) | Role |
 |---|---|---|---|
-| Intake, low | −X end wall, **+Y half only** | `[5, 17]` | cool air in low; mesh filter pocket on the inside (`thermal-guidelines.md:193-195`). +Y half because the splitter slab masks the −Y half |
-| Intake, low | −Y far long wall, full device length | `[5, 17]` — **widen if T1-30 fails** | feeds the **16 mm** `MCC_GAP_FAR` duct along the device's metal flank |
+| Intake, low | −X end wall, **+Y half only** | **`[5, 23]`** (`MCC_VENT_INTAKE_BAND_H = 18.0`, rev 5) | cool air in low; mesh filter pocket on the inside (`thermal-guidelines.md:193-195`). +Y half because the splitter slab masks the −Y half |
+| Intake, low | −Y far long wall, full device length | **`[5, 23]`** (rev 5 — 12 and 15 mm both fail T1-30) | feeds the **16 mm** `MCC_GAP_FAR` duct along the device's metal flank |
 | Exhaust, high | −Y far long wall, +X half only, **and outboard of the side-bolt keep-out** | `[32, 44]` | passive outlet when `fan=false`; offset in X from the intake to avoid short-circuiting (`thermal-guidelines.md:176-179`) |
 | Exhaust | +X end wall | fan aperture, ⌀38 at `y = fan_y` | forced outlet when `fan=true` |
 | **None** | **+Y patch wall** | — | **assert: no vent may be cut in the patch wall** (T1-19) |
 | **None** | **inside the side-bolt keep-out** | ⌀24 disc at `(x_bolt, z_bolt)` **∪ a 7 mm-wide strip from `z = MCC_FLOOR_T` up to `z_bolt`**, on the far wall | **assert T1-23.** The boss dams the duct at that X and its support web (§7.1, D-13) runs from the boss down to the floor, so a slot anywhere in that footprint opens into solid material |
+| **None** | **inside the far-wall mid-span lid-fastener boss footprint** | a `(boss_od + 2·2.0)`-wide strip at `x = x_far_mid`, full height | **new, rev 5 — assert T1-23b.** With `n_fast = 6` the far-wall mid fastener sits at `x_far_mid = −12.64` on NDI to HDMI, i.e. *inside* the intake band's X run, and its boss + wall gusset run floor-to-lid. Slots cut there open into solid material, exactly as at the side bolt. Its lost area must also come off T1-30's net total |
 
 **The duct is now 16 mm, and that changes what the vents are for.** `MCC_GAP_FAR = 6.0` used to exist
 *for* the duct; since D-13 it is 16 mm because the fastener needs it, and the duct is the by-product.
@@ -461,8 +656,19 @@ Consequences for `vents.scad`:
   slot / 1.6 mm web, over the device length) yields only ≈ **590 mm²**, plus ≈ 400 mm² from the −X end
   wall's +Y half ≈ **990 mm² total — below the fan aperture**, and
   `knowledge/design/thermal-guidelines.md:104-109` says vent free area should be "comfortably larger
-  than the fan's inlet/outlet duct area". **Widen the intake band in Z (e.g. `[5, 20]`) and/or raise
+  than the fan's inlet/outlet duct area". **Widen the intake band in Z and/or raise
   the slot:web ratio until T1-30 passes.** Widening the duct further buys nothing.
+- **Rev-5 resolution: `MCC_VENT_INTAKE_BAND_H = 18.0`, band `z ∈ [5, 23]` on both intake faces.**
+  Worked at the NDI to HDMI geometry (far-wall run = `dev_l` = 100.9, −X end-wall run = `W/2 − MCC_WALL`
+  = 76.925, duty = `1.2/(1.2+1.6)` = 0.4286): gross free area **1219 mm²**, minus the side-bolt
+  keep-out (7 mm strip over the full band + the disc's overhang into `z ∈ [14.0, 23]`) ≈ **78 mm²**,
+  minus the far-wall mid-span lid-fastener boss + gusset ≈ **64 mm²** → **≈ 1077 … 1141 mm²** net,
+  against the ⌀38 fan aperture's **1134 mm²**. It is *marginal*, so **T1-30 must be evaluated on the
+  NET area after every keep-out subtraction, and the module's own assert is the authority** — the
+  hand figures above are illustrative. **12 mm fails outright (≈ 990 mm²) and 15 mm also fails once
+  the keep-outs are subtracted (≈ 1084 mm²); do not use either.** If 18 mm still misses at render,
+  the next lever is the slot:web ratio (slot 1.2 → 1.6 at web 1.6 raises duty 0.4286 → 0.50), not a
+  deeper duct and not a taller band (23 mm is already close to the exhaust band's `z = 32` floor).
 - Slot geometry unchanged: vertical slots through the wall thickness (no bridging,
   `fdm-rugged-enclosure-guidelines.md:199`), slot width ≥ 1.2 mm `assumed` (nearest verified analogues
   0.8 mm minimum wall and 1.0 mm lattice gap, `fdm-...:197`), web ≥ 1.6 mm, any bridged span ≤ 10 mm
@@ -554,11 +760,31 @@ reach the device's flank to locate it, so at `MCC_GAP_FAR = 16` each rib now spa
 (rev 2: 6 mm). Three ribs would chop the chimney into four dead segments. Rule: **below the device's
 underside plane (`z < z_dev_lo`) each far-flank rib must be open**, and the opening must be a ≤45°
 self-supporting arch or chamfered notch — not a flat bridge — with ≤ 3 mm legs at each end, so the
-clear span stays ≤ 10 mm (`fdm-rugged-enclosure-guidelines.md:111`, `architecture.md` §5). Acceptable
-alternative if a developer prefers: exactly **two** far-flank ribs placed at X positions outboard of
-the intake band. **Not acceptable:** three or more solid full-depth ribs. This is the only cradle
+clear span stays ≤ 10 mm (`fdm-rugged-enclosure-guidelines.md:111`, `architecture.md` §5).
+**Not acceptable:** three or more solid full-depth ribs. This is the only cradle
 change D-13 forces; the ribs themselves print fine (their footprint sits on the floor, so they are
 self-supporting vertical fins, not cantilevers).
+
+> **Rev 5 correction (2026-09-08).** Rev 3 offered an alternative — "exactly two far-flank ribs
+> placed at X positions outboard of the intake band" — which is **struck**: the intake band runs the
+> *full device length* (§5), so "outboard of the intake band" is also outboard of the device, where a
+> rib cannot reach the flank it exists to locate. The open-notch ≥3-rib design is the only sanctioned
+> one.
+>
+> **Normative placement rule (replaces "≥ 3 X positions", which was not deterministic enough for the
+> geometry goldens):**
+> ```
+> c        = MCC_SIDE_BOLT_KEEPOUT_D/2 + MCC_CRADLE_RIB_T/2 + 2.0        // = 15.5 at rev-5 defaults
+> band     = [x_dev_lo + 8, x_dev_hi - 8]
+> excl     = [x_bolt - c, x_bolt + c]
+> segments = band \ excl                                                 // 0, 1 or 2 closed intervals
+> ribs     = the two endpoints of each surviving segment, plus that segment's midpoint
+>            if the segment is longer than 40 mm
+> ```
+> Assert `len(ribs) >= 3` and, per rib, `abs(x_rib - x_bolt) >= c`. For NDI to HDMI
+> (`x_dev_lo = -46.95`, `x_dev_hi = 53.95`, `x_bolt = +3.5`) this yields **4 ribs at
+> `x = -38.95, -12.0, +19.0, +45.95`**. If a future SKU loses a whole segment the assert fires —
+> that is the correct failure mode; escalate rather than relaxing `c`.
 
 ### 7.1 Side-bolt boss — normative geometry (D-09, **flush per D-13**)
 
@@ -745,13 +971,39 @@ policy).
 | Case 1/4"-20 **insert** (case → tripod/cheeseplate) | ⌀20 disc | `(0, 0)` — case plan centre, default. Note this is a *threaded* feature, not the ⌀6.6 clearance boss `mcc_tripod_boss()` currently models (deviation D2) |
 | VESA 75 × 75 | 4 × ⌀12 discs at `vesa_pos + (±37.5, ±37.5)` | `vesa_pos` defaults to `(0,0)`; a shell parameter, shiftable per SKU |
 | Fishtail M4 pair | reserve a 60 × 20 band centred on `vesa_pos` | hole pitch is **`unknown`** — `knowledge/magewell/accessories.md:26` gives only "2× M4×12 screws, 2× M4 nuts". Derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl` (M7) |
-| Strap slots | 2 × (25 × 5) through-slots | `x = ±(L/2 - 25)`, `y = ±(W/2 - 12)` — `assumed` |
-| Splitter tie-down | 2 × ⌀8 | inside `bay_x × bay_y` (§5) |
-| **Side-bolt support web footprint** | 3 × 20 mm rectangle at `x = x_bolt`, against the far wall | **new (D-13)** — the web lands on the floor; nothing else may occupy it, and `mounts.scad` must treat it as a floor feature for the non-overlap assert |
+| Strap slots | 4 × (25 × 5) through-slots (2 straps) | `y = ±(W/2 - 12)`; `x = +(L/2 - 25)` on the +X pair and, on the −X pair, **`x = min(-(L/2 - 25), bay_x[1] + 25/2 + 2)`** — see the rev-5 correction below — `assumed` |
+| Splitter tie-down | `mcc_splitter_tiedown()` — 2 × (4 × 1.5) zip-tie slots, **on-edge orientation** | inside `bay_x × bay_y` (§5). **Rev-5 correction: not "2 × ⌀8"** — a ⌀8 hole is not a tie-down. `mounts.scad` calls the module; it must not hand-roll holes |
+| **Side-bolt support web footprint** | `MCC_SIDE_BOLT_SUPPORT_WEB_T × (MCC_WALL + MCC_GAP_FAR − MCC_SIDE_BOLT_PAD_T − MCC_WALL)` = **3 × 14 mm** rectangle at `x = x_bolt`, running from the far wall's *inner* face inward | **new (D-13), figure corrected rev 5** (rev 3 said "3 × 20", which is neither the boss OD nor its length). The boss ends at the pad face, `y = −W/2 + 17`; the web's floor footprint is `y ∈ [−W/2 + 3, −W/2 + 17]` |
+| **Far-wall mid-span lid-fastener boss** | ⌀`MCC_BOSS_MIN_RATIO·insert_od` + its wall gusset, at `(x_far_mid, −(W/2 − e))` | **new, rev 5.** It stands *inside the far-wall duct*, in the intake band's X range, so it is both a floor feature **and** a far-wall vent keep-out (see §5 / T1-23b) |
 | Stacking profile | recess mirroring the lid's proud features | must clear all of the above. **No longer has to dodge the side-bolt lug** — D-13 removed it; the far wall is flat |
 
 Minimum separation between any two floor features: 15 mm centre-to-centre for the ⌀12–⌀20 class
 features, or `(r1 + r2 + 2.0)` where that is larger. `mounts.scad` asserts it.
+
+> **Rev-5 corrections to this table (2026-09-08), all found while validating the first full case:**
+>
+> 1. **The −X strap-slot pair collides with the reserved splitter bay (T1-17 fails as specified).**
+>    At `L = 193.9` the rev-3 rule puts a slot centred at `x = −71.95` spanning `x ∈ [−84.45, −59.45]`
+>    and `y = −67.925`, straight through `bay_x × bay_y = [−93.95, −73.95] × [−76.925, −1.925]`. The
+>    **reserved bay wins** (§6 reservation rule); the strap slot is the movable feature. Deterministic
+>    fix, above: the −X pair slides inboard to `x = bay_x[1] + slot_l/2 + 2` when the nominal position
+>    would intersect the bay — `x = −59.45` for NDI to HDMI. Assert it rather than hand-typing it.
+> 2. **`mcc_floor_keepout()` is NOT a nullary function.** Strap slots, the splitter bay and the
+>    side-bolt web all depend on `L`, `W` and `x_bolt`. Its signature is `mcc_floor_keepout(dev, cfg)`.
+> 3. **The case's own 1/4"-20 insert is a stack-height constraint, not just a plan-view keep-out.**
+>    It is installed from the case underside, so its boss occupies `z ∈ [0, MCC_INSERT_1_4_20.len + 1]`
+>    = `[0, 13.7]`, and the device underside is at `z_dev_lo = MCC_FLOOR_T + MCC_CRADLE_DECK` = **13.85**
+>    (compact) / **13.8** (plus). The boss therefore has 0.15 / 0.10 mm of clearance and must be
+>    unioned into the cradle deck's hollow. **New assert T1-32** (§9). Anything that shortens the
+>    cradle deck breaks it silently — hence the assert.
+> 4. **VESA 75 × 75 cannot be cut as M4 clearance through-holes on the compact family.** Two of the
+>    four holes at `vesa_pos + (±37.5, ±37.5)` land inside the device/cradle footprint
+>    (`x ∈ [−46.95, 53.95]`, `y ∈ [−60.925, −0.725]`), and no `vesa_pos` shift avoids it — a 75 mm
+>    square cannot dodge a 100.9 × 60.2 device on a 193.9 × 159.85 floor. **Ruling: the VESA M4
+>    features are blind M4 heat-set inserts in floor bosses that are unioned into the cradle deck's
+>    hollow, not through-holes** (there is 13.85 mm of floor+deck stack, ample for a 5.7 mm insert).
+>    `mounts.scad` owns the bosses; `cradle.scad` must leave room for them. If the user would rather
+>    drop VESA on the compact family, that is a user decision — escalate, do not improvise.
 
 ---
 
@@ -776,24 +1028,30 @@ The device branch governs `L` on every priority SKU; `L_panel_min` is never bind
 
 | SKU | family | slots | ez_neg | ez_pos | L | W | H | pitch | x_dev_c |
 |---|---|---|---|---|---|---|---|---|---|
-| HDMI Plus, HDMI 4K Plus | plus | 4 | 47 | 40 | 210.5 | 166.4 | 51.0 | 47.50 | +3.50 |
-| SDI Plus, SDI 4K Plus, 12G SDI 4K Plus | plus | 4 | 47 | 41 | 211.5 | 165.3 | 51.0 | 47.83 | +3.00 |
-| NDI to HDMI 4K | plus | 4 | 47 | 40 | 210.5 | 166.4 | 51.0 | 47.50 | +3.50 |
-| HDMI TX | compact | 3 | 47 | 40 | 193.9 | 159.9 | 51.0 | 62.95 | +3.50 |
-| SDI TX | compact | 3 | 47 | 41 | 194.9 | 158.8 | 51.0 | 63.45 | +3.00 |
-| NDI to HDMI | compact | 4 | 47 | 40 | 193.9 | 159.9 | 51.0 | 41.97 | +3.50 |
-| NDI to SDI | compact | 4 | 47 | 41 | 194.9 | 158.8 | 51.0 | 42.30 | +3.00 |
-| NDI to AIO | compact | 4 | 47 | 41 | 194.9 | 159.9 | 51.0 | 42.30 | +3.00 |
+| HDMI Plus, HDMI 4K Plus | plus | 4 | 47 | 40 | 210.5 | 166.35 | 51.0 | 47.50 | +3.50 |
+| SDI Plus, SDI 4K Plus, 12G SDI 4K Plus | plus | 4 | 47 | 41 | 211.5 | 165.30 | 51.0 | 47.83 | +3.00 |
+| NDI to HDMI 4K | plus | 4 | 47 | 40 | 210.5 | 166.35 | 51.0 | 47.50 | +3.50 |
+| HDMI TX | compact | 3 | 47 | 40 | 193.9 | 159.85 | 51.0 | 62.95 | +3.50 |
+| SDI TX | compact | 3 | 47 | 41 | 194.9 | 158.80 | 51.0 | 63.45 | +3.00 |
+| NDI to HDMI | compact | 4 | 47 | 40 | 193.9 | 159.85 | 51.0 | 41.97 | +3.50 |
+| NDI to SDI | compact | 4 | 47 | 41 | 194.9 | 158.80 | 51.0 | 42.30 | +3.00 |
+| NDI to AIO | compact | 4 | 47 | 41 | 194.9 | 159.85 | 51.0 | 42.30 | +3.00 |
 
-(`W` differs by 1.1 mm within a family purely from `d_bay_free`: 70.65 for HDMI-bearing SKUs vs 69.60
+(`W` differs by 1.05 mm within a family purely from `d_bay_free`: 70.65 for HDMI-bearing SKUs vs 69.60
 for BNC-without-HDMI. `x_dev_c = (ez_neg − ez_pos)/2` — the device is off-centre since D-12.)
 
-**Family envelopes (the number to quote and to print) — rev 3:**
+> **Correction, rev 5 (2026-09-08).** The HDMI-bearing `W` figures were 159.9 / 166.4 in rev 3. That
+> came from `architecture.md` §1 rounding `mcc_bay_depth("NAHDMI-W-B")` to "75.7"; the exact value
+> from `constants.scad` is `40.65 + 35 = 75.65`, so `d_bay_free = 70.65` and `W = 159.85 / 166.35`.
+> **The code must compute 159.85/166.35 — do not round it back to match a doc.** ~0.05 mm,
+> non-structural, but the golden files will carry the exact number.
+
+**Family envelopes (the number to quote and to print) — rev 5:**
 
 | Family | L × W × H = printed bbox | Lid fasteners | Bed margin vs 256 | vs the 250 assert limit |
 |---|---|---|---|---|
-| **compact** | **194.9 × 159.9 × 51.0** | **6** | 61.1 / 96.1 | 55.1 / 90.1 |
-| **plus** | **211.5 × 166.4 × 51.0** | 6 | 44.5 / 89.6 | 38.5 / 83.6 |
+| **compact** | **194.9 × 159.85 × 51.0** | **6** | 61.1 / 96.15 | 55.1 / 90.15 |
+| **plus** | **211.5 × 166.35 × 51.0** | 6 | 44.5 / 89.65 | 38.5 / 83.65 |
 
 Both families' largest part (the base) is inside `MCC_BUILD - MCC_BED_MARGIN` = 250
 (`constants.scad:25-26`, asserted by `util.scad:41-43`) with ≥ 38.5 mm to spare. **The lid has the
@@ -838,7 +1096,7 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | T1-15 | `H_int >= fan_aperture_d + 2*MCC_WALL` when a fan bay is reserved | §5 (45 ≥ 38 + 6) |
 | T1-16 | `splitter_envelope ∩ connector_bay_envelope == ∅` | §5, R11 — **now passes** with the dongle default |
 | T1-17 | `splitter_envelope ∩ mcc_floor_keepout() == ∅` | §7 floor rule |
-| T1-18 | fan bay face `!= [0,+1,0]`, and `fan_bay ∩ end_zone_cable_envelope == ∅` | §5 |
+| T1-18 | ~~fan bay face `!= [0,+1,0]`, and `fan_bay ∩ end_zone_cable_envelope == ∅`~~ **RE-SCOPED rev 5 (2026-09-08): the second clause is unsatisfiable as written and is replaced.** New form: (a) fan bay face `!= [0,+1,0]`; (b) `fan_envelope ∩ device_envelope == ∅` and `fan_envelope ∩ splitter_bay == ∅`; (c) **axial cable clearance:** `x_dev_hi + axial_plug_len(worst +X port) <= L/2 − MCC_WALL − fan_envelope_depth` | §5. **Why:** `ez_pos = 40` is the *whole* +X end zone and the fan envelope (frame 10 + intake clearance 5 = 15) occupies its outer 15 mm, so `fan_bay ∩ end_zone` is non-empty on **every** SKU. But the two genuinely coexist: `ez_pos` = 25 mm of *axial* plug + 15 mm of *lateral* bend allowance, and the bend is spent in Y (turning toward the patch wall), not in X. Clause (c) is the real constraint. On NDI to HDMI: `53.95 + 25 = 78.95 <= 96.95 − 3 − 15 = 78.95` — **passes with exactly zero slack**, which is precisely why it must be an assert. **BNC-ended SKUs have no sourced axial plug-body term at all** (`ez(bnc) = 41` is a pure bend radius, §4) — clause (c) cannot be evaluated honestly there; use `mcc_plug_len("NBB75DFGB")` as the interim axial term and record it as `assumed` pending M6 |
 | T1-19 | no vent slot intersects the patch wall | §5 |
 | T1-20 | patch-flank cradle ribs only where `|x| > plate_l/2 - 3` | §4 |
 | T1-21 | `L <= MCC_BUILD - MCC_BED_MARGIN` and `bbox_W <= MCC_BUILD - MCC_BED_MARGIN` for base and lid | `util.scad:41-43`. `bbox_W = W + MCC_SIDE_BOLT_PROUD`, which **since D-13 equals `W`** — keep the expression, the parameter still exists |
@@ -852,6 +1110,15 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-29** | flush rule (D-13): `MCC_GAP_FAR >= boss_len + MCC_PAD_T - MCC_WALL` **and** `MCC_SIDE_BOLT_PROUD == 0` unless the variant sets `proud` explicitly and the exception is recorded in §10 | §7.1 — stops a future edit from silently re-introducing a proud lug, and stops anyone "optimising" `MCC_GAP_FAR` back to 6 |
 | **T1-30** | when a fan bay is reserved: total intake vent free area `>= MCC_VENT_AREA_RATIO * (π/4) * MCC_FAN_APERTURE_D²`, `MCC_VENT_AREA_RATIO = 1.0` `assumed` | `knowledge/design/thermal-guidelines.md:104-109` ("vent free area comfortably larger than the fan's inlet/outlet duct area"). **New, and it currently FAILS at the band geometry in §5** (≈ 990 vs 1134 mm²) — the fix is a taller intake band, not a deeper duct (R20). Note deliberately: the assert is on **slot area**, not duct depth; the duct is one of several parallel paths and never the restriction |
 | **T1-31** | printability of the internal boss: `(MCC_SIDE_BOLT_BOSS_OD - support_web_t)/2 <= 10.0` | §7.1, `architecture.md` §5 "no unsupported horizontal span over 10 mm"; `fdm-rugged-enclosure-guidelines.md:111`. At rev-3 defaults `(20 − 3)/2 = 8.5` |
+| **T1-23b** | no vent slot inside the far-wall mid-span lid-fastener boss + gusset strip | **new, rev 5** — §5 vent table. The `n_fast = 6` far-wall fastener lands inside the intake band's X run on every current SKU |
+| **T1-32** | the case's own 1/4"-20 insert stack fits under the device: `MCC_INSERT_1_4_20.len + 1 <= MCC_FLOOR_T + mcc_cradle_deck(dev)` | **new, rev 5** — §7.1 floor correction 3. `13.7 <= 13.85` (compact) / `13.8` (plus): **0.15 / 0.10 mm of slack**. The insert is installed from the case underside and its boss must union into the cradle deck's hollow |
+| **T1-33** | tongue-and-groove fits the lid: `MCC_TG_H + 1.0 <= MCC_LID_T` **and** `MCC_TG_W + 2*MCC_CLR_TG <= MCC_WALL - 0.8` (offset/shiplap tongue) | **new, rev 5** — §2.2 / D-07. The lid is a flat 3.0 mm slab and `H = 51.0` is a fixed user decision, so a 4 mm-deep groove is geometrically impossible and a *centred* tongue does not fit a 3 mm wall at all. See §15 ruling 4 |
+| ~~**T1-34**~~ | ~~every patch-wall window clears the connector's rear envelope … and no unsupported horizontal span in the window roof exceeds 10.0 mm~~ | **RETIRED rev 6, 2026-09-08.** It was satisfied by the `hull()`ed crown the user rejected, and it under-specified the shape (any envelope containing the three circles passed, including the blob). Replaced by **T1-34a–d**, which pin the shape exactly. The *reason* T1-34 existed — a 45°-gabled rectangle cannot clear the bosses at `z = 41.64` — is preserved in §2.5's "why a plain rectangle still does not work" |
+| **T1-34a** | the lip window is `union(body, relief_lo, relief_hi)` with `body = truncated teardrop ⌀(mcc_cutout_d(part) + 2*MCC_CLR_SLIDE)`, `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE`, and `relief = ⌀(MCC_BOSS_MIN_RATIO*insert_od + 2*MCC_CLR_SLIDE)` at **`(−MCC_D_SCREW_PITCH[0]/2, −MCC_D_SCREW_PITCH[1]/2)` and `(+MCC_D_SCREW_PITCH[0]/2, +MCC_D_SCREW_PITCH[1]/2)`** relative to the slot centre, in case `(x, z)` (**corrected rev 7** — rev 6 quoted the plate's *authored* front-view diagonal, which is mirrored once `rotate([-90,0,0])` places the plate; see §2.5's frame rule). Asserts: `w_flat = 2*(d_win/2*sqrt(2) − cap_h) <= MCC_APERTURE_BRIDGE_MAX` **and** `d_rel <= MCC_APERTURE_SELF_SUPPORT_MAX_D` **and** `cap_h > mcc_cutout_d(part)/2` | **new, rev 6** — §2.5. The first clause is `architecture.md` §5's ≤10 mm span rule; the second says the reliefs are small enough not to need their own teardrop; the third is what hides the apex behind the plate. **`hull()` is forbidden in the aperture** — that is a code-review rule, not assertable |
+| **T1-34b** | *roundness* — the only part of the lip window visible through the plate's own cutout is the two relief crescents: `mcc_cutout_d(part)/2 − (hypot(MCC_D_SCREW_PITCH/2) − d_rel/2) <= MCC_APERTURE_RELIEF_INTRUSION_MAX (1.5)` | **new, rev 6** — §2.5, and the direct expression of the user's requirement. Evaluates to **1.035 mm** for the 23.6-class parts and **1.235 mm** for `NE8FDP-B`. If a future insert or `MCC_BOSS_MIN_RATIO` change pushes this over 1.5 mm the window stops reading as round and the design must be revisited, not fudged |
+| **T1-34c** | *containment* — the whole window stays inside the plate silhouette with `MCC_APERTURE_LIP_WEB_MIN (2.0)` of lip left all round: `cap_h + 2.0 <= MCC_PLATE_H/2`, `MCC_D_SCREW_PITCH[1]/2 + d_rel/2 + 2.0 <= MCC_PLATE_H/2`, and `abs(slot_x(i)) + MCC_D_SCREW_PITCH[0]/2 + d_rel/2 + 2.0 <= plate_l/2` | **new, rev 6** — §2.5. Z: `12.8 + 2 = 14.8 <= 19.5` ✓ and `12 + 4.44 + 2 = 18.44 <= 19.5` ✓ (1.06 mm spare — the binding one). X on NDI to HDMI: `62.95 + 13.94 + 2 = 78.89 <= 83.95` ✓. **This is why the apex is truncated:** a full 45° teardrop apex at `12.4*√2 = 17.54` leaves only 0.26 mm and fails |
+| **T1-34d** | every lip window clears every plate-fixing boss's **insert bore** by ≥ 2.0 mm of lip material: `hypot(fix_x − (slot_x ∓ 9.5), fix_z − (z_conn_c ± 12)) − d_rel/2 − MCC_INSERT_M3.hole_d/2 >= 2.0` | **new, rev 6** — `fdm-rugged-enclosure-guidelines.md:127`. On NDI to HDMI the worst pair is the outer slot's lower relief `(72.45, 13.5)` vs. the fixing at `(80.95, 9.0)`: `9.617 − 4.44 − 2.0 = 3.18 mm` ✓. **Rev 7:** the four `mcc_panel_fixing_pos()` points are symmetric about `z = z_conn_c`, so this clearance is *invariant* under the §2.5 relief mirror — 3.18 mm is right either way, and this assert is therefore **not** what catches a mirrored relief pattern (only the head-on elevation is). Measured **to the bore, not to the boss OD** (boss-OD-to-relief is only 1.04 mm, which merely undercuts the boss root on that flank) |
+| **T1-35** | *the connector screw must reach its insert* — `mcc_neutrik_d_bosses()`'s bore is continuous from the boss's rear tip through to the panel's own screw clearance hole: `insert_bore_depth + thru_depth == boss_h` with `insert_bore_depth >= MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` and `thru_d >= MCC_M3_CLR_D`. **No solid material anywhere on the screw axis between the flange face and the insert.** Same rule for the 4 plate-fixing bosses in `shell.scad` | **new, rev 6** — the literal, mm-level form of the user's "there is no place to screw the D-connectors down". Today `bore_depth = len + 1 = 6.7` against `boss_h = 7`, leaving **0.3 mm of solid ASA** across the screw axis (`lib/mcc/neutrik.scad:117-120`), and the four `shell.scad` plate-fixing bosses have **no bore at all** (deviation D10). The `neutrik-tile` coupon exists precisely to catch this and has not been printed |
 
 ---
 
@@ -922,3 +1189,484 @@ citation or an `assumed` tag in the section noted.
 and `MCC_PAD_T`, and **before** `MCC_SIDE_BOLT_PROUD` and anything that computes `W`. `constants.scad`
 holds only variable assignments and pure functions (`architecture.md` §3), so this is a plain
 top-to-bottom ordering requirement, not a module dependency.
+
+### Rev-5 addendum (2026-09-08) — constants settled by the L2 architecture gate
+
+| Constant | Value | Status |
+|---|---|---|
+| `MCC_LID_CLEAR` | **2.0** | **ACCEPTED** (§15 ruling 3). Minimum only — not the design plenum, which is 10.85 mm here and must never be sealed (`architecture.md` §12 Q10) |
+| `MCC_TG_W` / `MCC_TG_H` | **1.6 / 2.0**, offset (shiplap) tongue flush with the wall's **inner** face | **CHANGED** from the plan's 3.0/4.0, which are geometrically impossible (§15 ruling 4, T1-33). `models/coupons/tg-ladder.scad`'s `T_W`/`T_H` must be re-cut to these before it is printed |
+| `MCC_VENT_SLOT_W` / `MCC_VENT_WEB_W` | 1.2 / 1.6 `assumed` | unchanged, §5 |
+| `MCC_VENT_INTAKE_BAND_H` | **18.0** | **CHANGED** from the plan's 15.0 (§15 ruling 5). 12 and 15 both fail T1-30 once the T1-23/T1-23b keep-outs are subtracted |
+| `MCC_VENT_EXHAUST_Z` | `[32, 44]` | unchanged, §5 |
+| `MCC_FAN_APERTURE_D` | **38.0** | already required by §11 above; **the plan omitted it while asserting against it** — it must be added, and it must agree with `mcc_fan_cutout()`'s own `frame[0] − 2` |
+| `MCC_PANEL_BEZEL_T` | **3.0**, new | the proud sacrificial-bezel layer of `MCC_T_PATCH`; needed explicitly now that the rabbet is stepped (§2.5). `MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL` |
+| `MCC_CRADLE_RIB_T` / `_RIB_H` | 3.0 / 9.0 | unchanged, §7 |
+| `MCC_CRADLE_FLOOR_PAD_T` / `_MIN` | 2.0 / 40 | unchanged, §7 |
+| `MCC_STRAP_SLOT` | `[25, 5]` `assumed` | unchanged, but the −X pair's X position is now derived (§7.1 correction 1), not `±(L/2 − 25)` |
+| `MCC_FLOOR_FEATURE_MIN_SEP` | 15.0 | unchanged, §7.1 |
+
+### Rev-6 addendum (2026-09-08) — constants for the aperture ruling
+
+All five are new; all are `assumed` (they are print-process figures, not sourced dimensions) and all
+belong in the **"Patch-wall layout"** section of `constants.scad`, after `MCC_PANEL_BEZEL_T`. None of
+them changes `L`, `W`, `H`, the plate size, the slot pitch or any fixing position — the rev-6 ruling
+is shape-only.
+
+| Constant | Value | Purpose / where used |
+|---|---|---|
+| **`MCC_APERTURE_BRIDGE_MAX`** | **NEW — 10.0** | The one place `architecture.md` §5's "no unsupported horizontal span over 10 mm" becomes a number instead of prose. Used by T1-34a (window apex) and available to T1-31. Do **not** duplicate the literal `10.0` in `shell.scad` or `fasteners.scad` |
+| **`MCC_APERTURE_SELF_SUPPORT_MAX_D`** | **NEW — 10.0 `assumed`** | Round-hole diameter below which a horizontally-printed hole needs **no** teardrop. Same 10 mm span rule read as a diameter. Used by T1-34a to justify plain-circle boss reliefs (`d_rel = 8.88`) |
+| **`MCC_APERTURE_CAP_RISE`** | **NEW — 0.4 `assumed`** | How far the truncated-teardrop cap sits above the body circle's top, mm. `cap_h = d_win/2 + MCC_APERTURE_CAP_RISE`. Chosen as the smallest rise that still hides the cap behind the plate (`cap_h > mcc_cutout_d/2`, margin 0.7 mm) while keeping `w_flat` under `MCC_APERTURE_BRIDGE_MAX`. Calibrate with `neutrik-tile` |
+| **`MCC_APERTURE_RELIEF_INTRUSION_MAX`** | **NEW — 1.5 `assumed`** | Maximum radial intrusion of a boss relief inside the plate's own cutout silhouette, mm — the numeric form of "the D slots must read as exactly round". Actual worst case today 1.235 mm (`NE8FDP-B`). T1-34b |
+| **`MCC_APERTURE_LIP_WEB_MIN`** | **NEW — 2.0** | Minimum lip material between any part of a window and the plate's edge, mm. `fdm-rugged-enclosure-guidelines.md:127`. T1-34c |
+| **`MCC_INSERT_BORE_EXTRA`** | **NEW — 0.5 `assumed`** | Extra bore depth past a heat-set insert's own length so the insert seats fully, mm. Replaces the bare `+ 1` literal in `mcc_neutrik_d_bosses()`. T1-35 |
+| **`MCC_PLATE_RIM_W`** | **NEW — 6.0** | The plate's rim (border) width. It is the *same* number in three places today — `mcc_panel_plate()`'s `rim_w = 6` default, `_mcc_patch_wall_aperture()`'s local `rim_w = 6`, and the literal `6` passed to `_mcc_patch_wall_fixing_bosses()` — across two L2 files, and it feeds `mcc_panel_fixing_pos()`. That is a §3 "no magic numbers in L2" deviation and the exact drift hazard that produced **D6**. Name it once and pass it |
+
+**Explicitly NOT added: `MCC_APERTURE_TOP_OPEN`.** The top-open (U-notch) aperture is rejected, not
+parameterised — a flag for a rejected topology is an invitation to re-open a settled decision and to
+ship an untested second geometry path. §15 ruling 2026-09-08b.
+
+---
+
+## 15. Rulings, 2026-09-08 — L2 architecture gate for `docs/plans/2026-09-08-l2-first-case.md`
+
+Verdict on that plan: **APPROVED WITH CHANGES.** The envelope arithmetic, the coordinate frame, the
+slot/pitch/end-zone maths, the lid-fastener placement and the `part=="assembly"` export exclusion are
+all correct as written. Eight `PLAN-ASSUMPTION`s were raised; the rulings are below, together with
+nine further defects found during validation that the plan did not raise.
+
+| # | Assumption | Ruling |
+|---|---|---|
+| 1 | new L1 `lib/mcc/layout.scad` | **ACCEPT**, constrained: pure **functions only, no modules ever**; dependencies limited to `constants.scad` / `ports.scad` / `util.scad`; it may **not** `use` any L1 geometry provider — so `mcc_case_layout()` returns `side_bolt_x`/`side_bolt_z`, and callers fetch `mcc_side_bolt_keepout()` from `fasteners.scad` themselves. It also becomes the home of `mcc_panel_fixing_pos()` (§2.3) |
+| 2 | patch-wall aperture = 4 discrete windows | **ACCEPT the 4 windows, REJECT the window shape.** One plate, **one continuous stepped rabbet**, `n_slots` windows through the 3 mm structural lip only. Full normative spec: §2.5 + T1-34 |
+| 3 | `MCC_LID_CLEAR = 2.0` | **ACCEPT** |
+| 4 | `MCC_TG_W/H = 3.0/4.0` | **REJECT.** `MCC_TG_H = 4.0 > MCC_LID_T = 3.0` — a 4 mm groove cuts clean through the lid, and `H = 51.0` is a fixed user decision so the lid cannot grow. A *centred* tongue also does not fit a 3 mm wall (`0.8 + 0.25 + w + 0.25 + 0.8 ≤ 3.0` → `w ≤ 0.9`). **Ruling: offset/shiplap tongue flush with the wall's inner face, `MCC_TG_W = 1.6`, `MCC_TG_H = 2.0`**, leaving 1.0 mm of lid above the groove. New assert T1-33. `tg-ladder` calibrates `MCC_CLR_TG` and must be re-cut to 1.6/2.0 |
+| 5 | `MCC_VENT_INTAKE_BAND_H = 15.0` | **CHANGE to 18.0.** 15 mm gives ≈1143 mm² *gross* — but T1-23 (side-bolt strip + disc, ≈78 mm²) and the new T1-23b (far-wall mid lid boss, ≈64 mm²) must come off, leaving ≈1084 < 1134. See §5 |
+| 6 | far-flank rib count/positions | **CHANGE.** The plan's §3.3 visibly hand-iterates and contradicts itself. Deterministic rule now normative in §7; for NDI to HDMI it yields **4 ribs at `x = −38.95, −12.0, +19.0, +45.95`**. The contract's "exactly two, outboard of the intake band" alternative is **struck** as unrealisable |
+| 7 | splitter tie-down orientation | **CHANGE the fix, not the diagnosis.** The plan is right that `mcc_splitter_tiedown()` assumes a *flat* splitter — and so does `mcc_splitter_envelope()`, which additionally inflates `size[0]` by `2 × cable_allow` and would reserve a **115 mm** Y extent instead of §5's 75 mm. **Do not hand-roll holes in `mounts.scad`.** Add an `orient = "edge"` parameter to **both** modules in `poe_splitter.scad` (an approved L1 change, outside the plan's file list) and a `cable_allow = false` option on the envelope; `mounts.scad` then calls `mcc_splitter_tiedown(orient="edge")`. The tie-down stays **2 × (4 × 1.5) zip-tie slots**, not "2 × ⌀8" |
+| 8 | slot-order contradiction | **The §3 rule text is right; the §3 worked-results table was wrong** — on **six of eight rows**, not just the four decoders. Table replaced (§3). The plan's own claim that "the encoder rows do match" is itself wrong: HDMI TX and SDI TX were reversed too, and HDMI Plus had slots 3/4 swapped. Root cause: "end A" in the rule means `face.x < 0` in the case frame, while the table was built from Magewell's "Face A", which is the *video* end on the decoders. **No device file changes.** Final order for NDI to HDMI: **1 = NE8FDP-B (rj45) · 2 = NAUSB-W-B (usb_b) · 3 = NAUSB-W-B (usb_host) · 4 = NAHDMI-W-B (hdmi_out)** |
+
+**Further defects found by the architect (not raised by the plan):**
+
+| # | Defect | Where |
+|---|---|---|
+| A | Plate-retention boss positions in the plan (`±(plate_l/2 − 4)`, `z_conn_c ± 14`) do not match the already-implemented `mcc_panel_plate()` (`±(plate_l/2 − 3)`, `±16.5`) — the screws would not line up | §2.3 correction |
+| B | The rabbet must be **stepped** (6 mm over the plate's 3 mm rim, 5 mm over the 2 mm field); a uniform 5 mm pocket buries the rim | §2.5 |
+| C | The plate's rear connector bosses reach `z = 41.64` and cannot pass a 45°-gabled window | §2.5, T1-34 |
+| D | T1-18 (`fan_bay ∩ end_zone_cable_envelope == ∅`) is unsatisfiable on every SKU | §9 T1-18, re-scoped |
+| E | The −X strap-slot pair intersects the reserved splitter bay (T1-17 would fire) | §7.1 correction 1 |
+| F | `mcc_floor_keepout()` cannot be nullary — it depends on `L`, `W`, `x_bolt` | §7.1 correction 2 |
+| G | The case's own 1/4"-20 insert stack (13.7 mm) barely fits under the device (13.85 mm) and must live inside the cradle deck | §7.1 correction 3, T1-32 |
+| H | VESA 75 × 75 cannot be M4 clearance through-holes on the compact family — they land under the device | §7.1 correction 4 |
+| I | The far-wall mid-span lid-fastener boss stands inside the intake vent band | §5 vent table, T1-23b |
+| J | The side-bolt support web's floor footprint is 3 × 14, not 3 × 20 | §7.1 floor table |
+
+---
+
+## Ruling 2026-09-08b — user feedback on the connector openings (rev 6)
+
+**Trigger.** The user reviewed the first rendered case (`models/pro-convert-for-ndi-to-hdmi`) in a
+3D viewer and rejected the patch-wall connector openings: *"the 4 D-slots must be exactly round — not
+the weird round/diamond-like shape they have now. As they are now there is no place to screw the
+D-connectors down."*
+
+**What the user was actually looking at.** The rev-5 §2.5 window: `hull()` of the ⌀24.4 body circle
+and the two ⌀8.88 rear-boss reliefs at `(∓9.5, ±12)` — a 27.9 × 32.4 mm diagonal blob through the
+3 mm structural lip (`lib/mcc/shell.scad` `_mcc_patch_wall_window()`). Because that blob is *narrower
+than the plate's own D cutout along the two diagonal flanks*, its outline shows through every plate
+hole. The plate itself, 2.0 mm behind the plate face with the real round cutouts, the ⌀3.4 screw
+holes and the M3 rear bosses, is geometrically correct and correctly placed — but it is not what the
+eye lands on.
+
+**Verdict — the complaint is upheld on all three counts.**
+
+| Count | Finding |
+|---|---|
+| "not exactly round" | **Upheld.** The `hull()` is the cause and it buys nothing: it is not more self-supporting than a plain circle (its top near the upper relief is still a horizontal-tangent arc), it removes ~35 % more of the 3 mm lip than a `union()`, and it removes it exactly where the plate's 2 mm flange seat needs backing (R4). **Fix: `union()` of a truncated-teardrop body circle and two plain relief circles.** §2.5, T1-34a–c |
+| "no place to screw the D-connectors down" — the connectors | **Upheld, and it is a real mm-level defect, not a perception issue.** `mcc_neutrik_d_bosses()` bores `insert_len + 1 = 6.7 mm` into a `boss_h = 7` boss from the **rear** tip, leaving **0.3 mm of solid ASA across the screw axis** between the plate's ⌀3.4 clearance hole and the insert (`lib/mcc/neutrik.scad:117-120`). The screw physically cannot reach the insert. **Fix: continuous bore — insert bore from the rear tip, `MCC_M3_CLR_D` through to the front.** T1-35 |
+| "no place to screw the D-connectors down" — the plate | **Upheld.** The four shell-side plate-retention bosses are **plain unbored solids** (`shell.scad` `_mcc_patch_wall_fixing_bosses()`, self-documented as a known deviation), so the plate cannot be fastened either. Deviation **D10**. Two contradictory comments in `shell.scad` describe this bore as both "not modelled" and "resolved locally" — reconcile them |
+
+**The proposed top-open (U-notch) aperture: REJECTED.** The proposal — a full-plate-width notch from
+the wall's top edge down to the plate's bottom edge, plate slid in from above, lid rim capturing it —
+does eliminate windows by eliminating the roof, and I credit that it also restores a bezel on the
+fourth side (the lid overhangs the recessed plate by `MCC_PANEL_BEZEL_T`). It is still the wrong
+trade, for five reasons, any two of which would be enough:
+
+1. **It breaks the patch wall's top continuity over 168 of 194 mm** (86 % of the wall). The base
+   becomes a ⊐-channel in plan. Racking and torsional stiffness — the properties that carry the 1 m
+   drop-onto-concrete requirement (`architecture.md` §1, `fdm-rugged-enclosure-guidelines.md`) — and
+   ASA warp resistance on a 194 × 160 mm first layer (R9/R14) both depend on that closed rim. The
+   plate cannot substitute: it is a separate part sitting on `MCC_CLR_SLIDE = 0.3` mm of slide
+   clearance and transfers no reliable shear.
+2. **It destroys the tongue-and-groove closure along the whole patch side.** D-07 puts the tongue on
+   the base's inner top perimeter; with the notch there is no base material to carry it for 168 mm.
+   Moving the tongue onto the plate's top edge makes the T&G fit inherit the plate's own slide
+   clearance — a sloppy tongue is worse than no tongue, and the dust/ingress function is lost.
+3. **Plate retention drops from 4 fixings to 2 + lid capture.** On a 168 mm plate carrying four
+   connectors and their cable loads that is a real reduction, and the plate becomes removable only
+   with the lid off (it is currently serviceable from outside).
+4. **The `n_fast = 6` patch-wall mid-span lid fastener loses its gusset.** Its boss at
+   `(x_gap, W/2 − MCC_FASTENER_INSET)` currently gussets into the patch wall floor-to-lid
+   (`_mcc_gusset_web()`); above `z ≈ 5.7` there would be no wall to gusset into, leaving a
+   free-standing 45 mm pillar in the connector bay.
+5. **It forces `MCC_PLATE_H` off its derivation** (39.0 = `MCC_D_FLANGE[1] + 2·MCC_D_FLANGE_EDGE_MARGIN`,
+   the D-06 veto) up to ~42.3 to reach the wall top, or leaves a 2.7 mm open slot along 168 mm.
+   Either way it perturbs `H_int`/`z_conn_c`, and `H = 51.0` is a **fixed user decision**.
+
+All of that to remove a shape that one word of code (`hull` → `union`) removes. **Do not build it,
+and do not add a `MCC_APERTURE_TOP_OPEN` flag** — see §11's rev-6 addendum.
+
+**Option C, also rejected (recorded so it is not re-opened): move the flange-fixing bosses from the
+plate into the shell's structural lip.** This is the only way to make the lip window a single
+*perfect* circle with no relief crescents at all, and it would put the connector fixing into
+wall-backed 3 mm shell material instead of a 2 mm plate field (attractive against R4). Rejected
+because it costs more than it buys: 8 heat-set inserts per case would have to be set blind from
+inside a 45 mm-deep box against the patch wall instead of on a flat bench plate; it needs
+non-stock ~M3×14 screws (flange + 2 mm plate + 3 mm lip + engagement) instead of the screws Neutrik
+supplies; and it destroys the "bolt all four connectors to the plate on the bench, then drop the
+loaded plate into the rabbet" sequence, which is what makes an `L − 26` mm plate handleable. The
+residual 1.0–1.24 mm relief crescent is 2 mm behind the plate face and is covered by the fitted
+connector body — an acceptable price. §2.5.
+
+**Process finding (the reason a rejected design reached the user at all).** The only patch-wall view
+in `exports/` that shows the plate is `preview-rear.png`, an oblique ISO. There is no straight-on
+outside elevation of the assembled patch wall, and `scripts/build.py` renders no previews at all —
+they are ad-hoc. A geometry whose acceptance criterion is "what the user sees from outside" must be
+reviewed in exactly that view. **Required, `architecture.md` §9 Tier-4 / the `print-check` skill:
+every case variant publishes a straight-on `−Y → +Y` orthographic elevation of the assembled patch
+wall (base + `panel_placed`) before it is shown to the user.** Cheap, and it prevents a repeat.
+
+**Not changed by this ruling:** `L`, `W`, `H`, `plate_l`, `MCC_PLATE_H`, slot pitch, slot assignment,
+the stepped rabbet, `MCC_PANEL_BEZEL_T`, `mcc_panel_fixing_pos()`, and every §9 assert other than
+T1-34/T1-35. This is a shape-and-bore ruling, not an envelope ruling — no golden bbox moves, though
+volumes will.
+
+---
+
+## Ruling 2026-09-08c — record corrections carried by rev 7
+
+### C1. §2.5 boss-relief positions were the plate's *authored* pattern, not its *placed* pattern
+
+**Corrected in §2.5, §9 T1-34a and §9 T1-34d.** The plate is authored in the Neutrik front view with
+its screw holes and rear bosses at local `(−9.5, +12)` / `(+9.5, −12)`; `case.scad` places it with
+`rotate([-90,0,0])`, i.e. **local `(x, y)` → world `(x, z = −y)`**, so on the assembled case the
+bosses are at **`(slot_x − 9.5, z_conn_c − 12)` and `(slot_x + 9.5, z_conn_c + 12)`**. Rev 6 wrote
+`(∓9.5, ±12)` — the mirror. `lib/mcc/shell.scad` was corrected on **2026-09-08 (commit 2a7e0b0)**
+after the user reported the mirrored pattern on the first rendered case; **the doc is now corrected
+to match the code, and §2.5 carries an explicit frame rule** — *"the outside viewer's right is world
+−X"* — so this is not re-derived a third time.
+
+Why it survived every assert: the four `mcc_panel_fixing_pos()` points are symmetric about both
+`x = 0` and `z = z_conn_c`, so T1-34c and T1-34d are numerically **invariant** under the mirror. The
+defect is only visible in the head-on `−Y → +Y` elevation — the same view whose absence produced
+D11. This is the second defect in a row that only that view catches; it is why §16.4 makes the
+elevation a required per-PR artefact rather than a recommendation.
+
+Residual: `lib/mcc/layout.scad:388-391` still builds T1-34d's relief pair from the mirrored
+diagonal. Harmless today (invariant, above), latent the moment a fixing position becomes asymmetric.
+**Deviation D14** — fix by publishing the relief pair once as a pure function in `layout.scad` and
+calling it from both `layout.scad` and `shell.scad`. Not urgent, and **not** work for the seven
+parallel branches.
+
+### C2. D10 resolution — the plate-fixing bosses carry a genuine THROUGH-bore
+
+**Accepted as the resolution of deviation D10** (`architecture.md` §13), recorded here so it is not
+"corrected" back to a blind pocket by someone reading T1-35 literally.
+
+- **What is built.** Each of the four patch-wall plate-fixing bosses
+  (`_mcc_patch_wall_fixing_bosses()`, `lib/mcc/shell.scad:289-321`) is bored end to end:
+  `MCC_INSERT_M3.hole_d` for `MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` = **6.2 mm** from the
+  boss's **rear tip**, then `MCC_M3_CLR_D` for the remaining **0.8 mm** out through the front,
+  plate-facing face. Both ends are open.
+- **Why not the blind pocket T1-35's wording implies.** Manifold on the pinned OpenSCAD
+  **2025.09.07** cannot union a *blind-bored* boss flush against a face of another solid: the boss
+  comes back as its own disconnected component (`build.py check`'s `n_parts` = 1 + one per bored
+  boss). Diagnosed by isolated bisection — it reproduces with the aperture entirely absent, at every
+  overlap depth from `MCC_EPS` to 2 mm, and the add-then-cut-in-the-outer-`difference()` pattern
+  used for the tripod/VESA floor bosses does **not** fix it. A plain unbored cylinder unions
+  cleanly; any blind cavity breaks it. This is a toolchain robustness limit, not a modelling error,
+  and the through-bore is the smallest change that renders `parts=1` and watertight.
+- **Why it costs nothing by design.** Unlike `mcc_neutrik_d_bosses()`, this boss carries no other
+  feature at its rear tip, so opening it changes no function.
+- **Consequence, and it must reach the build sheet: the M3 heat-set insert is installed from the
+  boss's INTERIOR (rear) tip**, i.e. from inside the open base before the lid goes on, with the
+  soldering iron pointing +Y toward the patch wall. The screw enters from the *plate* side, through
+  the plate's own ⌀3.4 clearance hole and the boss's 0.8 mm clearance section, into the insert.
+  A 0.8 mm clearance lead-in is short: the screw must be started square, and **the insert must not
+  be over-driven past the 6.2 mm bore** or it will protrude out of the front face and stand the
+  plate off its seat. Add both notes to `BOM.md`'s assembly section and to `print-check`.
+- **Scope.** This resolution is specific to the four shell-side plate-fixing bosses.
+  `mcc_neutrik_d_bosses()` keeps its own two-diameter bore (insert from the rear tip, `MCC_M3_CLR_D`
+  through to the panel-side face) — also open at both ends, for the same toolchain reason, and
+  already the rev-6 fix.
+- **T1-35 wording stands** ("no solid material anywhere on the screw axis between the bearing face
+  and its insert"). A through-bore satisfies it strictly. Nothing in §9 changes.
+
+### C3. BLOCKING library defect found while gating the seven SKUs: T1-18(c)
+
+See **§16.3**. `lib/mcc/shell.scad:360-366` charges the BNC cable's *lateral* bend radius against the
+*axial* +X end-zone budget, so the assert fires on all four BNC-ended SKUs. It is a library fix, it
+is one constant plus one expression, it moves no geometry — and it must land **before** any of the
+seven branches is opened.
+
+---
+
+## 16. Pre-implementation gate for the seven remaining SKUs (rev 7, 2026-09-08)
+
+Scope: GitHub issues **#3–#9** — `pro-convert-hdmi-tx`, `pro-convert-sdi-tx`,
+`pro-convert-hdmi-plus`, `pro-convert-sdi-plus`, `pro-convert-for-ndi-to-hdmi-4k`,
+`pro-convert-for-ndi-to-sdi`, `pro-convert-for-ndi-to-aio`, built in parallel on seven branches
+against the library as it stands after `models/pro-convert-for-ndi-to-hdmi`.
+
+**Method.** Every number below is the mechanical output of `lib/mcc/layout.scad`,
+`lib/mcc/shell.scad`, `lib/mcc/cradle.scad`, `lib/mcc/vents.scad` and `lib/mcc/constants.scad`
+applied by hand to each device record — the same evaluation `mcc_case_layout()` and
+`mcc_shell_base()` perform. **It has not been executed through OpenSCAD** (this gate ran without a
+shell); every figure is reproducible from the cited expression, and the one *failing* assert
+(§16.3) is arithmetic simple enough to re-check by inspection. The first act of the pre-flight
+branch (§16.5) is to render all eight devices and confirm this table.
+
+### 16.1 Fit-check table
+
+Common to all seven: `H = 51.0`, `H_int = 45.0`, `ez_neg = 47` (rj45 27 + splitter 20, D-12),
+`n_fast = 6` (every `L` > `MCC_LID_SPAN_MAX` 180), `plate_l = L − 26`, `z_conn_c = 25.5`,
+`side_bolt_x = x_dev_c` and `side_bolt_z = 25.5` (every SKU still carries the `pos [0,0]`
+placeholder, M1), `MCC_GAP_FAR = 16`, `MCC_SIDE_BOLT_PROUD = 0`.
+
+| # | SKU | family | external ports (from the device file) | slot 1 (−X) | slot 2 | slot 3 | slot 4 (+X) | n | L × W × H | ez_neg / ez_pos | governing bay depth → `d_bay_free` | pitch | `x_dev_c` | fasteners |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| #3 | pro-convert-hdmi-tx | compact | `hdmi_in`(+X) · `usb_b`(−X) · `rj45`(−X) | **NE8FDP-B** `rj45` | **NAUSB-W-B** `usb_b` | **NAHDMI-W-B** `hdmi_in` | — | **3** | 193.9 × 159.85 × 51.0 | 47 / 40 | HDMI 75.65 → **70.65** | 62.950 | +3.50 | 6 |
+| #4 | pro-convert-sdi-tx | compact | `sdi_in`(+X) · `usb_b` · `rj45` | **NE8FDP-B** | **NAUSB-W-B** | **NBB75DFGB** `sdi_in` | — | **3** | 194.9 × 158.80 × 51.0 | 47 / 41 | BNC 74.60 → **69.60** | 63.450 | +3.00 | 6 |
+| #5 | pro-convert-hdmi-plus | plus | `usb_b`·`rj45`(−X) · `hdmi_in`·`hdmi_out`(+X) | **NE8FDP-B** | **NAUSB-W-B** | **NAHDMI-W-B** `hdmi_out` | **NAHDMI-W-B** `hdmi_in` | 4 | 210.5 × 166.35 × 51.0 | 47 / 40 | HDMI 75.65 → **70.65** | 47.500 | +3.50 | 6 |
+| #6 | pro-convert-sdi-plus | plus | `usb_b`·`rj45` · `sdi_in`·`sdi_out`(+X) | **NE8FDP-B** | **NAUSB-W-B** | **NBB75DFGB** `sdi_out` | **NBB75DFGB** `sdi_in` | 4 | 211.5 × 165.30 × 51.0 | 47 / 41 | BNC 74.60 → **69.60** | 47.833 | +3.00 | 6 |
+| #7 | pro-convert-for-ndi-to-hdmi-4k | plus | `usb_host`·`hdmi_out`(+X) · `usb_b`·`rj45`(−X) | **NE8FDP-B** | **NAUSB-W-B** `usb_b` | **NAUSB-W-B** `usb_host` | **NAHDMI-W-B** `hdmi_out` | 4 | 210.5 × 166.35 × 51.0 | 47 / 40 | HDMI 75.65 → **70.65** | 47.500 | +3.50 | 6 |
+| #8 | pro-convert-for-ndi-to-sdi | compact | `sdi_out`·`usb_host`(+X) · `usb_b`·`rj45`(−X) | **NE8FDP-B** | **NAUSB-W-B** `usb_b` | **NAUSB-W-B** `usb_host` | **NBB75DFGB** `sdi_out` | 4 | 194.9 × 158.80 × 51.0 | 47 / 41 | BNC 74.60 → **69.60** | 42.300 | +3.00 | 6 |
+| #9 | pro-convert-for-ndi-to-aio | compact | `hdmi_out`·`sdi_out`(+X) · `usb_b`·`rj45`(−X) | **NE8FDP-B** | **NAUSB-W-B** | **NAHDMI-W-B** `hdmi_out` | **NBB75DFGB** `sdi_out` | 4 | 194.9 × **159.85** × 51.0 | 47 / 41 | **HDMI** 75.65 → **70.65** | 42.300 | +3.00 | 6 |
+
+Notes on the slot column, all mechanical consequences of §3 and none of them a choice:
+
+- **`NE8FDP-B` is slot 1 and `NAUSB-W-B` is slot 2 on all seven.** Every SKU's −X block is exactly
+  `{rj45, usb_b}`, and `rank(rj45) = [10, 25] > rank(usb_b) = [8, 20]`. This is the cross-check §3
+  demands: the etherCON sits at the same end as the reserved PoE-splitter bay that must be fed from
+  it.
+- **`hdmi_in` outboard of `hdmi_out` on HDMI Plus, `sdi_in` outboard of `sdi_out` on SDI Plus.** The
+  two +X ports tie on `[bend, plug_len]`; the tie-break is `pos[0]` ascending, and the `_in` port is
+  at `pos[0] = −22` on both. So the **IN** connector takes the outermost slot 4.
+- **AIO puts the BNC outermost and the HDMI inboard** (`bend` 40.6 > 15), so slot 3 = `NAHDMI-W-B`.
+- **Derived positions** (needed by the goldens; all from `mcc_case_layout()`):
+  `x_gap` (patch-wall mid fastener) = **0** on every 4-slot SKU, **−31.475** on HDMI TX and
+  **−31.725** on SDI TX (odd slot count → even gap count → the −X tie-break, §6);
+  `x_far_mid` = **−12.64** where `x_dev_c = +3.50`, **−13.14** where `x_dev_c = +3.00`.
+- **No `DBA-BL-B` anywhere.** See §16.2.
+
+### 16.2 Expected assert outcomes, and the special handling each SKU was checked for
+
+**Constant across all seven** (they depend only on `constants.scad`, so they are pass/fail once, not
+per SKU): T1-34a (`w_flat` 9.30–9.48 ≤ 10.0; `d_rel` 8.88 < 10.0; `cap_h` clears
+`mcc_cutout_d/2` by 0.7) ✓ · T1-34b (intrusion **1.235 mm** for `NE8FDP-B`, **1.035 mm** for the
+23.6-class parts, ≤ 1.5) ✓ · T1-34c Z (`12 + 4.44 + 2 = 18.44 ≤ 19.5`, **1.06 mm** spare) ✓ ·
+T1-34c X (spare is `(plate_l − span)/2 − 15.94 = 21 − 15.94 =` **5.06 mm**, independent of `L`) ✓ ·
+T1-34d (**3.18 mm**) ✓ · T1-35 (`6.2 + 0.8 = 7.0 = boss_h`) ✓ · T1-25 (0.5 mm spare) ✓ ·
+T1-26 / T1-29 (**equality, 19 ≤ 19, zero slack by design**) ✓ · T1-31 (8.5 ≤ 10) ✓ ·
+T1-33 (`2.0 + 1.0 ≤ 3.0`; `1.6 + 0.5 ≤ 2.2`) ✓ · T1-11 (39.0 ≥ 36.28) ✓ · T1-15 (45 ≥ 44) ✓ ·
+T1-19 (no `mcc_vents()` call for `[0,1,0]`) ✓ · T1-05 (no `MINIDIN8` port on any SKU) ✓ ·
+T1-22 (one `tripod_1_4_20` on `[0,-1,0]` per device — all eight files fixed in commit bb1497f) ✓.
+
+**Per SKU:**
+
+| Assert | #3 hdmi-tx | #4 sdi-tx | #5 hdmi-plus | #6 sdi-plus | #7 ndi-hdmi-4k | #8 ndi-sdi | #9 ndi-aio |
+|---|---|---|---|---|---|---|---|
+| T1-01/02/03/04 (faces, `n_slots ≤ 4`, bijection) | ✓ 3 | ✓ 3 | ✓ 4 | ✓ 4 | ✓ 4 | ✓ 4 | ✓ 4 |
+| T1-06 `pitch ≥ 32` | ✓ 62.95 | ✓ 63.45 | ✓ 47.50 | ✓ 47.83 | ✓ 47.50 | ✓ 42.30 | ✓ 42.30 |
+| T1-07 / T1-08 (bay depth, lateral bend) | ✓ 70.65 ≥ 15 | ✓ 69.60 ≥ 40.6 | ✓ | ✓ 69.60 ≥ 40.6 | ✓ | ✓ 69.60 ≥ 40.6 | ✓ 70.65 ≥ 40.6 |
+| T1-09 `ez_neg` incl. splitter term | ✓ 47 | ✓ 47 | ✓ 47 | ✓ 47 | ✓ 47 | ✓ 47 | ✓ 47 |
+| T1-10 `plate_l` | ✓ 167.9 | ✓ 168.9 | ✓ 184.5 | ✓ 185.5 | ✓ 184.5 | ✓ 168.9 | ✓ 168.9 |
+| T1-13 lid boss → flange edge (`pitch/2 − 13` vs 6.14) | ✓ 18.48 | ✓ 18.73 | ✓ 10.75 | ✓ 10.92 | ✓ 10.75 | ✓ **8.15** | ✓ **8.15** |
+| T1-14 `H_int ≥ deck + dev_h + 2` | ✓ 45 ≥ 36.15 | ✓ | ✓ 45 ≥ 36.2 | ✓ | ✓ 45 ≥ 36.2 | ✓ | ✓ |
+| **T1-18(c) +X axial cable vs fan bay** | ✓ **0.00 slack** | ❌ **FAIL −14.60** | ✓ **0.00** | ❌ **FAIL −14.60** | ✓ **0.00** | ❌ **FAIL −14.60** | ❌ **FAIL −14.60** |
+| T1-21 bbox ≤ 250 | ✓ 56.1 spare | ✓ 55.1 | ✓ 38.5 | ✓ 38.5 | ✓ 38.5 | ✓ 55.1 | ✓ 55.1 |
+| T1-23 / T1-23b (vent keep-outs) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T1-24 pad on device flank (`18 ≤ dev_h − 2`) | ✓ 21.3 | ✓ 21.3 | ✓ 21.4 | ✓ 21.4 | ✓ 21.4 | ✓ 21.3 | ✓ 21.3 |
+| T1-27 far-flank ribs ≥ 3, clear of `x_bolt` | ✓ **4** | ✓ 4 | ✓ 4 | ✓ 4 | ✓ 4 | ✓ 4 | ✓ 4 |
+| T1-28 splitter bay vs −X cable envelope | ✓ 27 mm clear | ✓ | ✓ 27 | ✓ | ✓ 27 | ✓ | ✓ |
+| T1-32 case 1/4"-20 stack `13.7 ≤ z_dev_lo` | ✓ **0.15** | ✓ 0.15 | ✓ **0.10** | ✓ 0.10 | ✓ **0.10** | ✓ 0.15 | ✓ 0.15 |
+| VESA boss vs splitter bay (`mounts.scad:89`) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T1-30 net intake area vs 1134 mm² *(test-only, see below)* | 1174 | **1153** | 1325 | 1325 | 1325 | **1153** | 1174 |
+| `undef` in the layout struct | none | none | none | none | none | none | none |
+
+No `undef` is produced on any SKU: `x_gap` is defined because `gap_clearance ≥ 6.14` everywhere, and
+`x_far_mid` is defined because both `x_bolt ± 16.14` candidates are inside the fastener ring.
+
+**Special handling, item by item:**
+
+1. **Plus-family first use — `shell.scad` has never rendered a `plus` device.** Audited for
+   compact-only assumptions and there are **none**. `_mcc_h_int()` is `MCC_PANEL_BAND + MCC_PLATE_H +
+   MCC_PANEL_BAND` = 45.0 on every family; every family-varying quantity (`L`, `W`, `deck`,
+   `y_dev_c`, `z_dev_lo`) comes from `mcc_case_layout()` / `mcc_cradle_deck(dev)`; a grep of
+   `lib/mcc/**` outside `devices/` finds **no** literal `100.9`/`60.2`/`23.3`/`117.5`/`66.7` and no
+   branch on `mcc_dev_family()` — family is pure data, exactly as §4 of `architecture.md` intends.
+   Two plus-specific tight spots to know about, both passing:
+   **(a) T1-32 has 0.10 mm of slack** (`13.7 ≤ z_dev_lo = 13.8`) because the plus device is 0.1 mm
+   taller, so its deck is 0.05 mm shallower. Any upward revision of `MCC_INSERT_1_4_20.len` (12.7,
+   `assumed`) breaks the three plus SKUs first. **(b)** the ⌀38 fan aperture at
+   `fan_y = y_dev_c = −30.825` spans `y ∈ [−49.825, −11.825]`, clear of both walls.
+2. **BNC-only ends (SDI TX #4, NDI to SDI #8, NDI to AIO #9's outer slot).** Slot assignment,
+   `ez_pos = 41`, `d_bay_free = 69.60 ≥ 40.6` all correct. **The only problem is T1-18(c)** — §16.3.
+3. **Two BNC on one end (SDI Plus #6, the loop-out).** Slots 3 and 4, pitch 47.83, both inside a
+   69.60 mm-deep bay: the two 40.6 mm bend envelopes are 47.83 mm apart in X and cannot interfere.
+   `ez_pos = 41` is `max(bnc, bnc)`, unchanged. **No library change** beyond §16.3.
+4. **The 4K decoder's internal fan / top grille (R5, `architecture.md` §12 Q10 — "do not seal the
+   device's top grille").** **Guaranteed by construction, and here is what guarantees it:** the
+   plenum over the device is `MCC_FLOOR_T + H_int − z_dev_hi = 48 − 37.2 =` **10.8 mm** on the plus
+   chassis (10.85 compact), and **nothing is drawn in it.** `mcc_cradle()`'s deck slab lives entirely
+   below `z_dev_lo`; each far-flank rib's solid body tops out at `z_dev_lo + MCC_CRADLE_RIB_H =
+   22.8`, i.e. 14.4 mm below the device's top face, and sits in `y ∈ [y_dev_lo − 16, y_dev_lo]`,
+   *beside* the device, never over it; patch-flank ribs are gated on `|x| > plate_l/2 − 3` and are
+   emitted on **no** current SKU; `mcc_shell_lid()` is a flat 3 mm slab whose only downward feature
+   is the perimeter T&G groove. T1-14 is the standing guard (8.8 mm of slack on plus). The far-wall
+   exhaust band `z ∈ [32, 44]` sits *above* `z_dev_hi = 37.2` for its upper half, i.e. it opens into
+   the plenum — which is the right place for it. **No cradle or lid change is needed for #7.**
+   *Open, and a user decision, not an architect one:* R5 says the fan is **not optional for the 10 W
+   Plus models**, yet #5/#6/#7 will inherit `["fan", false]` if they are copied from
+   `models/pro-convert-for-ndi-to-hdmi/case.scad`. Ask the user before those three PRs merge; it is
+   one line of `cfg` plus a BOM row, never a library change.
+5. **AIO with HDMI + BNC on the same end (#9).** `ez_pos = max(40, 41) = 41` (BNC governs `L`);
+   `d_bay_free = 70.65` (**HDMI** governs `W`) — #9 is the only SKU where the two are governed by
+   *different* parts, which is why its `W` is 159.85 while #8's is 158.80 at the same `L`. Watch it
+   in review: a developer "simplifying" `W` to match #8 breaks the HDMI bay by 1.05 mm.
+6. **TX with 3 slots, blank policy (#3, #4).** `n_slots = len(mcc_ports_external(dev)) = 3`, and
+   `mcc_slot_assignment()` fills all three (block A → slots 1–2, block B → slot 3). **No `DBA-BL-B`
+   is instantiated anywhere in this repo today**, which is the intended outcome — the blank exists
+   for a caller that pads `n_slots`, and nothing does. The plate and aperture handle 3 slots
+   **symmetrically**: `slot_x[i] = −span/2 + i·(span/2)` gives exactly `[−span/2, 0, +span/2]`, so
+   the plate, the three windows and the three flange seats are symmetric about `x = 0`; the
+   asymmetry that *does* appear is `x_gap = −31.475 / −31.725`, which is §6's deliberate −X
+   tie-break for an even number of gaps, not a defect. `mcc_aperture_window()`'s `DBA-BL-B` branch
+   stays dead code — leave it, do not delete it in a variant branch.
+
+### 16.3 BLOCKING library change — T1-18(c) fails on every BNC-ended SKU
+
+**The finding.** `lib/mcc/shell.scad:360-366` builds the +X end zone's *axial* term as
+
+```
+axial = (kind == "bnc") ? mcc_plug_len("NBB75DFGB")            // = 40.6
+                        : mcc_dev_side_allow(kind) - mcc_bend_envelope(panel)
+assert(x_dev_hi + max(axial) <= L/2 - MCC_WALL - fan_env_depth)      // fan_env_depth = 10 + 5 = 15
+```
+
+which reduces, since `L = 53 + dev_l + ez_pos` and `x_dev_hi = −L/2 + 50 + dev_l`, to the clean
+condition **`ez_pos ≥ 15 + axial`**. Evaluated:
+
+| SKU | `axial` | required `ez_pos` | actual `ez_pos` | result |
+|---|---|---|---|---|
+| #3 hdmi-tx, #5 hdmi-plus, #7 ndi-hdmi-4k (and the shipped NDI to HDMI) | 25.0 (`hdmi_a`: 40 − 15) | 40.0 | 40 | **pass, 0.00 mm slack** |
+| #4 sdi-tx, #6 sdi-plus, #8 ndi-sdi, #9 ndi-aio | **40.6** (`bnc`) | **55.6** | 41 | ❌ **fail by 14.60 mm** |
+
+Worked example, SDI TX: `x_dev_hi = 53.45`, `LHS = 53.45 + 40.6 = 94.05`,
+`RHS = 97.45 − 3 − 15 = 79.45`. The same 14.60 mm shortfall appears on all four.
+
+**Why the assert is wrong rather than the envelope.** `MCC_PANEL_PARTS`'s `plug_len` for
+`NBB75DFGB` is **40.6, which is the Belden 4855R bend radius re-used** — `constants.scad:588-592`
+says so in as many words ("for BNC the bend radius genuinely governs both axial and lateral
+clearance"). T1-18 was re-scoped in rev 5 precisely because charging a lateral allowance against an
+axial budget is double-counting ("the bend is spent in Y, turning toward the patch wall, not in X").
+Clause (c) then reintroduced the double-count through the back door, with the doc's own hedge
+("clause (c) cannot be evaluated honestly there; use `mcc_plug_len("NBB75DFGB")` as the interim
+axial term"). That interim term is not honest — it is 40.6 mm of *bend radius* pretending to be a
+plug body — and it is what fails.
+
+**Options considered.**
+
+| Option | Verdict |
+|---|---|
+| **(a) Give the axial term its own `assumed` table entry.** Add `MCC_DEV_AXIAL_PLUG` (or extend `MCC_DEV_SIDE_ALLOW` with an `axial` column) with `bnc → 25.0 assumed (M6)`, `hdmi_a → 25.0`, `rj45 → 17`, `usb_a`/`usb_b` → 9, and make T1-18(c) read it. BNC-ended SKUs then need `ez_pos ≥ 40` and have 41 → **1.0 mm slack**. HDMI-ended SKUs are unchanged (still exactly 0.00). | **ADOPTED.** It is the only option that fixes the double-count instead of paying for it; it moves **no geometry**, so `tests/golden/pro-convert-for-ndi-to-hdmi.*.json` do not change; and it puts the missing figure where M6 can replace it. The 25.0 is `assumed`, deliberately the same class of placeholder as HDMI's assumed straight-plug axial length, and it must be tagged as such. |
+| (b) Compute the axial term uniformly as `allow − bend` for BNC too. | **Rejected.** It yields `41 − 40.6 = 0.4 mm` of axial plug body, which is not merely conservative, it is false — a BNC male plug body is certainly longer than 0.4 mm. An assert that passes on a figure everyone knows is wrong is worse than one that fires. |
+| (c) Grow `ez_pos` on BNC ends to 55.6. | **Rejected.** `L` → 209.5 compact / 226.1 plus on four SKUs; plus bed margin falls from 44.5 to 29.9 mm; and it contradicts §4's own `ez` table, which sources 41 from a *bend radius*. Re-sizing four cases on a number that is admittedly not an axial figure is the wrong direction. |
+| (d) Downgrade T1-18(c) to an `echo()` warning. | **Rejected.** It is the *only* guard against the fan bay and the +X cable bundle occupying the same volume, and the HDMI SKUs pass it with exactly zero slack — precisely the situation an assert exists for. |
+
+**Ruling.** Option (a). **This is a library change, therefore it is BLOCKING for parallel work.** It
+touches `lib/mcc/constants.scad` and `lib/mcc/shell.scad` — two files all seven branches depend on
+and none of them may edit — so it must be done **once, first, on a single pre-flight branch**, merged
+to `main`, and the seven branched from the result. Do **not** start #4/#6/#8/#9 before it lands, and
+do not "work around" it in a `models/**` file: a variant that overrides a library assert is exactly
+the abstraction leak §4's acceptance test exists to catch.
+
+**Also record:** T1-18(c) passes with **0.00 mm** of slack on every HDMI-ended SKU. When `depth-mockup`
+(M6) measures the straight HDMI plug and it comes back above 25 mm, T1-18(c) fails on #3, #5, #7 and
+the shipped NDI to HDMI *simultaneously*, and the answer will then be `L`, not the assert. That is
+the intended failure mode; nobody may pre-empt it by shaving `fan_env_depth`.
+
+### 16.4 Non-blocking findings the seven developers must be told about
+
+| # | Finding | Consequence for the seven |
+|---|---|---|
+| **D12** | **`cfg["external_ports"]` is inert.** `mcc_slot_assignment()` and `mcc_case_layout()` derive `n_slots` and every slot's part **solely** from `mcc_ports_external(dev)`; a grep of `lib/**` finds `external_ports` only in doc comments. The `new-case-variant` skill's promise that omitting an id "gets a DBA-BL-B blank instead of the live connector" is **not implemented**. | List every external port id in the variant config for documentation/BOM parity with the first case — but **do not try to blank or drop a port by omitting it**; it will silently do nothing. Any change here is a library change, out of scope for these seven. |
+| **D13** | **The `new-case-variant` skill is stale and will actively mislead a Sonnet-tier developer.** It states that `shell.scad`/`cradle.scad`/`mounts.scad`/`vents.scad`/`panel.scad`/`ports.scad` "do not exist yet", and its template calls `mcc_shell(family=…, half="base")` and `mcc_panel(device=…, face=[1,0,0])` — **signatures that exist nowhere in the library.** The real API is `mcc_shell_base(dev, cfg)`, `mcc_shell_lid(dev, cfg)`, `mcc_panel_plate(size, slots)`, `mcc_panel_plate_dims(dev)`, `mcc_slot_assignment(dev)`, `mcc_case_layout(dev, cfg)`. | **Fix the skill on the same pre-flight branch as §16.3**, before any developer reads it. Until it is fixed, the normative template is `models/pro-convert-for-ndi-to-hdmi/case.scad` — copy that file, not the skill. |
+| **D14** | `lib/mcc/layout.scad:388-391` evaluates T1-34d against the **mirrored** relief diagonal (ruling C1). Numerically invariant today. | Nothing. Do not "fix" it in a variant branch — it is a library change. |
+| **D15** | **T1-30 (intake free area vs the fan aperture) is not an in-model assert.** It lives only in `tests/test_shell.scad:53`, hard-wired to NDI to HDMI, so the other seven SKUs ship with **no** intake-area check. Hand-evaluated from `_mcc_vent_slot_centers()` the seven land at **1174 / 1153 / 1325 / 1325 / 1325 / 1153 / 1174 mm²** against the 1134 mm² threshold — all pass, but **#4 and #8 have only ~19 mm² (1.6 %) of margin**, because their `W = 158.80` loses one whole slot off the −X end wall's run (27 slots instead of 28). | Nothing in a variant branch. Wiring T1-30 into `mcc_shell_base()` is recommended on the pre-flight branch **only after** a render confirms all eight devices pass; if a BNC compact SKU actually fails, that is a real thermal finding — escalate to the user, do not relax `MCC_VENT_AREA_RATIO`. |
+| **D16** | `mcc_floor_keepout()` publishes the floor features, but **`mounts.scad` never asserts pairwise non-overlap**, although `layout.scad:240-243` and §7.1 both say it does. `MCC_FLOOR_FEATURE_MIN_SEP` is unused. | Nothing in a variant branch. Log for a later single-branch fix. |
+| — | **Cable routing to the *inboard* +X slot.** On every 4-slot SKU, slot 3 sits at `+span/6`, ~32 mm inboard of `x_dev_hi`, so its lead makes the S-bend §3 warns about. That is fine for `usb_host` (#7, #8) but lands on a **stiff** cable on **#5** (`hdmi_out`), **#6** (`sdi_out`, the stiffest in the repo) and **#9** (`hdmi_out`). | Not a blocker and not a geometry change — it is a **measurement** gate. `depth-mockup` (M6) must be built and the S-bend tried with a real BNC and a real HDMI lead **before #5/#6/#9 are printed**. Say so in each PR. |
+
+### 16.5 Parallel-work rules for the seven branches
+
+**Pre-flight, once, on a single branch, merged before any of the seven is opened:**
+
+1. §16.3's T1-18(c) fix (`constants.scad` + `shell.scad`). **Blocking.**
+2. D13's `new-case-variant` skill rewrite. **Blocking in practice** — seven Sonnet developers reading
+   a template with non-existent signatures is a guaranteed seven-way rework.
+3. Optional on the same branch: D15's T1-30 assert, D14's shared relief-position function, D16's
+   floor-overlap assert. All three are library-wide; none may be done inside a variant branch.
+4. Render all eight devices and confirm §16.1/§16.2 against the actual OpenSCAD output. If any figure
+   in §16.1 disagrees with the render, **the render wins** and §16 is corrected — this table was
+   derived by hand.
+
+**Files a variant branch MAY touch — and nothing else:**
+
+- `models/<slug>/case.scad` *(new; a copy of `models/pro-convert-for-ndi-to-hdmi/case.scad` with the
+  device include, `MCC_DEV_*` symbol, `external_ports` list and the echo strings changed — nothing
+  structural)*
+- `tests/golden/<slug>.base.json`, `<slug>.lid.json`, `<slug>.panel.json` *(new; generated by
+  `python scripts/build.py golden --update`, numbers eyeballed against §16.1's `L × W × H` before
+  committing)*
+- **only its own `### <slug>` block** under `## Per-variant BOM` in `BOM.md` — every slug already has
+  a section, so this is an edit inside one existing block, never a restructure
+- **only its own status row** in `README.md`, if that row exists
+
+**Files a variant branch MUST NOT touch:**
+
+- **anything under `lib/mcc/`** — that is the whole point of §4's acceptance test. If a SKU appears to
+  need a library edit, **stop and report to the teamlead**; do not edit and do not improvise geometry
+  in `models/**` (`new-case-variant`'s stop-and-report gate).
+- another SKU's `models/**` or `tests/golden/**`
+- `BOM.md`'s common/coupon/purchase sections or another slug's block
+- `README.md` structure or another SKU's row; `CLAUDE.md`; `.claude/knowledge/**`;
+  `.claude/skills/**`; `scripts/**`; `.github/**`; `docs/plans/**`
+- `tests/test_*.scad` — shared, and a seven-way conflict magnet
+
+**Required render/preview set per PR** (both are gates, not nice-to-haves):
+
+1. an **ISO** view of the assembled case (`part="assembly"`), and
+2. a **straight-on `−Y → +Y` orthographic elevation of the patch wall** with the plate in place
+   (`part="base"` + `part="panel_placed"`).
+
+The elevation is mandatory because it is the *only* view in which the two defects this repo has
+already shipped to the user — the `hull()`ed blob (D9) and the mirrored boss reliefs (ruling C1) —
+are unambiguous. A PR without it is not reviewable. Both views go in the PR body, together with the
+`build.py all` result and the golden `L × W × H` for comparison against §16.1.
+
+**Merge order — compact first, then Plus:**
+
+```
+pre-flight (T1-18(c) + skill)  ->  #3 hdmi-tx  ->  #4 sdi-tx  ->  #8 ndi-sdi  ->  #9 ndi-aio
+                              ->  #5 hdmi-plus ->  #6 sdi-plus ->  #7 ndi-hdmi-4k
+```
+
+Rationale: the compact family is the *proven* geometry (the shipped NDI to HDMI is compact), and #3
+is the smallest delta of all seven — 3 slots, no BNC, HDMI-ended. Landing it first proves the
+copy-the-thin-assembly path end to end. #4 then proves the BNC path with the §16.3 fix in place, and
+#8/#9 add nothing new. **The plus family is genuinely new ground** (`shell.scad` has never rendered
+one), so its three SKUs merge last, after the compact four have confirmed that no library change was
+needed — and #5 (HDMI-ended, the closest plus analogue to a proven compact case) goes before #6 and
+#7. Branches may all be *developed* in parallel; it is the **merge** that is ordered, so that if the
+plus family does surface a library problem, it surfaces against a `main` that is already known good.

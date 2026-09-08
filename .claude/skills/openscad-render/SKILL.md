@@ -79,7 +79,8 @@ independent implementation of any of these — they will drift from what CI actu
 | `smoke` | Tier-2: `-o out.csg` on every public module at default/min/max parameters — fast, asserts-only, no tessellation. Non-zero exit = failure. |
 | `check` | Tier-3 mesh checks via `check_mesh.py` (trimesh): `is_watertight`, `is_winding_consistent`, `euler_number`, `volume > 0`, `len(split()) == 1` (single connected shell — catches a rib/boss that floated free). Do not expect automated minimum-wall-thickness measurement; that's unreliable in trimesh — rely on the Tier-1 `assert()` plus a slicer check instead. |
 | `golden` | Diffs `--summary` output against `tests/golden/<slug>.json` with tolerance (~0.5% volume, 0.1 mm bbox). `--update` regenerates the golden after a deliberate geometry change — never run `--update` to make a red diff go away without first understanding *why* it changed. |
-| `all` | `doctor` + `smoke` + `render` + `check` + `golden`, in that order — what CI runs on every PR. |
+| `step` | Converts an already-rendered STL to STEP via `scripts/mesh_to_step.py` — see "STEP export" below. |
+| `all` | `smoke` + `render` + `check` + `golden`, in that order — what CI runs on every PR (`--with-step` also runs `step --all` at the end; that's what `release.yml` uses). |
 
 ## Manifold vs CGAL
 
@@ -89,18 +90,45 @@ per above, surfaces invalid-geometry bugs that CGAL papers over. There is no sup
 this repo's tooling — if you see `--backend=CGAL` in a command someone wrote, that's a mistake to
 flag, not a valid alternative to reach for when Manifold complains.
 
-## STL vs 3MF, and what's committed
+## STL vs 3MF vs STEP, and what's committed
 
 - `exports/` is **gitignored** — it's local scratch output, full stop. Never `git add` anything under
   it.
 - `tests/golden/<slug>.json` **is** committed — small, diffable, catches unintended geometry drift in
   review.
-- Release-quality STL + 3MF are built by CI from a **git tag** and attached to a GitHub Release —
-  never committed to the working tree at any point, including "just this once for a demo."
+- Release-quality STL + 3MF + STEP are built by CI on every push to `main`
+  (`.github/workflows/release.yml`) and attached to a GitHub Release — never committed to the
+  working tree at any point, including "just this once for a demo."
 - Every real artefact (not a smoke-test throwaway) ships with a manifest: git SHA, BOSL2 submodule
   SHA, OpenSCAD version string, the full `-D` parameter set used, and the measured bbox/volume from
   `--summary`. If you're generating an export by hand for someone, write this manifest alongside it —
   a binary without provenance is exactly the drift problem the export policy exists to prevent.
+
+## STEP export
+
+OpenSCAD cannot write STEP directly, so it's a separate step after `render`:
+
+```
+python scripts/build.py step <target>     # e.g. pro-convert-for-ndi-to-hdmi
+python scripts/build.py step --all
+```
+
+This calls `scripts/mesh_to_step.py`, which reads the already-rendered STL and builds a proper
+B-rep: one planar face per triangle, sewn into a shell/solid, then
+`ShapeUpgrade_UnifySameDomain` merges coplanar facets into single planar faces (a flat wall becomes
+one face; a cylindrical bore stays faceted — there's no curve-fitting, only planar merging).
+Preferred backend is `cadquery-ocp` (`requirements-step.txt`, pure Python, fast); if no wheel is
+available for the local Python version it falls back to shelling out to FreeCAD's `freecadcmd`
+(located via `MCC_FREECAD` or the default Windows install path). `build.py doctor` reports which
+backend, if either, is available. Locally, a missing backend is a warning and the command exits 0;
+in CI (`CI=true`) it's a hard failure — both `render.yml` (every PR) and `release.yml` require it to
+succeed. The result (backend used, face count before/after unify, file size, validated y/n) is
+recorded in the part's `<part>.manifest.json` under a `"step"` key, alongside the render-time fields
+already written by `render`.
+
+STEP files are release artefacts, not smoke-test throwaways — same export policy as STL/3MF above,
+never committed. `README.md`'s "Open in Bambu Studio" section is the downstream how-to for someone
+who downloaded a release zip and wants to import the `.step` (or the `.stl`/`.3mf`) into the slicer.
 
 ## Reading the `--summary` JSON
 

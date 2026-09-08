@@ -17,9 +17,11 @@ include <mcc/mcc.scad>
 // definition in constants.scad.
 CLEARANCES = [0.15, 0.20, 0.25, 0.30, 0.35];
 
-T_W    = 3.0; // nominal tongue width, mm. assumed — representative T&G feature size for this ladder.
+T_W    = MCC_TG_W; // nominal tongue width, mm. .claude/knowledge/layout-patch-wall.md §15 ruling 4
+                    // (rev-5, 2026-09-08): re-cut from the original 3.0 mm placeholder to match
+                    // the production offset/shiplap tongue constant now that shell.scad exists.
 T_L    = 14;  // tongue/groove engagement length, mm. assumed.
-T_H    = 4.0; // tongue/groove height, mm. assumed.
+T_H    = MCC_TG_H; // tongue/groove height, mm. Same rev-5 re-cut as T_W above.
 PITCH  = 16;  // spacing between a pair's tongue and its groove, mm. assumed.
 CELL   = 46;  // spacing between successive clearance pairs, mm. assumed.
 BASE_T = 3.0; // base plate thickness, mm. matches MCC_WALL.

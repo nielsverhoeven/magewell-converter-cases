@@ -42,7 +42,7 @@ the per-variant tables.
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | RX-M3x5.7 | 4 | Bosses standing rearward off the rabbet lip, 2 per plate end at `z = z_conn_c ± 14` | `.claude/knowledge/layout-patch-wall.md` §2.3 ("Plate retention: 4 × M3 into heat-set inserts, screws along +Y") |
+| M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | RX-M3x5.7 | 4 | Bosses standing rearward off the rabbet lip, at `mcc_panel_fixing_pos()` = `(±(plate_l/2-3), ±16.5)` — corrected 2026-09-08 (deviation D6) from the doc's original `z_conn_c ± 14`, which did not match the already-implemented `mcc_panel_plate()` | `.claude/knowledge/layout-patch-wall.md` §2.3 rev-5 correction; `lib/mcc/layout.scad:mcc_panel_fixing_pos()`; `lib/mcc/panel.scad:mcc_panel_plate()` |
 | M3 machine screw, ~10–12 mm | generic pan/socket-head M3 | 4 | Screws along +Y through the plate's `MCC_PLATE_END_PAD` tabs into the bosses above | `knowledge/components/fasteners-and-hardware.md:96` (6–20 mm generic range); `:207` (a 3rd-party M3×12 mm kit specifically sold for Neutrik D-type panels, cited as a sourcing example, not this project's chosen length) |
 
 ### Device retention — captive side bolt (D-09, far wall)
