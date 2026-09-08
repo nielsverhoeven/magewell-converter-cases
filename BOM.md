@@ -189,6 +189,9 @@ mandate to always populate 4.
 | HDMI patch cable, straight plug, 0.3 m | 2 | `hdmi_in`, `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
+| Noctua NF-A4x10 5V (plain 3-pin or PWM) | 1 | `models/pro-convert-hdmi-plus/case.scad`'s `fan` variant defaults **true** on this SKU (not the common-hardware table's "only when `fan=true`" case) — the Plus chassis' ~10 W thermal budget makes the fan not optional per `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 / architecture.md §11 R5, user decision 2026-09-08 | `knowledge/components/fans.md:13-24` (frame/current); `models/pro-convert-hdmi-plus/case.scad` (`fan = true` default, comment cites the decision) |
+| NA-AV3 anti-vibration mounts | 4 | Ships in the box with the fan above — **no separate screws to buy**, these both mount the fan and decouple it from the shell | `knowledge/components/fans.md:89-95` (bundled scope of delivery) |
+| USB-A to 2/3-pin fan power lead (or third-party equivalent), Y-spliced onto the `usb_b` power feed inside the case | 1 | 5 V/GND tapped from the incoming `NAUSB-W-B` power line upstream of the device — this SKU has no PoE splitter (`splitter = false`, bay reserved but unpopulated), so the fan cannot be fed from a splitter's 5 V rail the way a `splitter=true` build would (see the Common Hardware "PoE-splitter bay" row) | `knowledge/components/fans.md:140-149` ("General 5V-from-USB power options" — generic USB-A-to-fan-connector adaptor leads) |
 
 Note: the device file flags End B's own physical port pitch (HDMI IN / Mini-DIN-8 / HDMI OUT at
 ~22 mm) as tighter than `MCC_D_PITCH_H` (32 mm) — this does **not** affect the BOM above, since the
@@ -197,15 +200,20 @@ panel-plate connector slots are spread across the full case width by `mcc_slot_f
 
 ### pro-convert-sdi-plus
 
-**4 external D-connectors.**
+**4 external D-connectors.** Plus-family case, ships with the fan fitted by default (`fan = true`,
+`models/pro-convert-sdi-plus/case.scad`; user decision 2026-09-08, R5 — the Plus chassis' ~10 W
+thermal budget makes the fan non-optional here, unlike the compact-family template it was copied
+from) — the Noctua row below is therefore a **standard** row for this SKU, not the common-hardware
+table's "only when `fan=true`" case.
 
 | Part | Qty | Notes | Source |
 |---|---|---|---|
-| Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config | `lib/mcc/devices/pro-convert-sdi-plus.scad:19-20`; `lib/mcc/constants.scad:425` |
-| Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-sdi-plus.scad:21-22`; `lib/mcc/constants.scad:423` |
-| Neutrik NBB75DFGB | 2 | `sdi_in` + `sdi_out` | `lib/mcc/devices/pro-convert-sdi-plus.scad:24-30`; `lib/mcc/constants.scad:426` |
+| Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network (slot 1) | `lib/mcc/devices/pro-convert-sdi-plus.scad:22-23`; `lib/mcc/constants.scad:423` |
+| Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config (slot 2) | `lib/mcc/devices/pro-convert-sdi-plus.scad:20-21`; `lib/mcc/constants.scad:425` |
+| Neutrik NBB75DFGB | 2 | `sdi_out` (slot 3, loop-out) + `sdi_in` (slot 4) | `lib/mcc/devices/pro-convert-sdi-plus.scad:25-31`; `lib/mcc/constants.scad:426` |
 | M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
+| Noctua NF-A4x10 5V | 1 | Fan bay, fitted by default on this SKU (`fan = true`) — ships with 4× NA-AV3 anti-vibration mounts, no separate screws to buy | `knowledge/components/fans.md:13-24,89-95`; `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 (R5) |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 2 | `sdi_in`, `sdi_out` | `knowledge/components/cables.md:63,65,123` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
