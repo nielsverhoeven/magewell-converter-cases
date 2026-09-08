@@ -112,6 +112,18 @@ MCC_INSERT_1_4_20 = [
     ["confidence", "assumed"],
 ];
 
+// M4 heat-set insert (Ruthex RX-M4x8.1 class), same keyed struct shape as MCC_INSERT_M3. Used by
+// the floor VESA 75x75 blind-insert bosses (mounts.scad, layout-patch-wall.md §7.1 rev-5 correction
+// H). No M4 insert figures exist in knowledge/components/fasteners-and-hardware.md (which sources
+// only the M3 RX-M3x5.7/RX-M3S family) — the figures below are typical brass/Ruthex M4 heat-set
+// insert dimensions (generic hardware-catalog range, not project-sourced), following the same
+// "typical" pattern already used for MCC_INSERT_1_4_20 above. confidence: assumed.
+MCC_INSERT_M4 = [
+    ["hole_d", 5.5],
+    ["od",     6.3],
+    ["len",    8.1],
+];
+
 MCC_BOSS_MIN_RATIO = 1.8;  // heat-set boss OD >= this * insert OD. architecture.md:348 (Tier-1 assert
                             // table) / architecture.md:207 "OD ... to ~7 mm total" design rule.
 
@@ -265,6 +277,142 @@ MCC_SIDE_BOLT_KEEPOUT_STRIP_W = MCC_SIDE_BOLT_SUPPORT_WEB_T + 2 * 2.0;
                      // interior floor up to the disc — the support web's own wall footprint, so a
                      // vent slot cut there would open into solid material. DERIVED (D-13) —
                      // layout-patch-wall.md §7.1 "keepout_strip_w = web_support_t + 2*2.0 = 7.0".
+
+// -----------------------------------------------------------------------------------------
+// Section: Patch-wall layout (L2 milestone)
+// .claude/knowledge/layout-patch-wall.md rev 5 / architecture.md §14. Every case-envelope,
+// slot-assignment, end-zone, cradle, vent and floor-keepout formula in lib/mcc/layout.scad and the
+// L2 geometry files (shell/cradle/mounts/vents.scad) is driven by the constants below — those
+// files must never re-derive these numbers independently (layout-patch-wall.md §11 "Ordering
+// constraint" / §15 rulings 3-5). Values marked "rev-5" replaced an earlier plan draft's guess
+// after the architect's L2 gate (layout-patch-wall.md §15 addendum, 2026-09-08) — do not revert
+// them to the superseded numbers.
+// -----------------------------------------------------------------------------------------
+
+MCC_PANEL_BEZEL_T = 3.0; // proud sacrificial-bezel layer of the patch-wall Y stack, mm.
+                          // layout-patch-wall.md §2.1 "Proud sacrificial bezel ... 3.0 assumed";
+                          // §15 addendum "the proud sacrificial-bezel layer of MCC_T_PATCH; needed
+                          // explicitly now that the rabbet is stepped (§2.5)".
+MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL;
+                          // total patch-wall Y stack at the panel band, mm. DERIVED —
+                          // layout-patch-wall.md §2.1 "MCC_T_PATCH total = 8.0" =
+                          // MCC_PANEL_BEZEL_T(3.0) + MCC_PANEL_SEAT_T(2.0, already defined above) +
+                          // MCC_WALL(3.0, structural rabbet lip). §15 addendum confirms this exact
+                          // decomposition.
+MCC_PANEL_BAND = MCC_WALL; // continuous shell band above/below the panel aperture, mm. = MCC_WALL
+                            // by definition — layout-patch-wall.md §2.2 "MCC_PANEL_BAND = 3.0 //
+                            // continuous shell band above and below the aperture (= MCC_WALL)".
+MCC_PLATE_H = MCC_D_FLANGE[1] + 2 * MCC_D_FLANGE_EDGE_MARGIN;
+                            // panel-plate height, mm. DERIVED — layout-patch-wall.md §2.2 "MCC_PLATE_H
+                            // >= MCC_D_FLANGE[1] + 2*MCC_D_FLANGE_EDGE_MARGIN = 31 + 2*4.0 = 39.0"
+                            // (the web rule governs, D-06 vetoed 2026-09-08 — the rear-boss rule
+                            // 36.28 is satisfied but not binding). Evaluates to 39.0.
+MCC_PANEL_FRAME_MIN = 10.0; // shell frame band beyond each end of the panel plate, mm. assumed —
+                             // layout-patch-wall.md §2.3.
+MCC_PLATE_END_PAD = 8.0;   // plate material outboard of the outer flange, carries the M3 retaining
+                            // tabs, mm. assumed — layout-patch-wall.md §2.3.
+MCC_SLOTS_MAX = 4;         // max D-connectors per case (fixed user decision, CLAUDE.md "max 4
+                            // D-connectors per model"). layout-patch-wall.md §3 step 1.
+MCC_END_ZONE_MIN = 20.0;   // floor for a cable end zone even with no ports on that end, mm.
+                            // assumed — layout-patch-wall.md §4.
+MCC_GAP_DEV = 2.0;         // clearance between the deepest plug envelope and the device's patch-side
+                            // flank, mm. assumed — layout-patch-wall.md §4.
+MCC_LID_SPAN_MAX = 180.0;  // lid span threshold above which 6 (not 4) captive thumbscrews are used,
+                            // mm. Architect-derived, user-reviewed, ACCEPTED 2026-09-08 (D-04) —
+                            // layout-patch-wall.md §6 / §10.
+MCC_FASTENER_INSET = 10.0; // lid-fastener ring inset from the outer faces ("e"), mm. assumed —
+                            // layout-patch-wall.md §6.
+MCC_LID_FASTENER_CLR_MIN =
+    MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od") / 2 + 2.0;
+                            // minimum clearance from a lid-fastener boss to the nearest D-flange
+                            // edge, mm. DERIVED — layout-patch-wall.md §6 "boss_od/2 + 2.0" using
+                            // the same M3 heat-set boss geometry as every other captive thumbscrew
+                            // in this repo (MCC_BOSS_MIN_RATIO * insert od = 8.28 mm boss_od).
+                            // Evaluates to 6.14 (the doc's own worked table rounds this to "6.15";
+                            // this is the exact value the code computes — layout-patch-wall.md §15's
+                            // own rounding-artifact precedent for MCC's W figures applies here too).
+
+// Per-kind device-side cable allowance table (layout-patch-wall.md §4). Struct-style, mirrors
+// MCC_PANEL_PARTS' shape. Sourced per-kind in that section's own table; ports that are never cabled
+// (internal switches/buttons, the side-bolt thread) get 0.
+MCC_DEV_SIDE_ALLOW = [
+    ["bnc",            41], // Belden 4855R min bend radius, verified; layout-patch-wall.md §4.
+    ["hdmi_a",         40], // 25 (assumed axial, straight plug — D-08 vetoed) + 15 (mcc_bend_envelope
+                             // ("NAHDMI-W-B")). layout-patch-wall.md §4.
+    ["rj45",           27], // 21.5 mm max plug (TIA-568.2-D, verified) + 5 mm margin.
+    ["usb_a",          17], // 12 mm verified + 5 mm margin.
+    ["usb_b",          17], // USB-B assumed equal to USB-A (source: unknown for USB-B specifically).
+    ["minidin8",        0], // internal, not cabled (D-01).
+    ["rotary16",        0], // not cabled.
+    ["button",          0], // not cabled.
+    ["tripod_1_4_20",   0], // the side bolt is on a long face, never an end face (D-09).
+    ["blank",           0], // nothing plugs into a blank.
+];
+
+// Function: mcc_dev_side_allow()
+// Usage:
+//   allow = mcc_dev_side_allow(kind);
+// Description:
+//   Device-side end-zone cable allowance for a port `kind`, mm — layout-patch-wall.md §4's
+//   ez_cable(end) input. Reads MCC_DEV_SIDE_ALLOW so it stays a single source of truth alongside
+//   MCC_PANEL_PARTS' own bend/plug_len figures.
+function mcc_dev_side_allow(kind) =
+    let(ind = search([kind], MCC_DEV_SIDE_ALLOW)[0])
+    assert(ind != [], str("mcc: unknown port kind \"", kind, "\" in mcc_dev_side_allow()"))
+    MCC_DEV_SIDE_ALLOW[ind][1];
+
+MCC_CRADLE_RIB_T = 3.0;    // locating-rib thickness, mm. layout-patch-wall.md §7 cradle table
+                            // "Locating ribs | 3.0 mm thick x 9.0 mm tall".
+MCC_CRADLE_RIB_H = 9.0;    // locating-rib height, mm. Same table; <= 3x thickness rule
+                            // (fdm-rugged-enclosure-guidelines.md:65-70) satisfied (9 <= 9).
+MCC_CRADLE_FLOOR_PAD_T = 2.0; // compliant EPDM floor-pad thickness under the device, mm.
+                               // fasteners-and-hardware.md:186, layout-patch-wall.md §7.
+MCC_CRADLE_FLOOR_PAD_MIN = 40; // minimum compliant floor-pad footprint (square), mm.
+                                // layout-patch-wall.md §7 "footprint >= 40x40".
+
+// Tongue-and-groove production dimensions (D-07: tongue on the base, groove in the lid). REV-5
+// VALUES (layout-patch-wall.md §15 ruling 4 / T1-33) — an earlier plan draft's 3.0/4.0 is
+// geometrically impossible: MCC_LID_T is a fixed 3.0 mm (H=51.0 is a fixed user decision), so a
+// 4 mm-deep groove cuts clean through the lid, and a *centred* 3.0 mm-wide tongue does not fit a
+// 3.0 mm wall either (0.8+0.25+w+0.25+0.8 <= 3.0 -> w <= 0.9). Ruling: an OFFSET/SHIPLAP tongue
+// flush with the wall's INNER face, sized so it fits inside the lid with >= 1.0 mm of lid material
+// left above the groove.
+MCC_TG_W = 1.6; // tongue/groove nominal width, mm. layout-patch-wall.md §15 ruling 4.
+MCC_TG_H = 2.0; // tongue/groove depth, mm. Same ruling — leaves MCC_LID_T - MCC_TG_H = 1.0 mm of
+                 // lid material above the groove (T1-33).
+
+MCC_LID_CLEAR = 2.0; // minimum plenum between the cradle deck top + device height and the lid
+                      // underside, mm. layout-patch-wall.md §15 ruling 3 (ACCEPTED) — mirrors this
+                      // repo's other small-clearance constants (MCC_GAP_DEV, MCC_SIDE_BOLT_PAD_T).
+                      // Minimum only, not the design plenum (10.85 mm on this SKU) — the plenum
+                      // must never be sealed (architecture.md §12 Q10).
+
+// Vents (layout-patch-wall.md §5). Slot/web widths are contract-cited (assumed there).
+MCC_VENT_SLOT_W = 1.2; // vertical vent-slot width, mm. assumed — layout-patch-wall.md §5, nearest
+                        // verified analogue 1.0 mm lattice gap (fdm-rugged-enclosure-guidelines.md:197).
+MCC_VENT_WEB_W = 1.6;  // web between vent slots, mm. assumed — layout-patch-wall.md §5.
+MCC_VENT_INTAKE_BAND_H = 18.0; // intake vent band height (Z), mm. REV-5 VALUE (layout-patch-wall.md
+                                 // §15 ruling 5) — 12 and 15 mm both fail T1-30 once the T1-23/T1-23b
+                                 // keep-outs are subtracted from the gross free area; 18.0 clears it.
+MCC_VENT_EXHAUST_Z = [32, 44]; // far-wall exhaust vent band Z range (case coords), mm.
+                                 // layout-patch-wall.md §5 table.
+MCC_FAN_APERTURE_D = 38.0; // +X end-wall fan aperture diameter, mm. DERIVED (informational —
+                            // H_int is fixed at 45.0 mm on every current SKU since MCC_PLATE_H and
+                            // MCC_PANEL_BAND never vary): H_int - 2*MCC_WALL = 45 - 6 = 39, capped
+                            // to 38 so >= 3.5 mm of wall remains above/below the aperture per
+                            // layout-patch-wall.md §5. assumed.
+
+// Floor keep-out geometry (layout-patch-wall.md §7.1 floor table, rev-5 corrections).
+MCC_CASE_INSERT_KEEPOUT_D = 20.0; // plan-view keep-out disc for the case's own 1/4"-20 insert, mm.
+MCC_VESA_HOLE_D = 12.0;           // VESA 75x75 mounting-hole plan-view keep-out disc, mm (the holes
+                                    // themselves are blind M4 heat-set-insert bosses per §15 ruling
+                                    // H — see mounts.scad — this is only the keep-out footprint).
+MCC_STRAP_SLOT = [25, 5];         // strap-slot [length, width], mm. assumed.
+MCC_FISHTAIL_BAND = [60, 20];     // Magewell Fishtail M4 reservation band [x,y], mm — reserve-only,
+                                    // hole pitch unknown (knowledge/magewell/accessories.md:26, M7).
+MCC_FLOOR_FEATURE_MIN_SEP = 15.0; // minimum centre-to-centre separation between any two floor
+                                    // features, mm (or r1+r2+2.0 where larger) — layout-patch-wall.md
+                                    // §7.1.
 
 // Ghost-rendering visibility flag (architecture.md:304 "gated behind MCC_SHOW_GHOST (default false)").
 // Belt 2 of the two-belt ghost-exclusion rule; belt 1 is the `%` modifier used wherever ghost

@@ -88,9 +88,19 @@ module mcc_panel_plate(size, slots = [], t = MCC_PANEL_SEAT_T, rim_t = MCC_WALL,
 
     difference() {
         union() {
+            // Field footprint is shrunk by MCC_EPS on every edge relative to the rim's own outer
+            // silhouette (immediately below) — both would otherwise share an EXACTLY coincident
+            // vertical face over their overlapping Z range (the field sits fully within the rim's
+            // Z run), which is a known Manifold/STL-export degeneracy on this pinned OpenSCAD
+            // build (2025.09.07): two independently-extruded solids meeting at an exact shared
+            // planar face reliably produces a spurious disconnected zero-volume mesh sliver along
+            // that edge (`build.py check`'s `n_parts>1`) — see shell.scad's own module comments
+            // for the fuller writeup of this failure class, first diagnosed there. The field is
+            // physically identical either way (a few hundredths of a mm is far under any print
+            // tolerance) since the rim fully covers the outermost rim_w border regardless.
             translate([0, 0, -t])
                 linear_extrude(height = t)
-                    square([w, h], center = true);
+                    square([w - 2 * MCC_EPS, h - 2 * MCC_EPS], center = true);
             translate([0, 0, -rim_t])
                 linear_extrude(height = rim_t)
                     difference() {

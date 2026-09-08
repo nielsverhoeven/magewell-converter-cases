@@ -15,13 +15,15 @@ That inversion drives most of the design decisions recorded in
 
 ## Status
 
-Baseline setup. **No case models exist yet.** The build/render/test pipeline (`scripts/build.py`)
-is in place and green in CI; the L0/L1 library (`lib/mcc/**`: constants, ports, Neutrik cutout,
-fasteners, fan, PoE-splitter envelope, ghost, panel dispatcher), 8 device data files and the 5
-physical calibration coupons (`models/coupons/*.scad`, with goldens) exist and pass `build.py all`.
-Next: print and measure the coupons on the X1 Carbon, then the L2 geometry (shell, cradle, mounts,
-vents) and the per-device case assemblies. Coupons come before any full case — see "Contributing"
-below and `.claude/knowledge/session-resume.md` for the ordered plan.
+**First full case implemented: `pro-convert-for-ndi-to-hdmi`** (compact family, 193.9 × 159.85 ×
+51.0 mm). The L0/L1 library (`lib/mcc/**`: constants, ports, layout solver, Neutrik cutout,
+fasteners, fan, PoE-splitter envelope, ghost, panel dispatcher) and the L2 geometry (`shell.scad`,
+`cradle.scad`, `mounts.scad`, `vents.scad`) now exist alongside 8 device data files and the 6
+physical calibration coupons (`models/coupons/*.scad`, with goldens); `build.py all` is green
+(smoke/render/check/golden). Next: print and measure the coupons and the first case on the X1
+Carbon (every dimension below `measured` confidence is still `assumed`/`photo`), then the
+remaining 7 per-device case assemblies. See `.claude/knowledge/session-resume.md` for the ordered
+plan.
 
 ## Repo map
 
