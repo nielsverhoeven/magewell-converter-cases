@@ -2,12 +2,15 @@
 // models/pro-convert-for-ndi-to-hdmi/case.scad
 //   L4 thin assembly (architecture.md §4, new-case-variant skill). The first full case built
 //   against the L2 milestone (docs/plans/2026-09-08-l2-first-case.md,
-//   .claude/knowledge/layout-patch-wall.md rev 5). part in {"base","lid","panel","assembly",
-//   "ghost_device","ghost_plugs"}; only base/lid/panel are ever picked up by scripts/build.py
-//   (discover_models() hardcodes ["base","lid"] + "panel" iff the literal substring
-//   'part == "panel"' appears below).
+//   .claude/knowledge/layout-patch-wall.md rev 5). part in {"base","lid","panel","base_fan",
+//   "assembly","ghost_device","ghost_plugs"}; only base/lid/panel are picked up by
+//   scripts/build.py's discover_models() by default (it hardcodes ["base","lid"] + "panel" iff the
+//   literal substring 'part == "panel"' appears below) -- "base_fan" is added via the
+//   `extra_parts` marker comment below (issue #11), scripts/build.py's own mechanism for a model to
+//   declare additional CI-rendered/checked/golden-tracked part names beyond that hardcoded set.
 // Render:
 //   openscad --backend=Manifold -D 'part="base"' -o out/base.stl models/pro-convert-for-ndi-to-hdmi/case.scad
+// build.py: extra_parts = base_fan
 //////////////////////////////////////////////////////////////////////
 
 include <mcc/mcc.scad>
@@ -50,8 +53,14 @@ explode = 0;
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
 
+// "base_fan" (build.py's extra_parts marker above, issue #11) is the base rendered with the fan
+// cutout forced live, independent of whatever `-D fan=...` was (or wasn't) passed -- this is what
+// makes fan=true's mesh a required part of `build.py all` (parts=1 checked, golden-tracked as
+// pro-convert-for-ndi-to-hdmi.base_fan.json) instead of only a manual `-D fan=true` spot check.
+fan_effective = (part == "base_fan") ? true : fan;
+
 variant = [
-    ["fan",       fan],
+    ["fan",       fan_effective],
     ["splitter",  splitter],
 ];
 
@@ -90,7 +99,7 @@ module _mcc_case_panel_placed(layout) {
             mcc_panel_plate(size = mcc_panel_plate_dims(dev), slots = _mcc_case_slot_list(dev, variant));
 }
 
-if (part == "base") {
+if (part == "base" || part == "base_fan") {
     mcc_shell_base(dev = dev, cfg = variant);
 
 } else if (part == "lid") {

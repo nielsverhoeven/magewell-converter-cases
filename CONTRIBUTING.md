@@ -135,10 +135,14 @@ history is worth keeping. Either way:
    on any `WARNING: unmeasured`), this only sets the GitHub Release's **pre-release** flag —
    see "Pre-release" below.
 4. `scripts/package_release.py vX.Y.Z` builds one zip per device case (STL + 3MF + STEP + manifest
-   + a `README.txt`) plus a `coupons-vX.Y.Z.zip`.
+   + a `README.txt`) plus a `coupons-vX.Y.Z.zip`, copies every rendered STEP file loose into
+   `dist/step/<slug>-<part>.step` (e.g. `pro-convert-for-ndi-to-hdmi-base.step`,
+   `coupons-neutrik-tile.step` — unique, self-describing names; the old bare `<part>.step` names
+   collided once there were eight-plus device cases, see issue #10), and writes
+   `dist/SHA256SUMS.txt` over every file in `dist/`.
 5. An **annotated** tag `vX.Y.Z` is created and pushed (never lightweight — see "Versioning" above).
-6. `softprops/action-gh-release` publishes the GitHub Release with the zips and the loose `*.step`
-   files attached.
+6. `softprops/action-gh-release` publishes the GitHub Release with the zips, the loose
+   `dist/step/*.step` files, and `dist/SHA256SUMS.txt` attached.
 
 **Nothing to do locally to cut a release** beyond merging a PR into `main` with commit messages
 that follow Conventional Commits — the bump type is read from them. If you want a specific bump
@@ -153,8 +157,8 @@ measured and its record's `confidence` fields are upgraded to `"measured"`.
 
 **Verifying a release actually happened:** after a PR merges to `main`, check the `release` workflow
 run — don't assume it succeeded just because it started. Confirm the GitHub Release exists with the
-expected `dist/*.zip` and `exports/**/*.step` assets attached, and that its `vX.Y.Z` matches what you
-expected from the merged commits.
+expected `dist/*.zip`, loose `dist/step/*.step`, and `dist/SHA256SUMS.txt` assets attached, and that
+its `vX.Y.Z` matches what you expected from the merged commits.
 
 **Hotfix note:** there is no separate hotfix release path either — a `feature/hotfix-<topic>` branch
 merges to `main` like any other PR and the next push-to-`main` release picks it up automatically
@@ -190,8 +194,9 @@ a release (see "Release" above). After merge:
       because it started.
 - [ ] The computed `vX.Y.Z` (workflow run's "Compute next version" step output) matches what you
       expected from the merged commits' Conventional Commits types.
-- [ ] The GitHub Release exists with `dist/*.zip` (one per device + `coupons-vX.Y.Z.zip`) and the
-      loose `exports/**/*.step` files attached — spot-check the asset list.
+- [ ] The GitHub Release exists with `dist/*.zip` (one per device + `coupons-vX.Y.Z.zip`), the
+      loose `dist/step/<slug>-<part>.step` files, and `dist/SHA256SUMS.txt` attached — spot-check
+      the asset list for uniqueness (no two assets share a name).
 - [ ] The release's pre-release flag matches expectations: pre-release if any device still has a
       port below `measured` confidence (true for every device today), not pre-release once a
       device's ports are fully measured.

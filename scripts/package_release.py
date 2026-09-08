@@ -15,6 +15,19 @@ Writes:
                                   that model's ports are below "measured" confidence — see
                                   `build.py confidence`).
     dist/coupons-<version>.zip   every discovered coupon's exports in one zip, one shared README.
+    dist/step/<slug>-<part>.step
+                                  every rendered STEP file, copied loose out of exports/ with a
+                                  unique, self-describing name (e.g.
+                                  "pro-convert-for-ndi-to-hdmi-base.step",
+                                  "coupons-neutrik-tile.step") — with eight-plus device cases the
+                                  bare `<part>.step` name (base.step, lid.step, panel.step) used by
+                                  the pre-v0.1.0 release collided across models, since GitHub
+                                  release assets must be unique repo-wide (issue #10). See
+                                  `_step_asset_name()`.
+    dist/SHA256SUMS.txt          one line per file under dist/ (the zips above and every
+                                  dist/step/*.step), `<sha256>  <relative/path>`, sorted by path —
+                                  lets anyone verify a downloaded release asset wasn't corrupted or
+                                  tampered with.
 
 `dist/` is gitignored exactly like `exports/` (architecture.md §8) — CI uploads the zips straight
 to the GitHub Release and never commits them; delete `dist/` locally after a manual test run.
@@ -22,7 +35,9 @@ to the GitHub Release and never commits them; delete `dist/` locally after a man
 
 from __future__ import annotations
 
+import hashlib
 import re
+import shutil
 import sys
 import zipfile
 from datetime import datetime, timezone
@@ -31,6 +46,7 @@ from pathlib import Path
 import build  # sibling module: scripts/build.py — reuses discovery, device/confidence parsing, git helpers
 
 DIST_DIR = build.REPO_ROOT / "dist"
+STEP_DIR = DIST_DIR / "step"
 ARTEFACT_EXTS = (".stl", ".3mf", ".step", ".manifest.json")
 
 
@@ -150,6 +166,63 @@ def package_coupons(targets: list[build.Target], version: str, sha: str) -> Path
     return zip_path
 
 
+def _step_asset_name(target: build.Target, part: str) -> str:
+    """Unique, self-describing dist/step/ filename for one rendered part.
+
+    `target.name` is e.g. "pro-convert-for-ndi-to-hdmi" (a model) or "coupons/neutrik-tile" (a
+    coupon) — mirrors `build.golden_path()`'s stem logic so a single-part target (coupons, ad-hoc
+    paths, where `part` already equals the target's own stem) doesn't repeat its name twice
+    ("coupons-neutrik-tile.step", not "coupons-neutrik-tile-neutrik-tile.step"), while a
+    multi-part model target gets the part appended ("pro-convert-for-ndi-to-hdmi-base.step").
+    """
+
+    stem = Path(target.name).name
+    slug = target.name.replace("/", "-")
+    return f"{slug}.step" if part == stem else f"{slug}-{part}.step"
+
+
+def collect_step_files(targets: list[build.Target]) -> list[Path]:
+    """Copy every already-rendered `<part>.step` for `targets` into `dist/step/` under its unique
+    `_step_asset_name()`. Mirrors package_model()/package_coupons()'s "never invent artefacts"
+    rule: a part with no STEP file on disk is silently skipped, not an error — `build.py step`
+    (or `--with-step`) may not have been run, or the local STEP backend may be unavailable."""
+
+    copied: list[Path] = []
+    for target in targets:
+        for part in target.parts:
+            src = target.export_dir / f"{part}.step"
+            if not src.is_file():
+                continue
+            STEP_DIR.mkdir(parents=True, exist_ok=True)
+            dest = STEP_DIR / _step_asset_name(target, part)
+            shutil.copy2(src, dest)
+            copied.append(dest)
+    return copied
+
+
+def _sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_sha256sums(dist_dir: Path) -> Path:
+    """Write dist/SHA256SUMS.txt covering every file currently under dist/ (the per-model/coupon
+    zips plus dist/step/*.step), one `<sha256>  <relative/posix/path>` line each, sorted by path
+    for a stable, reviewable file. Overwrites any previous SHA256SUMS.txt and never includes itself."""
+
+    files = sorted(
+        (p for p in dist_dir.rglob("*") if p.is_file() and p.name != "SHA256SUMS.txt"),
+        key=lambda p: p.relative_to(dist_dir).as_posix(),
+    )
+    lines = [f"{_sha256_file(p)}  {p.relative_to(dist_dir).as_posix()}" for p in files]
+    sums_path = dist_dir / "SHA256SUMS.txt"
+    sums_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return sums_path
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     if len(args) != 1:
@@ -160,21 +233,34 @@ def main(argv: list[str] | None = None) -> int:
     print(f"packaging release {version} (git {sha})")
     DIST_DIR.mkdir(parents=True, exist_ok=True)
 
+    models = build.discover_models()
+    coupons = build.discover_coupons()
+
     made: list[Path] = []
-    for target in build.discover_models():
+    for target in models:
         zp = package_model(target, version, sha)
         if zp is not None:
             made.append(zp)
 
-    zp = package_coupons(build.discover_coupons(), version, sha)
+    zp = package_coupons(coupons, version, sha)
     if zp is not None:
         made.append(zp)
+
+    step_files = collect_step_files(models + coupons)
+    if step_files:
+        print(f"  [OK]   step: {len(step_files)} file(s) -> {STEP_DIR.relative_to(build.REPO_ROOT)}")
+    else:
+        print("  [SKIP] step: nothing rendered under exports/**/*.step — run `build.py step --all` first")
 
     if not made:
         print("error: no zips produced — nothing rendered under exports/ (run `build.py all` first)")
         return 1
 
-    print(f"\n{len(made)} zip(s) written to {DIST_DIR.relative_to(build.REPO_ROOT)}")
+    sums_path = write_sha256sums(DIST_DIR)
+    n_summed = len(made) + len(step_files)
+    print(f"  [OK]   {sums_path.relative_to(build.REPO_ROOT)} ({n_summed} file(s) hashed)")
+
+    print(f"\n{len(made)} zip(s), {len(step_files)} STEP file(s) written to {DIST_DIR.relative_to(build.REPO_ROOT)}")
     return 0
 
 
