@@ -1,20 +1,17 @@
 //////////////////////////////////////////////////////////////////////
-// models/pro-convert-for-ndi-to-hdmi/case.scad
-//   L4 thin assembly (architecture.md §4, new-case-variant skill). The first full case built
-//   against the L2 milestone (docs/plans/2026-09-08-l2-first-case.md,
-//   .claude/knowledge/layout-patch-wall.md rev 5). part in {"base","lid","panel","base_fan",
-//   "assembly","ghost_device","ghost_plugs"}; only base/lid/panel are picked up by
-//   scripts/build.py's discover_models() by default (it hardcodes ["base","lid"] + "panel" iff the
-//   literal substring 'part == "panel"' appears below) -- "base_fan" is added via the
-//   `extra_parts` marker comment below (issue #11), scripts/build.py's own mechanism for a model to
-//   declare additional CI-rendered/checked/golden-tracked part names beyond that hardcoded set.
+// models/pro-convert-sdi-tx/case.scad
+//   L4 thin assembly (architecture.md §4, new-case-variant skill). Copied from the normative
+//   template models/pro-convert-for-ndi-to-hdmi/case.scad (docs/plans/2026-09-08-l2-first-case.md,
+//   .claude/knowledge/layout-patch-wall.md §16.1/16.2, GitHub issue #4). part in {"base","lid",
+//   "panel","assembly","ghost_device","ghost_plugs"}; only base/lid/panel are ever picked up by
+//   scripts/build.py (discover_models() hardcodes ["base","lid"] + "panel" iff the literal
+//   substring 'part == "panel"' appears below).
 // Render:
-//   openscad --backend=Manifold -D 'part="base"' -o out/base.stl models/pro-convert-for-ndi-to-hdmi/case.scad
-// build.py: extra_parts = base_fan
+//   openscad --backend=Manifold -D 'part="base"' -o out/base.stl models/pro-convert-sdi-tx/case.scad
 //////////////////////////////////////////////////////////////////////
 
 include <mcc/mcc.scad>
-include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
+include <mcc/devices/pro-convert-sdi-tx.scad>
 
 $fa = 1; $fs = 0.4; // the ONLY place $fn-adjacent globals are set (openscad-authoring skill).
 
@@ -26,45 +23,40 @@ explode = 0;
 
 // Variant config (cfg): case-level options only. The connector slot set is NEVER driven by this
 // config -- it comes solely from the device file's own `panel` field per port
-// (mcc_ports_external(dev) / mcc_slot_assignment(dev), lib/mcc/layout.scad). An earlier
-// "external_ports" key that purported to let a variant blank or omit a physical port was found to
-// be INERT -- mcc_slot_assignment()/mcc_case_layout() never read it (architecture.md §13
-// deviation D12, layout-patch-wall.md §16.4) -- and has been DROPPED here rather than wired up;
-// implementing it would be a library change, out of scope for a variant branch. To omit a port
-// from this case, remove/edit it in lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad instead
-// (device-portmap skill) -- or, if it must stay in the port map but never get a cutout, give it
-// `["panel","none"]` there (same convention the Mini-DIN-8/rotary/button ports already use).
+// (mcc_ports_external(dev) / mcc_slot_assignment(dev), lib/mcc/layout.scad). There is no
+// "external_ports" key -- an earlier draft of this skill described one; it was never implemented
+// (architecture.md §13 deviation D12, layout-patch-wall.md §16.4). To omit a port from this case,
+// remove/edit it in lib/mcc/devices/pro-convert-sdi-tx.scad instead (device-portmap skill) -- or,
+// if it must stay in the port map but never get a cutout, give it `["panel","none"]` there (same
+// convention the Mini-DIN-8/rotary/side_bolt ports already use).
 //
 // Documented cfg keys (all consulted by lib/mcc/**, see mcc_shell_base()'s own doc comment):
 //   "fan"       (bool, REQUIRED) -- draws the live +X fan aperture when true. The fan BAY is
 //               reserved as internal keep-out volume regardless of this flag (architecture.md §6
 //               reservation rule) -- "false" only skips the live cutout, never the reservation.
 //               Fed from the top-level `fan` variable below so `-D fan=true` overrides it for a
-//               quick fan-cutout check without editing this file.
+//               quick fan-cutout check without editing this file. Left at the template default
+//               (false) for this compact-family SKU -- passive-first per CLAUDE.md's fixed
+//               decisions; the Plus-family fan default (R5) does not apply to the compact family.
 //   "splitter"  (bool, REQUIRED) -- reserved for a future live PoE-splitter cutout; the splitter
 //               BAY is reserved as keep-out volume regardless of this flag today (same
 //               reservation rule -- no live splitter geometry is drawn by any flag value yet).
 //               Fed from the top-level `splitter` variable below, likewise overridable via
 //               `-D splitter=true`.
 //   "vesa"      (bool, optional, default true) -- draws the 4 VESA 75x75 M4 heat-set bosses in
-//               the floor (mounts.scad, layout-patch-wall.md §15 ruling H). Pass false to omit.
-//   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
-//               the fan aperture's Y position (layout-patch-wall.md §5).
+//               the floor (mounts.scad, layout-patch-wall.md §15 ruling H). Left at the default
+//               (true) -- not overridden here.
+//   "fan_y"     (mm, optional, default the device's own Y centreline) -- shell parameter for the
+//               fan aperture's Y position (layout-patch-wall.md §5). Not overridden here.
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
 
-// "base_fan" (build.py's extra_parts marker above, issue #11) is the base rendered with the fan
-// cutout forced live, independent of whatever `-D fan=...` was (or wasn't) passed -- this is what
-// makes fan=true's mesh a required part of `build.py all` (parts=1 checked, golden-tracked as
-// pro-convert-for-ndi-to-hdmi.base_fan.json) instead of only a manual `-D fan=true` spot check.
-fan_effective = (part == "base_fan") ? true : fan;
-
 variant = [
-    ["fan",       fan_effective],
+    ["fan",       fan],
     ["splitter",  splitter],
 ];
 
-dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
+dev = MCC_DEV_PRO_CONVERT_SDI_TX;
 
 // Shared slot-list construction for the "panel" and "assembly" branches (data assembly, not raw
 // geometry -- acceptable per new-case-variant's stop-and-report gate).
@@ -77,8 +69,8 @@ function _mcc_case_slot_list(dev, cfg) =
     [for (s = slots_raw) let(i = struct_val(s, "slot")) [slot_x[i - 1], 0, struct_val(s, "part"), false]];
 
 L_dims = mcc_case_dims(dev, variant);
-echo(str("pro-convert-for-ndi-to-hdmi: L=", L_dims[0], " W=", L_dims[1], " H=", L_dims[2]));
-echo(str("pro-convert-for-ndi-to-hdmi: slots=", mcc_slot_assignment(dev)));
+echo(str("pro-convert-sdi-tx: L=", L_dims[0], " W=", L_dims[1], " H=", L_dims[2]));
+echo(str("pro-convert-sdi-tx: slots=", mcc_slot_assignment(dev)));
 
 // Place children at the device's assembled position (layout-patch-wall.md §2 frame): the device
 // box is centred at (x_dev_c, y_dev_c, z_dev_lo + h/2).
@@ -99,7 +91,7 @@ module _mcc_case_panel_placed(layout) {
             mcc_panel_plate(size = mcc_panel_plate_dims(dev), slots = _mcc_case_slot_list(dev, variant));
 }
 
-if (part == "base" || part == "base_fan") {
+if (part == "base") {
     mcc_shell_base(dev = dev, cfg = variant);
 
 } else if (part == "lid") {
