@@ -37,6 +37,9 @@ runs:
     - name: Install OpenSCAD runtime libraries (AppImage needs system OpenGL/X/Qt libs)
       shell: bash
       run: |
+        # The ubuntu runner image ships a Google Chrome apt source that intermittently fails
+        # with 'Hash Sum mismatch' and aborts apt-get update; the build never installs from it.
+        sudo rm -f /etc/apt/sources.list.d/google-chrome*.list /etc/apt/sources.list.d/google-chrome*.sources
         sudo apt-get update -qq
         sudo apt-get install -y --no-install-recommends \
           libegl1 libgl1 libopengl0 libglx0 libglu1-mesa \
