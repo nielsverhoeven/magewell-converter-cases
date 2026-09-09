@@ -141,6 +141,12 @@ MCC_M3_CLR_D = 3.4; // generic M3 clearance hole, mm. assumed — standard M3 cl
                      // ISO 273 "medium" fit, 3.2-3.6 mm) rounded to match d-series-cutout.md:52's own
                      // "Recommendation: Ø3.5 mm clearance hole" guidance minus FDM hole-shrink undersize.
 MCC_M4_CLR_D = 4.5;  // generic M4 clearance hole, mm. assumed — standard ISO 273 "medium" M4 clearance.
+MCC_M8_CLR_D = 9.0;  // generic M8 clearance hole, mm. assumed — ISO-medium M8 clearance, generous
+                     // enough to also pass an M6 screw (issue #26's VESA MIS-F 200x200 pattern
+                     // takes M6 or M8 per the mount's own hardware —
+                     // docs/plans/2026-09-09-mount-rail-and-brackets.md §3.1, VESA MIS-F spec via
+                     // Wikipedia). Reused for both bolt sizes rather than adding a third clearance
+                     // constant that would only drift from this one.
 
 // -----------------------------------------------------------------------------------------
 // Section: Captive side bolt (D-09) — device retention through the far (-Y) wall
@@ -714,6 +720,29 @@ MCC_RAIL_END_STOP_H = 2.0;    // end-stop flange's EXTRA rise above MCC_RAIL_SIL
 // per-side dovetail sliding-fit clearance — same coupon (tolerance-ladder / the new rail-latch
 // coupon) calibrates both, and a second clearance constant for the same physical fit class would
 // only drift from the first (docs/plans/2026-09-09-mount-rail-and-brackets.md §1.1).
+
+// -----------------------------------------------------------------------------------------
+// Section: Mounting brackets (issue #26 — VESA sandwich plate carrying the mount rail; §17.2's
+// R4/R5/D22 apply here too: the rib rule is stated once, generic, not duplicated per bracket)
+// docs/plans/2026-09-09-mount-rail-and-brackets.md §3. `MCC_M8_CLR_D` (above, in the fastener
+// section — a generic clearance size, not bracket-specific) is the only other new constant #26
+// needs; VESA hole *positions* (±50/±100) are plan-fixed geometry, not calibrated constants, so
+// they stay as literals inside tv-bracket.scad per the plan's own §3.1 table.
+// -----------------------------------------------------------------------------------------
+
+MCC_BRACKET_PLATE_T = 6.0; // TV-bracket sandwich-plate thickness, mm. assumed (PLAN-ASSUMPTION 6,
+                           // layout-patch-wall.md §17.5 — RATIFIED for #26: sandwiched flat
+                           // against a TV, the plate is a shim, not a beam, so 6 mm is not
+                           // re-derived from the rib rule below).
+
+MCC_RIB_HEIGHT_RATIO_MAX = 3.0; // stiffening-rib height <= this x rib thickness, unitless.
+                                 // fdm-rugged-enclosure-guidelines.md:65-70 "Rib height ... about
+                                 // 3x rib thickness as a practical limit". First codified here
+                                 // (D22, architecture.md §13/§17.2) — the bracket's own cross ribs
+                                 // are exactly the floor-standing stiffening fin this rule targets;
+                                 // the cradle-deck lattice (#29) explicitly does NOT use it
+                                 // (layout-patch-wall.md §17.3 R6 — those ribs are cross-braced webs,
+                                 // a different structural class).
 
 // -----------------------------------------------------------------------------------------
 // Section: Fans

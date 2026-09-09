@@ -1,6 +1,6 @@
 name: render
 
-# Renders every discovered coupon/model, runs the 4-tier test suite (smoke -> render -> mesh
+# Renders every discovered coupon/bracket/model, runs the 4-tier test suite (smoke -> render -> mesh
 # checks -> goldens), converts every part to STEP, and uploads the results. On a v* tag it also
 # runs the release gate (fails on any WARNING: unmeasured port). Releases themselves are no longer
 # created here — release.yml (triggered on push to main) owns tagging and GitHub Releases; this
@@ -69,7 +69,7 @@ jobs:
             python scripts/build.py all
           fi
 
-      - name: STEP export (every discovered coupon/model)
+      - name: STEP export (every discovered coupon/bracket/model)
         run: python scripts/build.py step --all
 
       - name: Upload exports

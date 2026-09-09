@@ -127,6 +127,36 @@ the printed clearances directly (they are self-contained peg/hole and tongue/gro
 
 ---
 
+## Mounting brackets
+
+**Hand-authored — not covered by `bom-update`.** That skill only regenerates the per-device
+sections below from a device's port map + variant config; a bracket has neither
+(`docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3, `.claude/knowledge/layout-patch-wall.md`
+§17.2). Update this section by hand whenever `models/brackets/*.scad` changes.
+
+`tv-bracket.scad` (issue #26) is a VESA 100×100/200×200 sandwich plate that sits between a TV's
+own back panel and its existing wall/stand mount, carrying the male mount rail
+(`lib/mcc/rail.scad`, issue #25) so a case clicks onto it tool-less. It is printed once per
+mounting point, not per case — not part of any per-device BOM above.
+
+| Item | Part number | Qty | Notes | Source |
+|---|---|---|---|---|
+| `tv-bracket` printed plate | `models/brackets/tv-bracket.scad`, ASA, 230×230×6 mm | 1 | Prints flat, either face down (see `models/brackets/README.md` "Orientation (Bambu Studio)") | `models/brackets/tv-bracket.scad` |
+| M4 machine screw, TV's own stock length **+ 6 mm** | generic, TV-specific | 4 | Passes through the bracket's 100×100 clearance holes (`MCC_M4_CLR_D` = 4.5 mm) into the TV's own VESA threads, sandwiching the plate | VESA MIS-D spec ([Wikipedia](https://en.wikipedia.org/wiki/VESA_mount)); `docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3 |
+| M6 or M8 machine screw, existing mount's own stock length **+ 6 mm** | generic, mount-specific | 4 | Passes through the bracket's 200×200 clearance holes (`MCC_M8_CLR_D` = 9.0 mm, `assumed` — generous enough for either bolt size) | VESA MIS-F spec ([Wikipedia](https://en.wikipedia.org/wiki/VESA_mount)); [Alibaba VESA screw-size guide](https://electronics.alibaba.com/question/monitor-bracket-screws-size,-vesa-fit-installation-guide) (M6×15/M8×16 for 200×200+) |
+| M6/M8 spacer/standoff washer, 6 mm | generic | 0–8 (situational) | Only if the user's existing mount's screws are not already long enough for the extra 6 mm plate thickness — `assumed`, stock-length dependent, check before ordering | `docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3 |
+
+No new fasteners are added to the BOM for the VESA side beyond the above — the *same* screws that
+normally go TV→mount now go TV→(through this plate)→mount; only their length needs checking
+against the plate's own 6 mm thickness. The case side needs no extra hardware either: the rail/
+latch interface is tool-less by design (see `models/coupons/rail-latch.scad`'s own measurement
+form for the retention target this depends on).
+
+Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
+user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
+
+---
+
 ## Purchase hints (EU)
 
 Per-category, not per-line-item (keeps this file from becoming a stale price list — **no prices are
