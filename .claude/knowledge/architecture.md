@@ -1,6 +1,50 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 11, 2026-09-09.** Rev 11 is the architecture gate for
+Status: **revision 12, 2026-09-09.** Rev 12 is the architecture gate for
+`docs/plans/2026-09-09-fan-bay-reservation.md` — the fix for **my own deviation D23** (§13): the fan
+bay's Y/Z footprint is reserved by nothing, and the 5 mm intake clearance exists as a bare literal in
+two files. Verdict: **APPROVED WITH CHANGES — 6 blocking (B1–B6), no user decision needed**; full
+verdict, the corrected code and the R1–R8 rulings are in that plan file's **§11 "Architect verdict"**
+and in `layout-patch-wall.md` **§19**.
+
+What rev 12 changes here: **§6's reservation rule is rewritten** — the reservation of record is the
+**numeric AABB published by `mcc_case_layout()`** (`fan_bay_x/y/z`, `splitter_bay_x/y/z`), enforced
+by Tier-1 asserts; an `*_envelope()` **module** is a `%`/`MCC_SHOW_GHOST` review ghost and never the
+reservation itself (this reconciles §6's long-standing "each expose an `*_envelope()` **function**"
+wording with the code — **the doc was right and the code is the deviation**, because §3 forbids
+`layout.scad`, where the checks live, from `use`-ing `fan.scad` at all). **§3 gains the explicit
+carve-out** that a *pure function* containing `assert()` is legal in `constants.scad` (the ban is on
+modules, which break `include` idempotency) — that is what lets `mcc_fan_spec()` move down to L0.
+§9 gains **T1-46a–d**; §13 records D23's resolution and adds **D24** and **D25**. New L0 constants
+`MCC_FAN_DEFAULT`, `MCC_FAN_INTAKE_CLR`, `MCC_FAN_BAY_CLR = 2.0`. **No envelope figure moves on any
+SKU and no golden may move** — with `MCC_SHOW_GHOST = false` the ghost emits nothing at all.
+
+**The two findings that matter most.**
+
+1. **A rev-11 number was wrong: the `fan_y` +Y cap is `−20.7`, not `−25.7`.** The rev-11 figure used
+   the *conservative* rev-2 convention `W/2 − MCC_T_PATCH − mcc_bay_depth`, which double-counts
+   `MCC_WALL + MCC_PANEL_SEAT_T = 5 mm`, and then silently folded in an unnamed 2 mm clearance. The
+   exact plane the deepest plug reaches is `W/2 − MCC_T_PATCH − d_bay_free` = **+1.275** on compact,
+   so the cap is `1.275 − MCC_FAN_BAY_CLR − 20 = −20.725` and the available +Y travel is **10.1 mm,
+   not 5.1**. Corrected in `layout-patch-wall.md` §5 and §18.6. **It does not reopen D-18:** the
+   ⌀20.2 IP65 switch was rejected on three grounds, and the binding one is not arithmetic — moving
+   `fan_y` toward +Y drives the fan into the +X end zone where the slot-3/slot-4 patch cables turn
+   toward the patch wall (§5's "exhaust away from the patch wall"), and **R20 says `fan_y` moves on
+   measurement, not on a switch's convenience**. Compact stays `fan_switch = false`; whether the
+   extra 5 mm is worth revisiting with M17 in hand is a **user** question, already parked at §12 Q19.
+2. **`fan.scad` contains two modules whose local `+Z` point in opposite directions**, and the plan
+   was about to place the wrong one with the wrong rotate. `mcc_fan_cutout()`'s local `Z ∈ [0,
+   wall_t]` spans the wall and is placed `rotate([0,90,0])` (local `+Z` → world `+X`, outward);
+   `mcc_fan_envelope()`'s local `Z` starts at the mounting plane and grows **into** the interior, so
+   it needs **`rotate([0,-90,0])`**. Copying `vents.scad:146-148`'s transform puts the entire
+   reservation *outside* the case — and because it is a `%`-ghost, **no assert, no mesh check and no
+   golden would report it.** This is rev 11's B2 in a new costume; the convention is now written into
+   both call sites and into `fan.scad`'s own header. Consequence recorded once: **the fan bay's Y
+   half-extent comes from `frame[1]` and its Z half-extent from `frame[0]`** — the plan's
+   "both from `frame[0]`, guarded by a square-frame assert" is a shortcut propped up by a guard, and
+   the guard is deleted.
+
+Rev 11 history follows. Rev 11 is the architecture gate for
 `docs/plans/2026-09-09-fan-switch.md` (issue #32 — an external manual on/off switch for the fan in
 the **+X end wall beside the ⌀38 fan aperture**, plus the KUOQIY USB-A → 3/4-pin fan-power cable).
 Verdict: **APPROVED WITH CHANGES — 8 blocking (B1–B8) + 1 blocking user decision (U)**; full verdict
@@ -15,7 +59,7 @@ contract is `layout-patch-wall.md` §5 "Fan switch". **No envelope figure moves 
 switch pad is an *internal* wall thickening (the D-13 pattern: material moves inward, never outward),
 so `bbox` is unchanged on every part.
 
-**The two findings that matter most.**
+**The two rev-11 findings that mattered most.**
 
 1. **B2 — the plan's `shell.scad` call site cuts nothing at all.** It translates to
    `switch_pos[0] = L/2` and then `rotate([0,90,0])`, which maps the cutout module's local
@@ -325,6 +369,11 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
 - `constants.scad` contains **only** variable assignments and pure functions — **never a module**.
   That makes repeated `include <>` idempotent and warning-free. This is a hard rule; a module in
   `constants.scad` is a deviation.
+  **A pure function containing `assert()` is legal here (rev 12, settled — do not re-litigate).** The
+  ban exists because a *module* emits geometry on every `include`; a function body is evaluated only
+  when it is called, so `mcc_fan_spec()`'s "unknown fan" assert costs nothing at include time and is
+  exactly the kind of contract L0 should carry. Same reasoning applies to any future
+  `mcc_<table>_spec()` accessor.
 - Everything else is consumed with `use <>` (modules/functions only).
 - A barrel file `lib/mcc/mcc.scad` `include`s `constants.scad` and `use`s every L1/L2 file. Model
   files (`L4`) import **only** `<mcc/mcc.scad>` and their own device data file. Library files import
@@ -743,11 +792,28 @@ Three rules exist because these features will otherwise collide silently:
   Nobody may "optimise" it back to 6 — the 16 mm is a fastener requirement that happens to also buy a
   duct. If a measurement (M5) makes the head taller, **`MCC_GAP_FAR` and hence `W` grow; the wall
   never grows a lug.**
-- **The reservation rule.** `shell.scad` always reserves the fan bay and the PoE-splitter bay as
-  internal keep-out volume, **even when `fan = false` and `splitter = false`**. Otherwise enabling a
-  fan later moves connectors and invalidates every printed part. `fan.scad` and `poe_splitter.scad`
-  each expose an `*_envelope()` function used for reservation, separate from the module that cuts
-  real geometry.
+- **The reservation rule.** The fan bay and the PoE-splitter bay are always reserved as internal
+  keep-out volume, **even when `fan = false` and `splitter = false`**. Otherwise enabling a fan later
+  moves connectors and invalidates every printed part.
+  **What a reservation *is* (rev 12, D23 — this replaces the older "`fan.scad` and `poe_splitter.scad`
+  each expose an `*_envelope()` function used for reservation" wording, which the code never
+  implemented).** A reservation is a **pure numeric world-frame AABB published by
+  `mcc_case_layout()`** — `fan_bay_x/y/z`, `splitter_bay_x/y/z` — and **enforced by Tier-1 asserts**
+  (T1-16, T1-18(c), T1-28, T1-46a–d). It is never a CSG intersection against a solid, and it can
+  never be an `*_envelope()` **module**: §3 forbids `layout.scad`, where the checks live, from
+  `use`-ing an L1 geometry provider at all, so a module's output is unreachable by the machinery that
+  does the checking. `layout.scad` therefore reads the L0 part table (`MCC_FANS`, `MCC_SPLITTERS`)
+  directly — the same rule that keeps the rail keep-out row on `MCC_RAIL_*` (rev 9) and T1-43 on
+  `MCC_SWITCHES` (rev 11).
+  **`mcc_fan_envelope()` / `mcc_splitter_envelope()` are review ghosts, not reservations.** They must
+  be `%`-ed **and** gated behind `MCC_SHOW_GHOST` like every other ghost (§7 "Ghost rendering", both
+  belts), and `shell.scad` — which §6 names as the owner — places them so the reservation is visible
+  in the `assembly` preview. An ungated solid "reservation box" that nothing consumes is dead code a
+  reader will trust (that is deviation D23, and D24 for the splitter).
+  **Clearance rule for a reserved bay (rev 12).** A bay must clear every **other feature** by
+  `MCC_FAN_BAY_CLR` (2.0 mm — the repo's recurring keep-out web); it may **touch the cavity
+  boundary** it is bolted to (floor, ceiling, wall), so containment asserts against the interior
+  carry no clearance term. T1-46a/b vs. T1-46c/d is the worked example.
   **Reserved volume adds, it does not overlap (D-12, 2026-09-08).** Where a reserved bay shares an
   end zone with cable allowances that are needed *regardless* of whether the bay is populated, the
   two **sum**; they are not `max`ed. Concretely
@@ -967,6 +1033,12 @@ thickness, engaged turns, and residual radial thread engagement vs. `$slop`** (i
 is the load-bearing one**: `0.5·(major − minor) − 2·$slop ≥ MCC_THREAD_ENGAGE_MIN_RADIAL`. It exists
 because a BOSL2 internal thread grows by `4·$slop` in *diameter*, so a plausible-looking `$slop` can
 silently erase the entire thread and leave a plain bore that every other assert happily passes.
+**Rev 11 adds T1-43/T1-44/T1-45** (fan-switch band, recess/panel, body depth — issue #32).
+**Rev 12 adds T1-46a–d — the fan bay's Y/Z footprint** (D23): `−Y` vs. the `(+X,−Y)` corner
+lid-fastener boss/gusset and `+Y` vs. the connector bay's plug envelope, both with
+`MCC_FAN_BAY_CLR`; `Z` contained in the interior cavity, without a clearance term (§6). They live in
+`layout.scad` and are evaluated **unconditionally**, exactly like T1-18(c) — §6 reserves the bay
+whether or not `cfg.fan` is true.
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
@@ -1632,7 +1704,9 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D20** | 2026-09-09 | §3 include discipline: a library file imports its own direct dependencies | `lib/mcc/vents.scad:14-19` `use`s `util`, `layout`, `fan`, `fasteners` — but **not** `ports.scad`. `docs/plans/2026-09-09-lid-vents.md` §3.2 calls `mcc_dev_slug(dev)` in every new lid-vent assert message, and `mcc_dev_slug()` lives in `ports.scad` | OpenSCAD's `use <>` is **not transitive** — `use <layout.scad>` does not re-export what `layout.scad` itself `use`s. Every new assert message becomes an undefined-function error, and because it is inside `str()` inside an `assert`, it only fires on the path that was supposed to report a real failure. `mounts.scad:20` already carries the exact fix, with the exact comment | **Open — one-line fix, must land with issue #24.** Add `use <ports.scad>   // mcc_dev_slug() (assert messages)` to `vents.scad`, matching `mounts.scad:20` |
 | **D21** | 2026-09-09 | §6: a floor keep-out is a plan-view registry for the `mounts.scad` non-overlap assert; `cradle.scad` never cuts the floor and never consumes floor-feature *labels* | `docs/plans/2026-09-09-cradle-deck.md` §5.2 `_mcc_deck_rib_blocked()` tests a candidate rib's **whole-length AABB** against `mcc_floor_keepout()`, with a hard-coded string allowlist (`"case_tripod_insert"`, `"fishtail_reserve"`) inside `cradle.scad` | Two defects. (a) Because each rib spans the deck's full interior on its axis, **any** keep-out band crossing the deck deletes every perpendicular rib line — with the ruled `MCC_RAIL_Y = −20` the rail band sits under the deck and would silently remove the entire Y-rib set. (b) It puts label strings owned by `layout.scad`/`mounts.scad` into `cradle.scad` with no assert tying them together; a renamed label silently turns the filter off. The plan itself records the logic is unverified against any real collision (its PLAN-ASSUMPTION 3) | **Open — decided at the rev-9 gate. Preferred: delete the filter for v1.** The deck lattice is purely additive and lives entirely above `z = MCC_FLOOR_T`; nothing in the floor needs vertical daylight through it, and if something ever does, §6 already routes that request through `mounts.scad`. If the teamlead wants forward-compat instead, it must be (i) evaluated **per rib segment**, not per rib, and (ii) driven by an allowlist published as a constant next to `mcc_floor_keepout()` in `layout.scad`, never by literals in `cradle.scad` |
 | **D22** | 2026-09-09 | §9 Tier 1: "rib thickness ≤ 0.6 × adjoining wall, height ≤ 3 × thickness" (`fdm-rugged-enclosure-guidelines.md:65-70`) | Already violated by the shipped cradle: `MCC_CRADLE_RIB_T = 3.0` against a 3.0 mm floor gives 1.0 ×, not ≤ 0.6 ×; `MCC_CRADLE_RIB_H = 9.0` gives exactly 3.0 : 1. `docs/plans/2026-09-09-cradle-deck.md` §5.1 then proposes a *second*, derived thickness `deck_h/3 ≈ 3.62` for the new deck ribs to keep the height ratio | The §9 rule is stated unscoped, so every future rib decision re-litigates it, and the plan's answer makes rib thickness a function of `dev_h` — two devices in the same family would print different deck geometry, and one part would carry two extrusion widths | **Resolved at the rev-9 gate by SCOPING the rule, not by relaxing it.** The ≤0.6 ×-wall / ≤3 ×-thickness rule governs **stiffening ribs standing off a plate or wall face** (a cantilevered fin — e.g. the bracket plates' cross ribs, which must satisfy it). It does **not** govern **floor-standing structural webs** that land on the floor slab along their whole length and are cross-braced at every intersection — the deck ladder and the far-flank ribs. Ruling: the deck ladder reuses **`MCC_CRADLE_RIB_T = 3.0`**; `MCC_RIB_HEIGHT_RATIO_MAX` is introduced only for the bracket-plate ribs; `_mcc_cradle_deck_rib_t()` is **not** created |
-| **D23** | 2026-09-09 | §6 reservation rule: "`shell.scad` always reserves the fan bay … even when `fan = false`", and one physical allowance has one definition (§3 "no magic numbers") | `lib/mcc/fan.scad:39` `mcc_fan_envelope()` is **defined and never called** — grep of `lib/**`, `models/**`, `tests/**` finds no call site. The reservation that *does* exist is numeric and lives elsewhere: `shell.scad:375-377` (T1-18(c)) recomputes the bay depth inline as `frame[2] + 5`, duplicating `fan.scad:42`'s `clr = 5` literal | Half true, half not, and the half that is missing is the half issue #32 needs. The bay's **depth** *is* reserved unconditionally (T1-18(c) runs regardless of `cfg.fan`) — but by a **second, independent copy** of the 5 mm intake allowance, so the two can drift and the module version is dead code that a reader will trust. The bay's **Y/Z footprint** is reserved by nothing at all: until T1-43 lands there is no check that any other +X-wall feature stays off the fan | **Open — separate ticket, NOT issue #32.** Either wire `mcc_fan_envelope()` into a real reservation (`%`-ghost + an intersection assert) or delete it; either way promote the intake clearance to a named L0 constant `MCC_FAN_INTAKE_CLR = 5.0` and have both `fan.scad` and `shell.scad` read it. Found by the researcher (plan §8 PLAN-ASSUMPTION 6); the finding is upheld, the "safe to proceed without fixing this" conclusion is upheld too — #32's switch sits *beside* the fan, not behind it |
+| **D23** | 2026-09-09 | §6 reservation rule: "`shell.scad` always reserves the fan bay … even when `fan = false`", and one physical allowance has one definition (§3 "no magic numbers") | `lib/mcc/fan.scad:39` `mcc_fan_envelope()` is **defined and never called** — grep of `lib/**`, `models/**`, `tests/**` finds no call site. The reservation that *does* exist is numeric and lives elsewhere: `shell.scad:375-377` (T1-18(c)) recomputes the bay depth inline as `frame[2] + 5`, duplicating `fan.scad:42`'s `clr = 5` literal | Half true, half not, and the half that is missing is the half issue #32 needs. The bay's **depth** *is* reserved unconditionally (T1-18(c) runs regardless of `cfg.fan`) — but by a **second, independent copy** of the 5 mm intake allowance, so the two can drift and the module version is dead code that a reader will trust. The bay's **Y/Z footprint** is reserved by nothing at all: until T1-43 lands there is no check that any other +X-wall feature stays off the fan | **APPROVED PLAN, developer task (rev 12, 2026-09-09).** `docs/plans/2026-09-09-fan-bay-reservation.md` gates **APPROVED WITH CHANGES — 6 blocking (B1–B6)**; corrected code in that plan's §11.3, rulings in `layout-patch-wall.md` §19. Resolution shape: the intake clearance becomes L0 `MCC_FAN_INTAKE_CLR = 5.0`; `mcc_case_layout()` publishes `fan_bay_x/y/z` as the reservation **of record**, enforced by new **T1-46a–d** (with the new `MCC_FAN_BAY_CLR = 2.0` on the two feature-facing bounds); `shell.scad`'s T1-18(c) reads `fan_bay_x[0]` instead of recomputing `frame[2] + 5`; `mcc_fan_envelope()` survives as a **`%`/`MCC_SHOW_GHOST` review ghost** placed by `shell.scad` with `rotate([0,-90,0])` — **not** `vents.scad`'s `rotate([0,90,0])`, which would put the reservation outside the case with nothing to report it. Land **before** #32, whose step B7 then becomes a no-op. Re-verify D23 closed when that PR merges. Original finding by the researcher (fan-switch plan §8 PLAN-ASSUMPTION 6); the "safe to proceed without fixing this" conclusion is still upheld — #32's switch sits *beside* the fan, not behind it |
+| **D24** | 2026-09-09 | §6 rev 12 / §7 "Ghost rendering": an `*_envelope()` module is a review ghost — `%`-ed **and** gated behind `MCC_SHOW_GHOST`, both belts. The reservation itself is the numeric AABB in `mcc_case_layout()` | `lib/mcc/poe_splitter.scad:50-66` `mcc_splitter_envelope()` is a **plain, ungated `cube()`** and is called from nowhere in `lib/**`, `models/**`, `tests/**`. Its own doc comment (and `fasteners.scad:333-340`) still present it as the thing the shell reserves against | Identical failure mode to D23: a solid box that looks like a reservation, is not one, and would land in an exported mesh the moment anyone calls it. The real splitter reservation is `splitter_bay_x/y/z` + T1-16/T1-28, which already exist and already pass | **Open — fold into the D7 rework of the same module** (which already has to add `orient`/`cable_allow`). Same one-line change as D23's fan side: wrap the body in `if (MCC_SHOW_GHOST) { %… }`, rewrite the doc to say "review ghost, not the reservation", and update `fasteners.scad:333-340`'s comparison sentence. **Explicitly out of scope for the fan-bay PR** |
+| **D25** | 2026-09-09 | One predicate, one owner (§3 "no magic numbers", the D6/D14 pattern) | T1-28 exists twice: `lib/mcc/layout.scad:472-474` (labelled T1-28) and `lib/mcc/shell.scad:380-381` (unlabelled, message "splitter bay reservation collides with the device envelope"). Both evaluate `splitter_bay_x[1] <= x_dev_lo` off the same struct | **Low severity, deliberately logged rather than fixed.** They read the same published field, so they cannot disagree numerically — this is noise, not a live risk. It matters only as a pattern: the next person to "add a check in `shell.scad`" copies it and eventually one copy drifts to a locally recomputed input, which is precisely how T1-18(c) acquired its duplicate `+ 5` (D23) | **Open — low priority, cleanup pass.** Delete the `shell.scad` copy and leave a one-line comment pointing at T1-28 in `layout.scad`. **Not** part of the fan-bay PR (rev-12 ruling R3) |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---

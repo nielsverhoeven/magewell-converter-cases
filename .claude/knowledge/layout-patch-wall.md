@@ -1,6 +1,24 @@
 # Patch-wall layout contract
 
-Status: **revision 11, 2026-09-09.** Rev 11 is the architecture gate for
+Status: **revision 12, 2026-09-09.** Rev 12 is the architecture gate for
+`docs/plans/2026-09-09-fan-bay-reservation.md` (**deviation D23** — the fan bay's Y/Z footprint is
+reserved by nothing, and the 5 mm intake clearance is a bare literal in two files). Verdict:
+**APPROVED WITH CHANGES — 6 blocking, no user decision**; full ruling in **§19** below and in that
+plan's **§11 "Architect verdict"**.
+
+**Nothing in this contract's envelopes moves** and no golden may move — the ghost this adds is
+`%`-ed and `MCC_SHOW_GHOST`-gated, so it emits nothing. What changes here:
+
+1. **§5's fan-bay bullets gain the reserved world AABB** (`fan_bay_x/y/z`) and, with it, a
+   **correction to a rev-11 number**: the `fan_y` +Y cap is **−20.7, not −25.7**, and the available
+   +Y travel on compact is **10.1 mm, not 5.1** — rev 11 charged the full `mcc_bay_depth` instead of
+   `d_bay_free`, double-counting `MCC_WALL + MCC_PANEL_SEAT_T`, and folded in an unnamed 2 mm
+   clearance. See §18.6 for what that does (and does **not**) do to the #32 ruling.
+2. **§9 gains T1-46a–d** — the fan bay's Y/Z footprint. Next free ID checked against §9 itself, per
+   rev 11's own lesson.
+3. **§11 gains a rev-12 addendum**: `MCC_FAN_DEFAULT`, `MCC_FAN_INTAKE_CLR`, `MCC_FAN_BAY_CLR`.
+
+Rev 11 history follows. Rev 11 is the architecture gate for
 `docs/plans/2026-09-09-fan-switch.md` (**#32** — an external manual fan on/off switch in the +X end
 wall beside the ⌀38 fan aperture). Verdict: **APPROVED WITH CHANGES — 8 blocking + 1 user
 decision**; full ruling in **§18** below and in that plan's **§9 "Architect verdict"**.
