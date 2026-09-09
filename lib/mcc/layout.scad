@@ -170,8 +170,15 @@ function mcc_panel_plate_dims(dev) =
 //   (architecture.md §5, D9). Returns [d_win, d_rel, cap_h, w_flat]:
 //     d_win  = body-opening diameter, mm (the connector's own clearanced cutout,
 //              mcc_cutout_d(part) + 2*MCC_CLR_SLIDE).
-//     d_rel  = boss-relief circle diameter, mm -- same for every part (the M3 heat-set boss OD +
-//              2*MCC_CLR_SLIDE), since the plate's own rear bosses are identical across parts.
+//     d_rel  = boss-relief circle diameter, mm -- same for every part (the connector-fixing
+//              printed-thread pad OD, MCC_THREAD_M3_PAD_D, + 2*MCC_CLR_SLIDE), since the plate's
+//              own rear pads are identical across parts. Derived from MCC_THREAD_M3_PAD_D, NOT
+//              from MCC_INSERT_M3 (architect verdict B4, docs/plans/2026-09-09-printed-m3-
+//              threads.md §9): the pad is no longer built from the heat-set-insert struct
+//              (GitHub issue #30), while MCC_INSERT_M3 stays in live use for the plate's own 4
+//              retention bosses -- one physical diameter must come from one source, or the two
+//              drift the first time either constant is edited. Numerically unchanged (8.88) so
+//              T1-34a-d are invariant.
 //     cap_h  = truncated-teardrop cap height above the body circle's own centre, mm
 //              (d_win/2 + MCC_APERTURE_CAP_RISE).
 //     w_flat = the cap's flat bridge width, mm -- architecture.md §5's <=10 mm unsupported-span
@@ -186,7 +193,7 @@ function mcc_aperture_window(part) =
     let(
         is_blank = mcc_panel_hole_d(part) == 0,
         d_win = is_blank ? 0 : mcc_cutout_d(part) + 2 * MCC_CLR_SLIDE,
-        d_rel = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od") + 2 * MCC_CLR_SLIDE,
+        d_rel = MCC_THREAD_M3_PAD_D + 2 * MCC_CLR_SLIDE, // B4: single-source from the pad's own OD
         cap_h = is_blank ? 0 : d_win / 2 + MCC_APERTURE_CAP_RISE,
         w_flat = is_blank ? 0 : 2 * (d_win / 2 * sqrt(2) - cap_h)
     )
