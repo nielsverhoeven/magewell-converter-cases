@@ -1,6 +1,25 @@
 # Patch-wall layout contract
 
-Status: **revision 8, 2026-09-09.** Rev 8 carries the user's fan-power decision (**D-14**, §10) into
+Status: **revision 9, 2026-09-09.** Rev 9 is the architecture gate for the mount rail (#25), the TV
+and truss brackets (#26/#27), the cradle-deck lattice (#29) and the lid vents (#24). Verdicts,
+`PLAN-ASSUMPTION` rulings, the required changes and the ordered developer dispatch are all in the
+new **§17**. What moves in *this* contract:
+
+1. **§7's cradle table** — the "Deck slab | 8.8 mm, ribbed/hollow, 3 mm top plate on 3 mm webs" row
+   was aspirational and was never built; it is replaced by the real, implemented lattice (**D-17**).
+2. **§7.1's floor keep-out table** — the VESA 75 × 75 row is **struck** (**D-15**, user decision) and
+   replaced by the mount-rail band; the ⌀20 case-insert row stays (**D-16**: `cfg.tripod_insert`
+   defaults **true**). The concentric `case_tripod_insert` / `fishtail_reserve` pair is called out
+   explicitly, because it breaks the pairwise assert D16 asks for (`architecture.md` §13 **D19**).
+3. **§9** gains **T1-36 … T1-41**.
+4. **§10** gains **D-15** (rail replaces VESA), **D-16** (tripod insert default true), **D-17** (deck
+   lattice).
+
+**Not changed by rev 9:** §1's frame, §2 in its entirety, §3, §4, §5, §6, §7.1's side-bolt geometry,
+§8's envelopes — **no envelope figure and no `L`/`W`/`H` moves on any SKU.** All three plans are
+interior/floor/lid work inside the existing shell. Rev-8 history follows.
+
+Rev 8 carries the user's fan-power decision (**D-14**, §10) into
 this contract. Two things change here and nothing else does:
 
 1. **§2.5 gains the `DBA-BL-B` ruling.** A blanked slot is a **reserved** slot, not a deleted one:
@@ -812,7 +831,9 @@ compact SKUs, and an accepted part of D-12's price. The threshold rule itself is
 | Property | Value | Source |
 |---|---|---|
 | Deck top (device underside) | `z = 13.8` (plus) / `13.85` (compact) | §1, port-centreline alignment |
-| Deck slab | 8.8 mm, ribbed/hollow, 3 mm top plate on 3 mm webs | `MCC_WALL` |
+| Deck **height** (interior floor → device underside) | **10.80 mm (plus) / 10.85 mm (compact)** — `mcc_cradle_deck(dev) = MCC_SIDE_BOLT_AXIS_Z − dev_h/2 − MCC_FLOOR_T` (`layout.scad:208`). **DERIVED, not free**: shortening it means moving `z_conn_c`, which reopens the vetoed D-06 or thins the 3 mm shell. Escalate, never improvise | §1, §2.2 |
+| Deck fill (**rev 9, D-17** — replaces "8.8 mm, ribbed/hollow, 3 mm top plate on 3 mm webs", which was aspirational and was never implemented; the 8.8 figure also predates D-13) | **`MCC_WALL`-wide perimeter frame + an interior ladder of X- and Y-running ribs on a `MCC_CRADLE_DECK_GRID_PITCH` (22.0 mm target) grid, full deck height, no top plate — the device rests on the rib top edges**, exactly as it already does on the far-flank ribs. Rib thickness is **`MCC_CRADLE_RIB_T` (3.0)**, the same constant the flank ribs use — *not* a derived per-family thickness (`architecture.md` §13 **D22**). Achieved pitch: 20.18 / 20.07 mm (compact), 23.50 / 22.23 mm (plus); asserted inside `[MCC_CRADLE_DECK_GRID_PITCH_MIN, _MAX]` = [16, 32] (**T1-39**) | issue #29; `fdm-rugged-enclosure-guidelines.md` §4 "ribs deliver most of the stiffness of a solid block for a fraction of the material" |
+| Pad pocket in a lattice deck (**rev 9**) | the 40 × 40 × 2 mm pocket must land on **solid** material: the lattice keeps a solid island over the `MCC_CRADLE_FLOOR_PAD_MIN` footprint for at least `MCC_CRADLE_FLOOR_PAD_T + 1.0` mm below the deck top (**T1-40**). Cutting the pocket straight into the ladder leaves the EPDM pad bearing on ~15 % of its own area over open bays, and it dishes under the device | issue #29, this gate |
 | Compliant pad, floor | 2.0 mm EPDM under the device, footprint ≥ 40 × 40 near the case centre | `fasteners-and-hardware.md:186` |
 | Compliant pad, side bolt | 2.0 mm EPDM annulus, OD 18 / ID 8, on the boss face | §7.1 |
 | Locating ribs | 3.0 mm thick × 9.0 mm tall | `fdm-...:68` rib height ≤ 3 × thickness |
@@ -1035,9 +1056,10 @@ policy).
 
 | Feature | Zone | Position rule |
 |---|---|---|
-| Case 1/4"-20 **insert** (case → tripod/cheeseplate) | ⌀20 disc | `(0, 0)` — case plan centre, default. Note this is a *threaded* feature, not the ⌀6.6 clearance boss `mcc_tripod_boss()` currently models (deviation D2) |
-| VESA 75 × 75 | 4 × ⌀12 discs at `vesa_pos + (±37.5, ±37.5)` | `vesa_pos` defaults to `(0,0)`; a shell parameter, shiftable per SKU |
-| Fishtail M4 pair | reserve a 60 × 20 band centred on `vesa_pos` | hole pitch is **`unknown`** — `knowledge/magewell/accessories.md:26` gives only "2× M4×12 screws, 2× M4 nuts". Derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl` (M7) |
+| Case 1/4"-20 **insert** (case → tripod/cheeseplate) | ⌀20 disc | `(0, 0)` = `floor_center`, case plan centre. A *threaded* feature (D2). **Rev 9 (D-16): behind `cfg["tripod_insert"]`, default `true`** — the user asked to keep every mounting option and dropped only VESA; the flag exists so a future SKU that cannot satisfy T1-32 can turn it off, not as a shipped default-off |
+| ~~VESA 75 × 75~~ | ~~4 × ⌀12 discs at `vesa_pos + (±37.5, ±37.5)`~~ | **STRUCK, rev 9 (D-15, user decision 2026-09-09): the dovetail mount rail replaces VESA on the case floor.** The rev-5 correction 4 below (blind M4 inserts because two of the four holes land under the device) is **superseded, not deleted** — it is the record of why the pattern was awkward here in the first place. `MCC_VESA75_PITCH`, `MCC_VESA_HOLE_D`, `_mcc_vesa_positions()`, the four `vesa_*` rows and the `"vesa"` cfg key are all removed by issue #25 |
+| **Mount rail (dovetail groove + sill)** | **`MCC_RAIL_LEN × MCC_RAIL_ROOT_W` = 150 × ≈14.6 rect at `(0, MCC_RAIL_Y)`, label `"mount_rail"`** | **new, rev 9 (D-15).** `MCC_RAIL_Y = **−20.0**` — ruled at this gate, **not** the plan's `+20.0`: symmetric about `y = 0`, so the keep-out arithmetic is identical (2.7 mm to the ⌀20 insert disc and to the Fishtail band, 20 mm centre-to-centre ≥ `MCC_FLOOR_FEATURE_MIN_SEP`), but `−20` puts the rail under the cradle deck and the device instead of free-standing in the cable bay, and puts the case's mass *below* the mount line when #26 hangs the patch wall downward (`architecture.md` §11 **R24**). Clearances at `−20`: splitter bay 9.6 mm (compact) / 12.9 (plus); side-bolt web ≥ 35; strap slots ≥ 40; stacking recesses ≥ 42. Z: groove `z ∈ [0, MCC_RAIL_DEPTH]` = [0, 4]; sill `z ∈ [0, MCC_RAIL_SILL_H]` = **[0, 7]**, i.e. `MCC_RAIL_DEPTH + MCC_FLOOR_T`, so **3.0 mm of floor survives over the groove** (T1-38) |
+| Fishtail M4 pair | reserve a 60 × 20 band centred on `floor_center` | hole pitch is **`unknown`** — `knowledge/magewell/accessories.md:26` gives only "2× M4×12 screws, 2× M4 nuts". Derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl` (M7). **Rev 9:** this row is **concentric with the case-insert row by design** (both anchored on `floor_center`, and this one cuts no geometry). The pairwise non-overlap assert D16 requires must exempt exactly this pair — see `architecture.md` §13 **D19** |
 | Strap slots | 4 × (25 × 5) through-slots (2 straps) | `y = ±(W/2 - 12)`; `x = +(L/2 - 25)` on the +X pair and, on the −X pair, **`x = min(-(L/2 - 25), bay_x[1] + 25/2 + 2)`** — see the rev-5 correction below — `assumed` |
 | Splitter tie-down | `mcc_splitter_tiedown()` — 2 × (4 × 1.5) zip-tie slots, **on-edge orientation** | inside `bay_x × bay_y` (§5). **Rev-5 correction: not "2 × ⌀8"** — a ⌀8 hole is not a tie-down. `mounts.scad` calls the module; it must not hand-roll holes |
 | **Side-bolt support web footprint** | `MCC_SIDE_BOLT_SUPPORT_WEB_T × (MCC_WALL + MCC_GAP_FAR − MCC_SIDE_BOLT_PAD_T − MCC_WALL)` = **3 × 14 mm** rectangle at `x = x_bolt`, running from the far wall's *inner* face inward | **new (D-13), figure corrected rev 5** (rev 3 said "3 × 20", which is neither the boss OD nor its length). The boss ends at the pad face, `y = −W/2 + 17`; the web's floor footprint is `y ∈ [−W/2 + 3, −W/2 + 17]` |
@@ -1185,6 +1207,12 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-34b** | *roundness* — the only part of the lip window visible through the plate's own cutout is the two relief crescents: `mcc_cutout_d(part)/2 − (hypot(MCC_D_SCREW_PITCH/2) − d_rel/2) <= MCC_APERTURE_RELIEF_INTRUSION_MAX (1.5)` | **new, rev 6** — §2.5, and the direct expression of the user's requirement. Evaluates to **1.035 mm** for the 23.6-class parts and **1.235 mm** for `NE8FDP-B`. If a future insert or `MCC_BOSS_MIN_RATIO` change pushes this over 1.5 mm the window stops reading as round and the design must be revisited, not fudged |
 | **T1-34c** | *containment* — the whole window stays inside the plate silhouette with `MCC_APERTURE_LIP_WEB_MIN (2.0)` of lip left all round: `cap_h + 2.0 <= MCC_PLATE_H/2`, `MCC_D_SCREW_PITCH[1]/2 + d_rel/2 + 2.0 <= MCC_PLATE_H/2`, and `abs(slot_x(i)) + MCC_D_SCREW_PITCH[0]/2 + d_rel/2 + 2.0 <= plate_l/2` | **new, rev 6** — §2.5. Z: `12.8 + 2 = 14.8 <= 19.5` ✓ and `12 + 4.44 + 2 = 18.44 <= 19.5` ✓ (1.06 mm spare — the binding one). X on NDI to HDMI: `62.95 + 13.94 + 2 = 78.89 <= 83.95` ✓. **This is why the apex is truncated:** a full 45° teardrop apex at `12.4*√2 = 17.54` leaves only 0.26 mm and fails |
 | **T1-34d** | every lip window clears every plate-fixing boss's **insert bore** by ≥ 2.0 mm of lip material: `hypot(fix_x − (slot_x ∓ 9.5), fix_z − (z_conn_c ± 12)) − d_rel/2 − MCC_INSERT_M3.hole_d/2 >= 2.0` | **new, rev 6** — `fdm-rugged-enclosure-guidelines.md:127`. On NDI to HDMI the worst pair is the outer slot's lower relief `(72.45, 13.5)` vs. the fixing at `(80.95, 9.0)`: `9.617 − 4.44 − 2.0 = 3.18 mm` ✓. **Rev 7:** the four `mcc_panel_fixing_pos()` points are symmetric about `z = z_conn_c`, so this clearance is *invariant* under the §2.5 relief mirror — 3.18 mm is right either way, and this assert is therefore **not** what catches a mirrored relief pattern (only the head-on elevation is). Measured **to the bore, not to the boss OD** (boss-OD-to-relief is only 1.04 mm, which merely undercuts the boss root on that flank) |
+| **T1-36** | *net lid-vent free area* — `mcc_lid_vent_area(dev, cfg) >= MCC_LID_VENT_AREA_RATIO * (π/4) * MCC_FAN_APERTURE_D²` (= 1134 mm² at `ratio = 1.0`), computed from the **same** slot-centre list `mcc_lid_vents_cut()` draws | **new, rev 9** (#24). Same heuristic and same reference area as T1-30 (`thermal-guidelines.md:104-109`), applied to the new top-exhaust path; applies on **every** SKU, fan or not, for the same reason T1-30 does (§6 reserves the fan bay unconditionally). Hand-check: ≈1840 mm² compact, ≈2240 mm² plus. **Must live in the model, not only in `tests/test_shell.scad`** — that is D15's whole lesson |
+| **T1-37** | *lid-vent field keep-outs* — the field's `[field_x_lo, field_x_hi] × [field_y_lo, field_y_hi]` clears (a) the T&G groove band and the patch wall's `MCC_T_PATCH` stack on all four sides by ≥ `MCC_LID_VENT_EDGE_MIN`, and (b) **every** `lid_fastener_pos` inflated by `MCC_LID_VENT_FASTENER_KEEPOUT_R` | **new, rev 9** (#24). Both clear by a wide margin on all 8 SKUs today (≥ 15 mm to the nearest fastener, ≥ 16 mm to the nearest groove band); the assert exists because a future device record with a longer or offset device closes that margin silently. `MCC_LID_VENT_EDGE_MIN` is a **named constant** — the plan's inline `1.0` and `1.6` literals are magic numbers and are rejected (§3 parameter conventions) |
+| **T1-38** | *the mount-rail groove never thins the floor* — `MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T`, and the `"mount_rail"` keep-out row overlaps no other row in `mcc_floor_keepout()` | **new, rev 9** (#25). The plan's `MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + 2.0 = 6.0` leaves **2.0 mm** of ASA over the groove — under the uniform 3 mm shell spec (`architecture.md` §9), on the surface that carries the entire case when it is bracket-mounted. Correct value **7.0**. The plan's own `MCC_RAIL_SILL_H > MCC_RAIL_DEPTH` is too weak: it passes at 4.1 mm |
+| **T1-39** | *deck ladder grid is sane* — achieved interior pitch on each axis lies in `[MCC_CRADLE_DECK_GRID_PITCH_MIN, MCC_CRADLE_DECK_GRID_PITCH_MAX]` (16–32 mm), and each axis yields ≥ 1 interior rib | **new, rev 9** (#29). Guards a future SKU far outside today's size range producing a degenerate 1-bay or 50-rib deck. Today: 20.18/20.07 (compact), 23.50/22.23 (plus) |
+| **T1-40** | *the compliant-pad pocket lands on solid material* — the deck lattice keeps a solid island over the `MCC_CRADLE_FLOOR_PAD_MIN` (40 × 40) footprint for ≥ `MCC_CRADLE_FLOOR_PAD_T + 1.0` below the deck top | **new, rev 9** (#29). Without it the pocket is cut into open bays and the EPDM pad bears on the ~15 % of its area that happens to sit over a rib top — it dishes under the device and the "level cable run" §1 derives collapses |
+| **T1-41** | *the case tripod-insert boss is braced in a lattice deck* — when `cfg["tripod_insert"]` is true, solid material (a collar of radius ≥ `boss_od/2 + MCC_CRADLE_RIB_T`, or a grid line through `floor_center`) connects the boss to the lattice | **new, rev 9** (#29 × D-16). The boss used to be embedded in a solid block; in a lattice it becomes a lone ⌀17.1 × 13.85 post whose only connection is the 3 mm floor slab. `check`'s `len(split()) == 1` still passes (it *is* connected), so nothing else catches this — it is a stiffness defect, not a topology one |
 | **T1-35** | *the connector screw must reach its insert* — `mcc_neutrik_d_bosses()`'s bore is continuous from the boss's rear tip through to the panel's own screw clearance hole: `insert_bore_depth + thru_depth == boss_h` with `insert_bore_depth >= MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` and `thru_d >= MCC_M3_CLR_D`. **No solid material anywhere on the screw axis between the flange face and the insert.** Same rule for the 4 plate-fixing bosses in `shell.scad` | **new, rev 6** — the literal, mm-level form of the user's "there is no place to screw the D-connectors down". Today `bore_depth = len + 1 = 6.7` against `boss_h = 7`, leaving **0.3 mm of solid ASA** across the screw axis (`lib/mcc/neutrik.scad:117-120`), and the four `shell.scad` plate-fixing bosses have **no bore at all** (deviation D10). The `neutrik-tile` coupon exists precisely to catch this and has not been printed |
 
 ---
@@ -1206,6 +1234,9 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **D-11** | **The `develop` branch is dropped.** `feature/*` → `main` by CI-green PR; releases are annotated `vX.Y.Z` tags on `main`. | **User, 2026-09-08** | **fixed**; `render.yml` conforms and the docs were rewritten on 2026-09-08 (deviation D3 **resolved**) |
 | **D-12** | **The reserved splitter bay and the −X cable allowance SUM: `ez_neg = 27 + 20 = 47`.** §6's reservation rule is honoured unconditionally in every variant. Every `L` grows 20 mm (compact 194.9, plus 211.5); **both families cross the 180 mm span threshold, so all SKUs get 6 lid thumbscrews**; T1-28 passes by construction. `MCC_END_ZONE_NEG_EXTRA_SPLITTER` is derived from `MCC_SPLITTERS[part].size[2]`, so measurement M3 flows straight into `L`. | **User, 2026-09-08** (resolves R15; option (a) of three) | **fixed** |
 | **D-14** | **Fan power is device-sourced; a thermoswitch gates it; no PoE splitter by default; the decoders' host slot becomes a reusable blank.** (1) On stage everything is PoE from an 802.3at switch; the decoders' USB-A host port and the PTZ/Tally port are never used as such. (2) Fan = **NF-A4x10 5V plain** (0.05 A max) in series with a **KSD9700 45 °C normally-open** bimetal switch bonded to the device's metal top. (3) 5 V from the **USB-A host** port on the decoders, from **Mini-DIN-8 pin 8 (VCC, 5 V, 100 mA max) + pin 4 (GND)** on the encoders; **NDI to AIO stays passive** (it has neither port). **No splitter by default — the bay stays reserved per §6/D-12.** (4) The decoders' host slot becomes a **`DBA-BL-B` blank with the full ⌀24.0-class hole** (§2.5.1) so it stays convertible. **D-01 is untouched:** the Mini-DIN-8 is still `panel:"none"`, now internally cabled. | **User, 2026-09-09** | **fixed** in intent; **BLOCKING measurement M12** on `pro-convert-hdmi-plus` / `-sdi-plus` (R23), and the source ratings are unverified (R21/R22, M8–M11, M13) |
+| **D-15** | **The floor mount is a dovetail rail; VESA 75 × 75 is removed outright.** The case carries the **female** groove (recessed up into the floor, on a local sill that keeps ≥ `MCC_FLOOR_T` of material over it — T1-38); every printable bracket carries the **male** rail plus the spring-lip latch. Forced, not preferred: the exterior floor face is the bed-contact face, so a protruding feature is unprintable without flipping the base, and D-13 already commits this repo to "nothing protrudes". Interface geometry lives in **one** L1 file, `lib/mcc/rail.scad` (not `bracket.scad` — `architecture.md` §3). `MCC_RAIL_Y = **−20.0**` (§7.1, R24). Single insertion direction: end stop at one end, latch + thumb release at the other. **Removed, not deprecated:** no code path reinstates VESA. | **User, 2026-09-09** (issue #25) | **fixed** in intent; every `MCC_RAIL_*` figure is `assumed` until coupon **M15** |
+| **D-16** | **`cfg["tripod_insert"]` defaults to `true`.** The case keeps its own 1/4"-20 floor insert as a shipped feature alongside the rail; the flag exists so a future SKU that cannot satisfy T1-32 (0.10–0.15 mm of slack today, and the `ip_decoder` family at `dev_h = 24.5` will have less) can turn it off — **not** as a default-off opt-in. The researcher's plan proposed default `false`; that was **overruled**: the user asked to keep every mounting option and dropped only VESA. Set the key explicitly in all 8 `models/*/case.scad` for the same BOM/documentation-parity reason `fan` is explicit there. | **Teamlead, 2026-09-09**, on the user's stated scope | **fixed**; brings **T1-41** with it |
+| **D-17** | **The cradle deck is a ribbed lattice, not a solid slab.** `MCC_WALL`-wide perimeter frame + interior X/Y ladder ribs on a ~22 mm grid at `MCC_CRADLE_RIB_T = 3.0`, full deck height, no top plate — the device rests on rib top edges. Deck **height** and **footprint** are unchanged (both derived, §1/§7). Saves ≈46,000 mm³ (compact, ≈16 % of the base) / ≈66,000 mm³ (plus, ≈21 %); `bbox` must not move on any SKU. Brings T1-39/T1-40/T1-41. | Architect-derived from issue #29, gated rev 9 | **fixed**; the §7 row it replaces was never implemented |
 | **D-13** | **The side-bolt boss is FLUSH — nothing protrudes from the far wall.** `MCC_GAP_FAR` 6 → **16** (derived: `boss_len + MCC_PAD_T − MCC_WALL`), `MCC_SIDE_BOLT_PROUD` 10 → **0**; the 17 mm captive stack sits inside `MCC_WALL + MCC_GAP_FAR = 19`. `W` grows 10 mm (compact 159.9, plus 166.4) — **the printed bbox is unchanged**, since rev 2's bbox already included the lug. The freed 10 mm becomes a 16 mm far-wall airflow duct. The boss becomes a ⌀20 internal thickening from the wall's inner face to the pad face, carried by a 3 mm central vertical support web down to the floor (a ≤45° conical blend alone would need a ⌀48 root and is rejected). Screw length, groove position and clip travel are all unchanged. | **User, 2026-09-08** (resolves R18) | **fixed** |
 
 ---
@@ -1794,8 +1825,149 @@ straight-on `−Y → +Y` patch-wall elevation (§16.5) must show **four exactly
 openings** on the three decoders, and `echo(mcc_slot_assignment(dev))` must print `DBA-BL-B` at
 slot 3. Update the goldens anyway, and check the volume moved in the direction and magnitude above.
 
-**Blocking item, encoders only.** `pro-convert-hdmi-plus` and `pro-convert-sdi-plus` must not be
-touched until **M12** (Mini-DIN-8 plug axial length) is measured — see `architecture.md` §11 **R23**
+**Blocking item, encoders only, unchanged by rev 9.** `pro-convert-hdmi-plus` and
+`pro-convert-sdi-plus` must not be touched **for D-14 slot work** until **M12** (Mini-DIN-8 plug
+axial length) is measured — see `architecture.md` §11 **R23**. *None of the rev-9 plans (#24/#25/#29)
+touches the patch wall, the slot map or any end zone, so M12 does not block them.*
+
+---
+
+## 17. Rulings, 2026-09-09 — architecture gate for #24 / #25 / #26 / #27 / #29 (rev 9)
+
+Four researcher plans were gated together because three of them touch `mounts.scad`/`layout.scad`
+and all three touch the same 8 `models/*/case.scad` cfg blocks. **No envelope figure moves.**
+
+### 17.1 Verdicts
+
+| Plan | Issues | Verdict | Blocking changes |
+|---|---|---|---|
+| `2026-09-09-mount-rail-and-brackets.md` | **#25** (rail), **#26** (TV bracket) | **APPROVE WITH CHANGES** | R1–R5 below |
+| same plan, §4 | **#27** (truss bracket) | **REJECT for now — DEFER** | blocked on **M14** + a user safety sign-off (**R25/R26**) |
+| `2026-09-09-cradle-deck.md` | **#29** | **APPROVE WITH CHANGES** | R6–R8 below |
+| `2026-09-09-lid-vents.md` | **#24** | **APPROVE WITH CHANGES** | R9–R10 below |
+
+### 17.2 Required changes — #25 / #26
+
+- **R1 (blocking).** `MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + MCC_FLOOR_T = **7.0**`, not `+2.0 = 6.0`;
+  assert **T1-38**. At 6.0 the 4 mm groove leaves 2.0 mm of ASA on the one surface that carries the
+  whole case when bracket-mounted, against a 3.0 mm uniform-shell spec. The plan's derivation cites
+  `MCC_APERTURE_LIP_WEB_MIN`, which is a *minimum-material-to-an-edge* rule for a lip, not the floor
+  spec. Cost: the sill stands 4 mm (not 3) into the interior; at `MCC_RAIL_Y = −20` that is inside
+  the cradle-deck volume and free.
+- **R2 (blocking).** `MCC_RAIL_Y = **−20.0**`, not `+20.0` — see §7.1's mount-rail row and
+  `architecture.md` §11 **R24**. Keep the plan's derivation *form*
+  (`MCC_CASE_INSERT_KEEPOUT_D/2 + MCC_RAIL_ROOT_W/2 + margin`, negated), not a hand-typed number.
+  Replace the plan's ad-hoc "2.0 mm because disc-vs-rect" with a **named** `MCC_FLOOR_FEATURE_EDGE_MIN
+  = 2.0` — §7.1's separation rule already says `max(MCC_FLOOR_FEATURE_MIN_SEP, r1+r2+2.0)`, and 20 mm
+  centre-to-centre satisfies the 15 mm term outright.
+- **R3 (blocking).** The D16 pairwise floor assert **is** in scope for #25 (the plan is right: do not
+  add a sixth unchecked feature to an unchecked set) — but it must carry the
+  `case_tripod_insert`/`fishtail_reserve` exemption or it fails on the first render of all 8 SKUs
+  (`architecture.md` §13 **D19**). It lives in `mounts.scad` (the §6 owner), not in `layout.scad`
+  (functions only).
+- **R4.** The L1 file is **`lib/mcc/rail.scad`**, not `bracket.scad`; `layout.scad` must **not**
+  `use` it (`architecture.md` §3). Barrel entry after `use <fasteners.scad>`.
+- **R5.** `mcc_floor_bore_cut()` is **retired**, not left as an empty module; `shell.scad:428`'s call
+  site becomes `mcc_rail_features_cut(dev, cfg)`. `layout.scad`'s `vesa_pos` local is renamed
+  **`floor_center`** — that name, not #29's proposed `mount_ref_pos`; **#25 owns the rename.**
+- Also: `scripts/build.py` — add `discover_brackets()` **and** register it in *both* `discover_all()`
+  and `cmd_doctor()`'s listing (which calls `discover_coupons() + discover_models()` directly, so it
+  would silently under-report). Make `discover_models()` skip `"brackets"` the way it already skips
+  `"coupons"`. `golden_path("brackets/tv-bracket", "tv-bracket")` already resolves to
+  `tests/golden/brackets/tv-bracket.json` — no change needed there.
+- The bracket plates' **cross ribs** are exactly the case `MCC_RIB_HEIGHT_RATIO_MAX` was introduced
+  for (a stiffening fin standing off a plate face) — assert it there (`architecture.md` §13 **D22**).
+
+### 17.3 Required changes — #29
+
+- **R6 (blocking).** Deck ladder ribs use **`MCC_CRADLE_RIB_T = 3.0`**. Do **not** create
+  `_mcc_cradle_deck_rib_t()` or `deck_h/3 ≈ 3.62`. Full reasoning: **D22**. In one line — the ≤3:1
+  height rule governs cantilevered fins, and these are floor-standing, cross-braced webs, stiffer in
+  every axis than the 3.0:1 far-flank ribs the repo already ships; the derived form would also make
+  rib thickness a function of `dev_h` and put two extrusion widths in one printed part.
+- **R7 (blocking).** Drop `_mcc_deck_rib_blocked()` for v1 (**D21**). If the teamlead wants it kept,
+  it must be per-**segment** and driven by an allowlist published beside `mcc_floor_keepout()`.
+- **R8 (blocking).** `cfg["tripod_insert"]` defaults **`true`** (**D-16**), set explicitly in all 8
+  `case.scad` files; `mcc_tripod_insert_bore_cut()`'s internal guard defaults true too. Bring
+  **T1-40** (solid island under the pad pocket) and **T1-41** (the boss must be braced into the
+  lattice) — both are new failure modes the lattice creates and neither is caught by `check`.
+- Not blocking, but required: **do not** edit `.claude/knowledge/**` from an implementation branch
+  (the plan's steps 9/10). Both files are architect-owned; this section is the record. **Do not
+  create `.claude/knowledge/decision-log.md`** — decisions live in `architecture.md` §11/§13 and this
+  file's §10/§15/§17, and a fourth file fragments the record. Same ruling for #24's step 13.
+
+### 17.4 Required changes — #24
+
+- **R9 (blocking).** Add `use <ports.scad>` to `vents.scad` (**D20**) — `mcc_dev_slug()` is not
+  reachable through `use <layout.scad>`; OpenSCAD's `use` is not transitive.
+- **R10 (blocking).** No magic numbers in the new asserts: the inline `1.0` edge margin becomes
+  `MCC_LID_VENT_EDGE_MIN`, and `assert(MCC_LID_VENT_WEB_W >= 1.6)` compares against a named minimum
+  (or against `MCC_VENT_WEB_W`), per §3's parameter conventions.
+- Gate the field in **one** place: read `cfg["lid_vents"]` in `mcc_shell_lid()` and call
+  `mcc_lid_vents_cut()` conditionally; do not also re-read the flag inside the module (the plan's
+  code and its doc comment disagree). Fix the doc comment.
+- Assert numbering **T1-36 / T1-37 is ratified** (T1-35 was the highest); this gate also claims
+  T1-38–T1-41 for #25/#29, so those are taken.
+- Keep `mcc_shell_lid()`'s two existing "vent band never crosses into the lid" asserts — they guard
+  the *wall* bands and stay true.
+- Golden scope is right: only `*.lid.json` may change; if a `.base.json` or `.panel.json` moves,
+  something leaked out of the lid — stop and investigate.
+
+### 17.5 `PLAN-ASSUMPTION` verdicts
+
+| Plan | # | Assumption | Verdict |
+|---|---|---|---|
+| rail | 1 | Truss safety framing: dovetail+latch is not the primary fall restraint; the printed eye is unrated; the certified safety cable is the rated element | **ESCALATED to the user — not ratifiable by the architect.** The framing is technically correct; signing it off is a safety decision. **R26.** Blocks #27 |
+| rail | 2 | Single insertion direction, not bidirectional | **RATIFIED.** Two latches double the flex-fatigue parts for a benefit nobody asked for. Reversible later |
+| rail | 3 | `MCC_RAIL_Y` offsets the rail rather than moving the 1/4"-20 insert | **RATIFIED in principle, REJECTED in value.** Keep the insert where it is; the rail moves — but to **−20**, derived from the load path, not to `+20`, derived from the obstacle. **R24 / R2** |
+| rail | 4 | `MCC_TRUSS_MOUNT_PATTERN = [40,40]` placeholder, "same status as `MCC_SPLITTERS`" | **REJECTED.** Not the same status: a wrong *reservation* makes the case bigger, a wrong *bolt pattern* makes the part scrap. **M14.** Blocks #27 |
+| rail | 5 | 30 N retention target is `assumed` | **RATIFIED** as a coupon target only. Becomes **M15**; no full-size bracket prints before that coupon is pulled |
+| rail | 6 | Bracket plate thicknesses 6 mm (TV) / 8 mm (truss) `assumed` | **RATIFIED for #26** (sandwiched flat against a TV, the plate is a shim, not a beam). **Deferred with #27** — the truss plate is a cantilever and its outline must be re-sized to ≥ the case footprint once M14 lands |
+| rail | 7 | VESA fully removed, not deprecated-but-optional | **RATIFIED — this is the user's decision (D-15).** If VESA is ever wanted back as a third option, that is new scope |
+| deck | 1 | Derived deck-rib thickness `deck_h/3` distinct from `MCC_CRADLE_RIB_T` | **REJECTED. R6 / D22** |
+| deck | 2 | `cfg.tripod_insert` defaults `false` | **OVERRULED → `true`. D-16 / R8** |
+| deck | 3 | `_mcc_deck_rib_blocked()` AABB test is conservative and unverified | **REJECTED as written. R7 / D21** — it is not merely conservative, it deletes whole rib lines |
+| deck | 4 | One global grid pitch, not per-family | **RATIFIED**, guarded by **T1-39**. Do not raise the bounds to silence a future failure |
+| deck | 5 | §4's volume/print-time figures are estimates | **RATIFIED.** The golden diff is the authority; quote before/after `volume_mm3` per SKU in the PR |
+| deck | 6 | "#25 has not landed yet" | **Resolved by the dispatch order below: #25 lands first, #29 branches off `main` after it merges.** The plan's §2 VESA-removal steps become *verification* steps, not edits |
+| lid | A | Uniform lid-vent field on fan and non-fan SKUs alike | **RATIFIED.** Same logic as §6's unconditional fan-bay reservation and T1-30's uniform application; and R5 already warns that a fan whose thermoswitch never closes is indistinguishable from a failed one, so a passive path on the Plus family is redundancy, not competition |
+| lid | B | No louvre / no dust mitigation in v1 | **RATIFIED**, recorded as **R27**. Revisit before print if the user's use ever includes rain/outdoor |
+| lid | C | 2 rows of 2 × 20 mm slots, not a hex field | **RATIFIED.** Reuses `_mcc_vent_slot_centers()` with no new primitive and clears the area target with ~60 % margin |
+| lid | — | All new `MCC_LID_VENT_*` are `assumed` | **RATIFIED.** They are design parameters, not device dimensions — the same category as `MCC_VENT_SLOT_W`. Not a "never invent a dimension" violation |
+| lid | — | T1-36/T1-37 numbering | **RATIFIED** (see R10) |
+
+### 17.6 Golden churn — justified?
+
+**Yes, for all three, and the justification is different in each case; state it in each PR.**
+
+- **#25**: every `*.base*.json` moves (4 VESA bosses + 4 bores out, rail sill + groove in).
+  **`bbox` must be byte-identical on all 8.** Two new goldens under `tests/golden/brackets/`, one new
+  `tests/golden/coupons/rail-latch.json`.
+- **#29**: every `*.base*.json` `volume_mm3` drops ≈16 % (compact) / ≈21 % (plus) and `facets` drops.
+  **`bbox` must be byte-identical.** Anything wildly outside that band is a bug, not a better lattice.
+- **#24**: only `*.lid.json` moves (`volume` down, `area` up, `facets` up, **`bbox` unchanged**).
+- In all three the ~0.5 % golden tolerance is far exceeded, so "goldens still green" would itself be
+  the failure signal — unlike D-14, where the delta hid *under* the tolerance (§16.6).
+
+### 17.7 Ordered developer dispatch
+
+All three plans edit the same 8 `models/*/case.scad` cfg blocks and the same `constants.scad`, so
+they are **serialised**, not fanned out — the seven-branch pattern of §16.5 does not apply here.
+
+| # | Branch | Base | Scope | Gate to the next |
+|---|---|---|---|---|
+| 1 | `feature/issue-25-mount-rail` | `main` | `constants.scad` (rail block, VESA constants deleted), new `lib/mcc/rail.scad`, `layout.scad` (`floor_center` rename, VESA rows out, `"mount_rail"` row in), `mounts.scad` (VESA out, sill in, `mcc_rail_features_cut()`, **D16 assert with the D19 exemption**), `shell.scad` call site, 8 × `case.scad` (`"vesa"` out), `models/coupons/rail-latch.scad`, `build.py` discovery, `tests/test_bracket.scad`, `BOM.md` VESA rows out, base goldens ×8 | merged to `main`, CI green |
+| 2a | `feature/issue-26-tv-bracket` | `main` (after 1) | `models/brackets/tv-bracket.scad` + README, `MCC_M8_CLR_D`, `BOM.md` `## Mounting brackets`, `tests/golden/brackets/tv-bracket.json` | — |
+| 2b | `feature/issue-29-cradle-deck` | `main` (after 1) | `constants.scad` (grid constants), `cradle.scad` (lattice, pad island, tripod collar, `tripod_insert` flag), 8 × `case.scad` (`"tripod_insert"` in), `tests/test_shell.scad`, base goldens ×8 | merged to `main`, CI green |
+| 3 | `feature/issue-24-lid-vents` | `main` (after 2b) | `constants.scad` (`MCC_LID_VENT_*`), `vents.scad` (+`use <ports.scad>`), `shell.scad` `mcc_shell_lid()`, 8 × `case.scad` (`"lid_vents"` in), `tests/test_shell.scad`, lid goldens ×8 | — |
+| — | **#27 truss bracket** | — | **NOT DISPATCHED.** Blocked on **M14** (buy and measure a half coupler) and on the user's sign-off of the **R26** safety framing | — |
+
+**2a and 2b may run concurrently** — disjoint file sets (`models/brackets/**` + `BOM.md` vs
+`lib/mcc/cradle.scad` + `models/*/case.scad`), and they touch different `constants.scad` sections.
+**Step 3 must not start before 2b merges**: both append to the same cfg block in the same 8 files.
+
+**Every branch:** `python scripts/build.py all` green locally, CI-green `render` before the PR
+merges, and a per-SKU before/after `volume_mm3` table in the PR body (§17.6).
 for the worked geometry (30.0 mm to the fan frame, 25.0 mm to the reservation, plug length
 `unknown`) and the four resolution options. Everything in the decoder column above is independent of
 M12 and may proceed now.

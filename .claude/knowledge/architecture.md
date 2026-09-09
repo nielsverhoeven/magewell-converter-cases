@@ -1258,6 +1258,57 @@ assert lies, too large and it fails two SKUs' builds for a figure nobody measure
 
 ---
 
+**R24 — the mount rail is a single line of restraint offset from the case's centre of mass. NEW
+2026-09-09 (rev 9, D-15).** The device sits at `y_dev_c ≈ −30.8` (compact) / `−30.6` (plus), i.e.
+well onto the far-wall side of the case; the rail is one straight dovetail. Wherever the rail is
+placed in Y, the assembly's mass is off the mount line and the joint sees a roll moment reacted only
+by the dovetail undercut plus flat contact between the case floor and the bracket plate.
+Consequences, and why `MCC_RAIL_Y = −20.0` (not the plan's `+20.0`) is the ruling:
+- **#26 requires the patch wall to hang downward.** With the rail at `−20` the case's mass then hangs
+  *below* the mount line (pure tension on the dovetail); at `+20` it hangs *above* it, and the far
+  edge peels off the plate. The moment is small (~0.5 N·m at <1 kg) but the sign is free to get right.
+- At `−20` the rail sill lands **under the cradle deck and the device**, so it is backed by deck
+  material instead of standing free in the connector bay. At `+20` it is an unsupported 150 mm rib in
+  the middle of the cable bay, which is also where the patch cables run.
+- The keep-out arithmetic is **identical** by symmetry about `y = 0`: 2.7 mm to the ⌀20
+  `case_tripod_insert` disc and to the 60 × 20 `fishtail_reserve` band, 20 mm centre-to-centre
+  (≥ `MCC_FLOOR_FEATURE_MIN_SEP` 15). At `−20` it additionally clears the splitter bay by 9.6 mm
+  (compact) / 12.9 mm (plus) and the side-bolt web by ≥ 35 mm.
+- **Residual risk, accepted:** the rail's Y position is still an `assumed` engineering choice, not a
+  computed one, and no load case has been calculated. The `rail-latch` coupon (M15) is what turns it
+  from assumed into measured. **Do not print a full-size bracket before that coupon is pulled.**
+
+**R25 — the truss bracket's mounting-flange bolt pattern is unknown, and a placeholder is worse than
+a gap. NEW 2026-09-09 (rev 9).** `docs/plans/2026-09-09-mount-rail-and-brackets.md` §4.1 proposes
+`MCC_TRUSS_MOUNT_PATTERN = [40, 40]` as an explicit placeholder. That is **not** the `MCC_SPLITTERS`
+precedent: an unmeasured *reservation envelope* being wrong makes the case slightly too big, whereas
+an unmeasured *bolt pattern* produces a printable, plausible-looking plate that simply does not bolt
+to the coupler — 8 mm of ASA and several hours of print time, with no assert and no coupon that can
+catch it. It also collides with the repo's first non-negotiable ("never invent a dimension"). Add to
+that: the proposed ~150 × 120 plate is **smaller in both axes than every case footprint**
+(194.9 × 159.85 / 211.5 × 166.35), and a 150 mm rail on a 150 mm plate leaves zero room for the end
+stop. **Ruling: #27 is deferred, not rejected on its merits — it is blocked on M14.**
+
+**R26 — the printed safety-cable eye on an overhead mount. NEW 2026-09-09 (rev 9).** The truss
+bracket's eye is a routing/pass-through feature with **no load rating**, on a bracket that hangs a
+case over people. The plan's own framing (the certified rigging safety cable is the rated secondary
+restraint, and the dovetail+latch is not claimed as the primary fall restraint) is the correct
+framing — but it is a **user safety decision, not an architect's**. Nothing in `models/brackets/`
+that is intended for overhead use may be printed for real use until the user has signed that framing
+off in writing, and the file's header comment must state that the print is not rigging-certified.
+
+**R27 — the lid vent field is an upward-facing dust and liquid path over the device's own hot top,
+and over the D-14 thermoswitch. NEW 2026-09-09 (rev 9, #24).** Straight vertical through-slots (no
+louvre) are ratified for v1 on the stated use case (touring/stage, `CLAUDE.md`; no ingress
+requirement exists in the fixed decisions), and `thermal-guidelines.md` §6's filter rule does not
+apply to an exhaust. Two consequences to carry: (a) if the user's actual use ever includes outdoor
+or rain exposure, this must be revisited *before* printing — a louvre needs a sloped feature the
+flat-lid print convention does not support today; (b) the field is centred on exactly the spot where
+D-14 bonds the **KSD9700** to the device's metal top, so debris entering the slots lands on that
+switch and its joints. Neither is a blocker; both are recorded so they are not rediscovered.
+
+---
+
 ## 12. Open questions / assumptions
 
 1. **OpenSCAD version.** The brief says nightly **2025**.09.07; today is 2026-09-07. Is this a
@@ -1336,8 +1387,12 @@ assert lies, too large and it fails two SKUs' builds for a figure nobody measure
 | **M12** | **Magewell Mini-DIN-8 breakout cable: plug body + strain-relief axial length, and cable OD** | **R23 — BLOCKING for `pro-convert-hdmi-plus` and `pro-convert-sdi-plus`.** Free space is 30.0 mm to the fan frame, 25.0 mm to the reservation; the figure is `unknown` (`mini-din8-feedthrough.md:66-68,275-277`). Decides between "change nothing", `fan_y`, a right-angle plug, or the splitter fallback | User, with the OEM breakout cable in hand |
 | **M13** | **Temperature of the device's metal top under sustained load in the closed case, ambient ~25 °C and ~35 °C** | R22 — nothing confirms 45 °C is the right trip point for this case/device pair (`poe-splitter-verification.md:234-238`). If the top never reaches 45 °C the fan never runs; if it sits at 45 °C the fan hunts | User, after the first full-size print |
 
+| **M14** | **Buy one 50 mm half coupler (Doughty T57010 / Global Truss equivalent, M12) and measure its mounting-flange bolt pattern, flange plate L × W, and overall depth** | **R25 — BLOCKING for issue #27.** No fetched source publishes the flange pattern; `MCC_TRUSS_MOUNT_PATTERN` cannot be authored honestly without it, and a placeholder produces a plate that does not bolt on. Also fixes the truss plate's own outline, which must be ≥ the case footprint | User, after buying one |
+| **M15** | **Print `models/coupons/rail-latch` and pull-test it:** slide force, axial retention at disengage (target **≥ 30 N**, `assumed`), thumb-release force, and the achieved dovetail fit at `MCC_CLR_SLIDE = 0.3` | R24 — every `MCC_RAIL_*` figure is `assumed`. Calibrates `MCC_RAIL_CLR`, `MCC_RAIL_LATCH_ENGAGE` and the retention target the same way `tg-ladder` calibrates `MCC_CLR_TG`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale |
+
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
+> **Rev 9** adds M14 (truss coupler flange) and M15 (rail-latch coupon).
 
 ---
 
@@ -1365,6 +1420,10 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D16** | 2026-09-08 | §6 floor rule: `mounts.scad` "exposes `mcc_floor_keepout()` and **asserts non-overlap** between all of them"; `layout.scad:240-243` repeats the promise | `lib/mcc/mounts.scad` asserts only VESA-boss-vs-splitter-bay (`:89-92`). There is no pairwise non-overlap check over `mcc_floor_keepout()`'s list, and `MCC_FLOOR_FEATURE_MIN_SEP` (`constants.scad:448`) is referenced by nothing | The floor is the one place §6 predicts silent collisions, and the guard that was supposed to catch them is absent. The `−X` strap slot is already positioned by a *displacement* rule whose only validation would have been this assert | **Open — library change, later single branch.** Add the pairwise `max(MCC_FLOOR_FEATURE_MIN_SEP, r1+r2+2.0)` assert over `mcc_floor_keepout(dev,cfg)` in `mounts.scad`. Not work for the seven |
 | **D17** | 2026-09-09 | A BOM row must describe a wiring path that physically exists | `BOM.md:194` (pro-convert-hdmi-plus) instructs the builder to power the fan from a "USB-A to 2/3-pin fan power lead … **Y-spliced onto the `usb_b` power feed inside the case**", "5 V/GND tapped from the incoming `NAUSB-W-B` power line upstream of the device". `BOM.md:256` (ndi-to-hdmi-4k) has the same defect in milder form, offering "or splice onto the device's own USB-B +5V feed" as an alternative. `pro-convert-sdi-plus` has a fan row (`:216`) and **no** power row at all | **The device's USB-B port is a power *input* only** (`knowledge/components/fan-power-sources.md:23,115-131`; `poe-splitter-verification.md:56-66`, quoting both manuals). On a PoE-powered device there is **no 5 V present on that line to tap** — the case ships with the fan fitted (`fan = true`) and a wiring instruction that cannot work on the user's actual stage setup. It would only ever have worked on a bench with the USB-B adapter plugged in | **Open — developer task, part of the D-14 change list.** Replace with the Mini-DIN-8 pin 8 / pin 4 row on the two Plus encoders and the USB-A host row on the Plus decoder, both via the KSD9700. Add the missing row to `pro-convert-sdi-plus`. Found while gating D-14; it is not *caused* by D-14 |
 | **D18** | 2026-09-09 | One geometric predicate, one definition (§3 "no magic numbers", §5 rev-8 blank ruling) | "Is this part a blank?" is written two different ways: `lib/mcc/neutrik.scad:39` `is_blank = (kind == "blank")`, versus `lib/mcc/shell.scad:181` and `lib/mcc/layout.scad:187` `is_blank = mcc_panel_hole_d(part) == 0` | Harmless while `DBA-BL-B` is both `kind=="blank"` **and** `hole_d==0` and is unreachable dead code (D12). **The moment `hole_d` becomes 24.0 (D-14) the two disagree**: the shell would cut the full window and the plate behind it would stay solid — a slot that looks open from outside and is blind 3 mm in. No assert catches it; it is only visible in the head-on patch-wall elevation (D11) | **Open — must land in the same commit as the `hole_d` change.** Unify on `mcc_panel_hole_d(part) == 0` in `neutrik.scad`. Note `is_24_class` at `:40` already reads `hole_d`, so the file is half-converted already |
+| **D19** | 2026-09-09 | §6 floor rule / §7.1: "`mounts.scad` exposes `mcc_floor_keepout()` and asserts non-overlap between all of them", separation `max(MCC_FLOOR_FEATURE_MIN_SEP, r1+r2+2.0)` | `lib/mcc/layout.scad:271` registers `case_tripod_insert` (⌀20 circle at `(0,0)`) and `:276` registers `fishtail_reserve` (60 × 20 rect at the **same** `(0,0)`). They are **deliberately concentric** — the Fishtail band is anchored on the same `floor_center` as the case insert and is reserve-only, no geometry is ever cut for it (§7.1 correction 4) | The D16 fix that issue #25 is required to land (§9 "no two floor features overlap") will **fail on the first render of all 8 SKUs** unless that pair is exempted. A developer who hits it will most likely "fix" it by relaxing the assert or moving the Fishtail band — silently destroying the reservation | **Open — must be handled inside the D16 fix (issue #25).** The assert takes an explicit exemption set, initially `{("case_tripod_insert","fishtail_reserve")}`, with the reason in the code: *a reserve-only band may coincide with the feature it is anchored on; two features that both cut geometry may not*. Do **not** widen it to a blanket "skip rect-vs-circle" |
+| **D20** | 2026-09-09 | §3 include discipline: a library file imports its own direct dependencies | `lib/mcc/vents.scad:14-19` `use`s `util`, `layout`, `fan`, `fasteners` — but **not** `ports.scad`. `docs/plans/2026-09-09-lid-vents.md` §3.2 calls `mcc_dev_slug(dev)` in every new lid-vent assert message, and `mcc_dev_slug()` lives in `ports.scad` | OpenSCAD's `use <>` is **not transitive** — `use <layout.scad>` does not re-export what `layout.scad` itself `use`s. Every new assert message becomes an undefined-function error, and because it is inside `str()` inside an `assert`, it only fires on the path that was supposed to report a real failure. `mounts.scad:20` already carries the exact fix, with the exact comment | **Open — one-line fix, must land with issue #24.** Add `use <ports.scad>   // mcc_dev_slug() (assert messages)` to `vents.scad`, matching `mounts.scad:20` |
+| **D21** | 2026-09-09 | §6: a floor keep-out is a plan-view registry for the `mounts.scad` non-overlap assert; `cradle.scad` never cuts the floor and never consumes floor-feature *labels* | `docs/plans/2026-09-09-cradle-deck.md` §5.2 `_mcc_deck_rib_blocked()` tests a candidate rib's **whole-length AABB** against `mcc_floor_keepout()`, with a hard-coded string allowlist (`"case_tripod_insert"`, `"fishtail_reserve"`) inside `cradle.scad` | Two defects. (a) Because each rib spans the deck's full interior on its axis, **any** keep-out band crossing the deck deletes every perpendicular rib line — with the ruled `MCC_RAIL_Y = −20` the rail band sits under the deck and would silently remove the entire Y-rib set. (b) It puts label strings owned by `layout.scad`/`mounts.scad` into `cradle.scad` with no assert tying them together; a renamed label silently turns the filter off. The plan itself records the logic is unverified against any real collision (its PLAN-ASSUMPTION 3) | **Open — decided at the rev-9 gate. Preferred: delete the filter for v1.** The deck lattice is purely additive and lives entirely above `z = MCC_FLOOR_T`; nothing in the floor needs vertical daylight through it, and if something ever does, §6 already routes that request through `mounts.scad`. If the teamlead wants forward-compat instead, it must be (i) evaluated **per rib segment**, not per rib, and (ii) driven by an allowlist published as a constant next to `mcc_floor_keepout()` in `layout.scad`, never by literals in `cradle.scad` |
+| **D22** | 2026-09-09 | §9 Tier 1: "rib thickness ≤ 0.6 × adjoining wall, height ≤ 3 × thickness" (`fdm-rugged-enclosure-guidelines.md:65-70`) | Already violated by the shipped cradle: `MCC_CRADLE_RIB_T = 3.0` against a 3.0 mm floor gives 1.0 ×, not ≤ 0.6 ×; `MCC_CRADLE_RIB_H = 9.0` gives exactly 3.0 : 1. `docs/plans/2026-09-09-cradle-deck.md` §5.1 then proposes a *second*, derived thickness `deck_h/3 ≈ 3.62` for the new deck ribs to keep the height ratio | The §9 rule is stated unscoped, so every future rib decision re-litigates it, and the plan's answer makes rib thickness a function of `dev_h` — two devices in the same family would print different deck geometry, and one part would carry two extrusion widths | **Resolved at the rev-9 gate by SCOPING the rule, not by relaxing it.** The ≤0.6 ×-wall / ≤3 ×-thickness rule governs **stiffening ribs standing off a plate or wall face** (a cantilevered fin — e.g. the bracket plates' cross ribs, which must satisfy it). It does **not** govern **floor-standing structural webs** that land on the floor slab along their whole length and are cross-braced at every intersection — the deck ladder and the far-flank ribs. Ruling: the deck ladder reuses **`MCC_CRADLE_RIB_T = 3.0`**; `MCC_RIB_HEIGHT_RATIO_MAX` is introduced only for the bracket-plate ribs; `_mcc_cradle_deck_rib_t()` is **not** created |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
