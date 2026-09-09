@@ -10,6 +10,7 @@
 //////////////////////////////////////////////////////////////////////
 
 include <BOSL2/std.scad>
+include <BOSL2/screws.scad>
 include <constants.scad>
 use <util.scad>
 
@@ -91,74 +92,126 @@ module mcc_neutrik_d_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, pan
     }
 }
 
+// Module: mcc_thread_pad()
+// Usage:
+//   mcc_thread_pad([pad_d=], [pad_h=], [slop=]);
+// Description:
+//   One additive pad (ADDITIVE solid, union onto the panel) carrying a printed M3x0.5 internal
+//   thread bore (GitHub issue #30, architecture.md §5 "Connector fixing" bullet 3, rev 10,
+//   2026-09-09). Public so mcc_neutrik_d_bosses() (below, connector fixing) and
+//   models/coupons/m3-thread-ladder.scad (the calibration ladder) share ONE geometry source — a
+//   coupon that hand-rebuilds this shape cannot calibrate the constant it exists to calibrate
+//   (architect verdict B5, docs/plans/2026-09-09-printed-m3-threads.md §9). Do not call BOSL2
+//   `screw_hole()` directly from models/** — always through this module.
+//   Local Z convention matches the pre-#30 boss: Z=0 is the pad's seat face (the screw ENTERS
+//   here, from the panel side), the pad extends to Z=-pad_h (the rear tip). The bore is a genuine
+//   THROUGH-hole, open at both Z=0 and Z=-pad_h — required so this union does not hit the same
+//   Manifold "blind-bore-flush-against-a-face" defect documented at length in shell.scad's
+//   _mcc_patch_wall_fixing_bosses() (deviation D10); verified clean for this exact pad-on-plate
+//   shape by an isolated repro during this ticket's research pass (plan §1).
+//   When MCC_THREAD_FAST is true, the bore is a plain MCC_M3_CLR_D clearance cylinder instead of a
+//   real thread — fast dev-iteration renders / the interactive case-viewer artifact only
+//   (architect verdict B6). NEVER true for a release/coupon/print export — goldens, CI `render`/
+//   `check`, and every release/coupon export use the default (false, real thread).
+//   $fn policy exception (architecture.md §3, rev 10): the thread bore itself is $fn=32 — BOSL2
+//   `screw_hole()` accepts no `circum` argument, so the usual circumscribe mechanism this repo
+//   otherwise requires is unavailable, and the fit is carried by `slop` + assert T1-42c, not by
+//   facet count (see the architecture.md citation for the full justification). The pad's own outer
+//   cylinder keeps the repo's normal $fn=64 + circum=true — this exception is scoped to the thread
+//   bore only, not to the pad shape.
+// Arguments:
+//   pad_d = pad outer diameter, mm. Default: MCC_THREAD_M3_PAD_D (8.28).
+//   pad_h = total rearward pad length from the seat, mm. Default: MCC_THREAD_M3_PAD_H (7.0).
+//   slop  = BOSL2 $slop radial print-compensation for the thread bore, mm. Default:
+//           MCC_THREAD_M3_SLOP (0.05).
+//   fast  = force the cheap clearance-bore path regardless of MCC_THREAD_FAST. Default:
+//           MCC_THREAD_FAST (false) — same overridable-default idiom as mcc_ghost(dev, show =
+//           MCC_SHOW_GHOST) (ghost.scad), so a smoke test can exercise both paths from one file
+//           without having to re-`include` constants.scad with a different -D value.
+//   enforce_min_radial = when false, SKIP the T1-42c residual-radial-engagement assert only
+//           (T1-42a wall and T1-42b turns still always assert). Default: true (every production
+//           call site — mcc_neutrik_d_bosses() — keeps the full contract). Exists ONLY for
+//           models/coupons/m3-thread-ladder.scad: architecture.md rev 10 B1 mandates the ladder
+//           sweep $slop across EXACTLY [0.02, 0.035, 0.05, 0.065, 0.08], and rev 10 also mandates
+//           T1-42c as unconditional — but the top rung (0.08) fails T1-42c by construction
+//           (residual = 0.2705 - 2*0.08 = 0.1105 < 0.135), so a hard, unconditional assert makes
+//           the mandated ladder physically un-renderable as one coupon. T1-42c is a *production*
+//           policy floor (never ship a pad below 50% nominal engagement); the ladder's entire
+//           purpose is to physically test rungs on both sides of that floor and read back which
+//           one actually strips a real screw — so letting the coupon (and ONLY the coupon)
+//           instantiate a rung the policy would reject for production is the point of a
+//           calibration ladder, not a bug. Flagged to the architect/user in this ticket's PR
+//           rather than silently resolved either by dropping T1-42c or by silently shrinking the
+//           architect-mandated rung array.
+module mcc_thread_pad(pad_d = MCC_THREAD_M3_PAD_D, pad_h = MCC_THREAD_M3_PAD_H, slop = MCC_THREAD_M3_SLOP, fast = MCC_THREAD_FAST, enforce_min_radial = true) {
+    // T1-42a: pad wall thickness around the (slopped) major diameter. BOSL2 grows an internal
+    // thread by 4*slop in DIAMETER (screws.scad:753), i.e. 2*slop per side.
+    thread_major_slopped = MCC_THREAD_M3_MAJOR_D + 4 * slop;
+    wall = (pad_d - thread_major_slopped) / 2;
+    assert(wall >= MCC_THREAD_WALL_MIN,
+        str("mcc: T1-42a thread pad wall=", wall, " below minimum ", MCC_THREAD_WALL_MIN, " mm (pad_d=", pad_d, ", slop=", slop, ")"));
+
+    // T1-42b: engaged thread turns.
+    engaged_len = pad_h - MCC_THREAD_M3_CHAMFER;
+    turns = engaged_len / MCC_THREAD_M3_PITCH;
+    assert(turns >= MCC_THREAD_ENGAGE_MIN_TURNS,
+        str("mcc: T1-42b thread engagement=", turns, " turns below minimum ", MCC_THREAD_ENGAGE_MIN_TURNS, " (pad_h=", pad_h, ")"));
+
+    // T1-42c: residual radial thread engagement after slop — the assert that catches a $slop
+    // value large enough to erase the thread outright (architecture.md rev 10, B1). Skippable ONLY
+    // via enforce_min_radial=false (see the argument doc above) — every production call site
+    // leaves this true.
+    residual_radial = MCC_THREAD_M3_MAJOR_D / 2 - MCC_THREAD_M3_MINOR_D / 2 - 2 * slop;
+    if (enforce_min_radial)
+        assert(residual_radial >= MCC_THREAD_ENGAGE_MIN_RADIAL,
+            str("mcc: T1-42c residual radial thread engagement=", residual_radial, " below minimum ", MCC_THREAD_ENGAGE_MIN_RADIAL, " mm (slop=", slop, ")"));
+
+    difference() {
+        translate([0, 0, -pad_h / 2])
+            cyl(h = pad_h, d = pad_d, circum = true, $fn = 64);
+        if (fast) {
+            // Fast path: plain screw-clearance bore, same $fn/circum convention as every other
+            // plain M3 clearance hole in this file. NEVER for a release/coupon/print export.
+            translate([0, 0, -pad_h - MCC_EPS])
+                cyl(h = pad_h + 2 * MCC_EPS, d = MCC_M3_CLR_D, circum = true, $fn = 64);
+        } else {
+            // Real path (default): printed M3x0.5 internal thread. anchor=BOTTOM at Z=-pad_h
+            // means the hole's BOTTOM is the pad's rear tip and its TOP is the panel-facing seat
+            // face where the screw actually starts — bevel2 (not bevel1) is therefore the correct
+            // lead-in chamfer end (architect verdict B3).
+            translate([0, 0, -pad_h])
+                screw_hole(str("M3,", pad_h + 2 * MCC_EPS), thread = true, tolerance = "6H",
+                    $slop = slop, bevel2 = true, anchor = BOTTOM, $fn = 32);
+        }
+    }
+}
+
 // Module: mcc_neutrik_d_bosses()
 // Usage:
-//   mcc_neutrik_d_bosses(part, [mirror=], [boss_h=]);
+//   mcc_neutrik_d_bosses(part, [mirror=], [pad_h=], [pad_d=]);
 // Description:
-//   Two rear bosses (ADDITIVE solid, union onto the panel) at the two screw positions, each with a
-//   bore a screw can actually reach through end to end (T1-35, deviation D10 rev 6 fix — "there is
-//   no place to screw the D-connectors down", 2026-09-08). architecture.md:206-207 "local rear
-//   bosses at the two screw positions, protruding rearward from the 2.0 mm seat to ~7 mm total".
-//   Local Z convention: Z=0 is the rear pocket floor (butts against the panel), the boss extends to
-//   Z=-boss_h. The bore is SPLIT in two, unlike a plain blind pocket: an insert bore of diameter
-//   `insert.hole_d`, depth `insert.len + MCC_INSERT_BORE_EXTRA`, opens at the rear tip (Z=-boss_h)
-//   and goes forward; the REMAINDER of the boss, from there to the panel-side face (Z=0), is a
-//   `MCC_M3_CLR_D` screw-clearance through-bore — so there is NO solid material anywhere on the
-//   screw axis between the flange face and the insert. Before this fix the bore was a single
-//   `insert.len + 1` blind pocket cut from the rear tip only (`insert_len + 1 = 6.7` against
-//   `boss_h = 7`), leaving 0.3 mm of solid ASA across the screw axis right behind the panel's own
-//   M3 clearance hole — the screw physically could not reach the insert.
+//   Two rear pads (ADDITIVE solid, union onto the panel) at the two screw positions, each carrying
+//   a printed M3 internal thread the connector's own machine screw drives straight into (GitHub
+//   issue #30, 2026-09-09 — replaces the heat-set-insert version of this module, T1-35/deviation
+//   D10's fix). The plate's own 4 retention bosses in shell.scad are UNCHANGED (still heat-set
+//   inserts) — this module only covers the connector-to-plate fixing
+//   (docs/plans/2026-09-09-printed-m3-threads.md §0). Geometry lives in mcc_thread_pad() (above);
+//   this module only places two of them at the standard diagonal.
 // Arguments:
-//   part    = panel part number (only used to keep the call site symmetric with the cutout call;
-//             the boss geometry itself does not vary per connector).
-//   mirror  = mirror the two screw-hole positions left-right, matching mcc_neutrik_d_cutout()'s
-//             own `mirror` argument so the two calls stay aligned. Default: false.
-//   boss_h  = total rearward boss length from the seat, mm. Default: 7 (architecture.md:207).
-//   boss_od = boss outer diameter override, mm. Default: MCC_BOSS_MIN_RATIO * insert OD.
-module mcc_neutrik_d_bosses(part, mirror = false, boss_h = 7, boss_od = undef) {
-    insert        = MCC_INSERT_M3;
-    insert_od     = struct_val(insert, "od");
-    insert_hole_d = struct_val(insert, "hole_d");
-    insert_len    = struct_val(insert, "len");
-    _boss_od      = is_undef(boss_od) ? MCC_BOSS_MIN_RATIO * insert_od : boss_od;
-
-    // architecture.md:348 "heat-set boss OD >= 1.8 * insert OD".
-    assert(
-        _boss_od >= MCC_BOSS_MIN_RATIO * insert_od,
-        str("mcc: boss_od=", _boss_od, " below minimum ", MCC_BOSS_MIN_RATIO, "x insert OD (", insert_od, ")")
-    );
-
+//   part   = panel part number (kept only to keep the call site symmetric with the cutout call;
+//            the pad geometry itself does not vary per connector).
+//   mirror = mirror the two screw-hole positions left-right, matching mcc_neutrik_d_cutout()'s own
+//            `mirror` argument. Default: false.
+//   pad_h  = total rearward pad length from the seat, mm. Default: MCC_THREAD_M3_PAD_H (7.0).
+//   pad_d  = pad outer diameter override, mm. Default: MCC_THREAD_M3_PAD_D (8.28).
+module mcc_neutrik_d_bosses(part, mirror = false, pad_h = MCC_THREAD_M3_PAD_H, pad_d = MCC_THREAD_M3_PAD_D) {
     mirror_x = mirror ? -1 : 1;
     screw_x  = mirror_x * MCC_D_SCREW_PITCH[0] / 2;
     screw_y  = MCC_D_SCREW_PITCH[1] / 2;
 
-    // T1-35: insert bore from the rear tip, MCC_M3_CLR_D clearance through-bore the rest of the
-    // way to the panel-side face — the two together must exactly span boss_h so no solid remains
-    // on the screw axis anywhere between the flange face and the insert.
-    insert_bore_depth = insert_len + MCC_INSERT_BORE_EXTRA;
-    thru_depth = boss_h - insert_bore_depth;
-
-    assert(insert_bore_depth <= boss_h,
-        str("mcc: T1-35 insert_bore_depth=", insert_bore_depth, " exceeds boss_h=", boss_h));
-    assert(thru_depth >= 0,
-        str("mcc: T1-35 thru_depth=", thru_depth, " negative — boss_h=", boss_h, " too short for insert_bore_depth=", insert_bore_depth));
-
-    for (pos = [[-screw_x, screw_y], [screw_x, -screw_y]]) {
+    for (pos = [[-screw_x, screw_y], [screw_x, -screw_y]])
         translate([pos[0], pos[1], 0])
-        difference() {
-            translate([0, 0, -boss_h / 2])
-                cyl(h = boss_h, d = _boss_od, circum = true, $fn = 64);
-            // Insert bore: opens at the rear tip (Z=-boss_h), extends forward by insert_bore_depth.
-            translate([0, 0, -boss_h + insert_bore_depth / 2])
-                cyl(h = insert_bore_depth + MCC_EPS, d = insert_hole_d, circum = true, $fn = 64);
-            // Screw-clearance through-bore: carries the axis the rest of the way to Z=0 (the
-            // panel-side face / the panel's own MCC_M3_CLR_D clearance hole), so nothing solid
-            // remains on the screw axis.
-            if (thru_depth > 0)
-                translate([0, 0, -boss_h + insert_bore_depth + thru_depth / 2 + MCC_EPS])
-                    cyl(h = thru_depth + 2 * MCC_EPS, d = MCC_M3_CLR_D, circum = true, $fn = 64);
-        }
-    }
+            mcc_thread_pad(pad_d = pad_d, pad_h = pad_h);
 }
 
 // Module: mcc_neutrik_d_flange_outline()

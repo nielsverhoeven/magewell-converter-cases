@@ -17,6 +17,7 @@ Printer: **Bambu Lab X1 Carbon**, 256×256×256 mm, enclosed, 0.4 mm nozzle, ASA
 | `depth-mockup.scad` | The real mating patch cable's plug seats with a comfortable bend at the budgeted bay depth | `lib/mcc/constants.scad` : `MCC_PANEL_PARTS[<part>].plug_len` (cross-checks `.bend`) |
 | `tg-ladder.scad` | Which tongue-and-groove per-side clearance slides freely without slop | `lib/mcc/constants.scad` : `MCC_CLR_TG` |
 | `insert-boss.scad` | Which M3 heat-set insert bore diameter seats with firm hand pressure in ASA without splitting the boss | `lib/mcc/constants.scad` : `MCC_INSERT_M3` → `hole_d` entry |
+| `m3-thread-ladder.scad` | Which `$slop` value on a printed M3×0.5 internal thread (Neutrik connector-fixing pad, GitHub issue #30) survives **≥5 insert/remove cycles** with a real M3 machine screw, without stripping the pad | `lib/mcc/constants.scad` : `MCC_THREAD_M3_SLOP` |
 | `tolerance-ladder.scad` | Which round peg/hole per-side clearance is a free slide vs. a firm press fit | `lib/mcc/constants.scad` : `MCC_CLR_SLIDE` (slide), `MCC_CLR_PRESS` (press) |
 | `side-bolt.scad` | The captive 1/4"-20 side bolt (D-09, **flush per D-13**): the real slotted screw seats with its head recessed, a DIN 6799 E-clip snaps into the pocket and holds the screw captive, the screw reaches its engagement length into a nut behind the EPDM pad, and the ASA **central support web** (root fillet retired by D-13) carries real clamp load down to the coupon's own base plate without cracking or needing slicer supports | `lib/mcc/constants.scad` : `MCC_SIDE_BOLT_HEAD_D`/`_HEAD_H`/`_HEAD_REC_D`/`_HEAD_REC_H`, `MCC_SIDE_BOLT_WEB_T`, `MCC_SIDE_BOLT_CLIP`, `MCC_SIDE_BOLT_POCKET_D`/`_POCKET_H`, `MCC_SIDE_BOLT_ENGAGE`, `MCC_SIDE_BOLT_PAD_OD`/`_PAD_ID`, `MCC_SIDE_BOLT_SCREW_LEN`, `MCC_GAP_FAR`, `MCC_SIDE_BOLT_PROUD`, `MCC_SIDE_BOLT_SUPPORT_WEB_T`, `MCC_SIDE_BOLT_AXIS_Z` |
 
@@ -28,7 +29,7 @@ Printer: **Bambu Lab X1 Carbon**, 256×256×256 mm, enclosed, 0.4 mm nozzle, ASA
 .venv\Scripts\python scripts\build.py golden
 ```
 
-`render --all` picks up all six coupons automatically (`scripts/build.py`'s `discover_coupons()`
+`render --all` picks up all seven coupons automatically (`scripts/build.py`'s `discover_coupons()`
 globs `models/coupons/*.scad`). `--format both` emits `.stl` (used for the Tier-3 mesh checks and
 golden measurement) and `.3mf` (what actually goes to Bambu Studio) into
 `exports/coupons/<name>/<part>.{stl,3mf}` — gitignored, local only.
@@ -67,6 +68,7 @@ about the other.
 | `depth-mockup` | **Flat, floor plate down on the bed**, walls rising vertically out of the floor. No supports needed. | A flat-printing U-channel: the floor plate is the bed-contact face, and both the panel wall and the mock-face wall stack directly on top of the floor (and of each other's ribs), so every layer has full support from the layer below. The only overhang is the connector cutout's horizontal hole, which prints with a short self-supporting bridge at its top — expected, not a defect (print-check §8 exception, noted in the coupon's own header comment). |
 | `tg-ladder` | **Flat, base plate down.** | Base is a simple flat plate; tongues/grooves project upward, no bridging. Brim recommended — base footprint is 230×36 mm, the longest single dimension of any coupon here. |
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |
+| `m3-thread-ladder` | **Flat, base plate down**, pad bores facing up. | Same "hole axis vertical" rule as `insert-boss` — `mcc_thread_pad()`'s bore is a through-hole open at both the pad's rear tip (up, once placed on the base) and its seat face (down, into the base), so it prints as a true-circle thread helix with no bridging, matching the panel plate's own face-down production orientation (`print-check §3`). Print in the **same batch as `neutrik-tile`** (R28, architecture.md §11) — the two coupons together are the physical gate for this ticket. |
 | `tolerance-ladder` | **Flat, base plate down**, pegs facing up. | Peg/hole axis vertical for both the printed pegs and the through-holes in the base — true circles, no bridging. |
 | `side-bolt` | **Print flat on the base**, wall slab vertical, boss/support-web horizontal off the wall, self-supporting. As modeled: the small base pad is the bed-contact face and stands in for the case's interior floor; the wall slab rises vertically off it and the boss protrudes horizontally off the wall at the real (unscaled) axis height above the base — the same orientation the far wall prints in on a full case. No rotation needed. | Matches how `shell.scad` will eventually orient this feature (a horizontal boss off a vertical wall). Since D-13 the boss is flush and a **central vertical support web** (`mcc_captive_side_bolt_boss()`'s `support_web_t`/`web_to_floor_h`) — not a root fillet — carries the cantilever down to the base plate; whether that web alone prints clean without slicer supports is exactly what this coupon exists to verify. |
 
@@ -138,6 +140,36 @@ number under a stale `confidence: "drawing"` still reads as unverified.
 - Record: which bore diameter(s) gave a good seat, and the failure mode (loose vs. split) for the
   ones that didn't.
 - Update: `lib/mcc/constants.scad` → `MCC_INSERT_M3` → `hole_d` entry (currently `4.0` mm).
+
+### m3-thread-ladder
+
+- Thread a real M3 machine screw (plain, no self-tap — Neutrik's own bundled screws are self-tapping
+  and must **not** be used to test a printed thread) into each of the 5 labelled pads
+  (0.02/0.035/0.05/0.065/0.08).
+- For each pad: does the screw start and thread in smoothly with light finger torque (no
+  cross-threading, no grinding/binding feel), and does it hold once seated (doesn't spin freely,
+  doesn't pull out under light axial tension)?
+- **Acceptance is ≥5 insert/remove cycles per pad, not a single successful seat (R28).** Repeat the
+  thread-in/thread-out cycle 5 times per pad, minimum. A connector gets unscrewed for cable service
+  in the field, and repeat-cycle stripping — not a single failed first seat — is the exact failure
+  mode a heat-set insert existed to prevent. Watch specifically for: the thread crest rounding off
+  and the screw starting to spin without engaging, visible plastic curling/shaving at the pad's
+  entry face, or the pad cracking radially.
+- **Good** = the loosest (highest-`$slop`) pad that still holds through all 5 cycles without
+  stripping, cracking, or losing retention. If even the tightest pad (0.02) strips before 5 cycles,
+  the whole approach is in question — stop and report per R28's fallback (revert to a heat-set
+  insert in the same pad; the pad's external footprint was pinned specifically so this revert stays
+  cheap).
+- Record: which `$slop` value(s) survived 5 cycles cleanly, the failure mode (stripped / cracked /
+  never held) for any that didn't, and how many cycles each survived before failing if fewer than 5.
+- Update: `lib/mcc/constants.scad` → `MCC_THREAD_M3_SLOP` (currently `0.05` mm, `assumed`) — pick the
+  **loosest** (highest) value that survived 5 clean cycles, the same "tightest-that-still-works /
+  loosest-that-still-holds" logic as `tg-ladder`/`tolerance-ladder` above. Bump the constant's
+  `confidence` language in its comment from "assumed" toward "measured via m3-thread-ladder coupon,
+  <date>, <N> cycles" once confirmed. Also print and test **`neutrik-tile`** in the same batch (R28)
+  — a ladder pad in isolation and a pad behind a real seated connector are not guaranteed to behave
+  identically, and `neutrik-tile` is what confirms a real Neutrik connector's own screws (not just a
+  generic M3 machine screw) seat and re-seat cleanly.
 
 ### tolerance-ladder
 
