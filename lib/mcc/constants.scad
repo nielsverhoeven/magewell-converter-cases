@@ -562,6 +562,19 @@ MCC_CRADLE_FLOOR_PAD_T = 2.0; // compliant EPDM floor-pad thickness under the de
 MCC_CRADLE_FLOOR_PAD_MIN = 40; // minimum compliant floor-pad footprint (square), mm.
                                 // layout-patch-wall.md §7 "footprint >= 40x40".
 
+// Ribbed cradle deck lattice (issue #29, rev 9 D-17 -- replaces the solid deck slab). The ladder
+// ribs reuse MCC_CRADLE_RIB_T above, NOT a derived per-family thickness -- architecture.md §13 D22
+// scopes the <=3x-height:thickness rule to cantilevered fins, not these floor-standing,
+// cross-braced webs, so no second rib-thickness constant is introduced here.
+MCC_CRADLE_DECK_GRID_PITCH = 22.0; // target interior ladder-rib pitch, mm -- GitHub issue #29 ("3 mm
+                                     // ribs on a 20-25 mm grid"), mid-point of that range. Achieved
+                                     // pitch varies per SKU (rounds to a whole number of bays) --
+                                     // bounded by the two constants below (T1-39).
+MCC_CRADLE_DECK_GRID_PITCH_MIN = 16.0; // T1-39 assert lower bound on achieved grid pitch, mm.
+                                         // layout-patch-wall.md §9 T1-39.
+MCC_CRADLE_DECK_GRID_PITCH_MAX = 32.0; // T1-39 assert upper bound on achieved grid pitch, mm.
+                                         // layout-patch-wall.md §9 T1-39.
+
 // Tongue-and-groove production dimensions (D-07: tongue on the base, groove in the lid). REV-5
 // VALUES (layout-patch-wall.md §15 ruling 4 / T1-33) — an earlier plan draft's 3.0/4.0 is
 // geometrically impossible: MCC_LID_T is a fixed 3.0 mm (H=51.0 is a fixed user decision), so a
