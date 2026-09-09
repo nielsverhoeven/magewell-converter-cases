@@ -22,7 +22,9 @@ MCC_DEV_PRO_CONVERT_FOR_NDI_TO_SDI = [
         [["id", "sdi_out"],   ["face", [ 1, 0, 0]], ["pos", [-16, 0]], ["kind", "bnc"],
          ["dir", "out"],      ["panel", "NBB75DFGB"], ["confidence", "photo"]],
         [["id", "usb_host"],  ["face", [ 1, 0, 0]], ["pos", [ 16, 0]], ["kind", "usb_a"],
-         ["dir", "bidir"],    ["panel", "NAUSB-W-B"], ["confidence", "photo"]],
+         // panel DBA-BL-B, not NAUSB-W-B (user decision 2026-09-09, D-14): host port never used by
+         // the build; slot stays built and reusable behind a blank (architecture.md §5 rev 8).
+         ["dir", "bidir"],    ["panel", "DBA-BL-B"], ["confidence", "photo"]],
         // Face B (knowledge/magewell/models/pro-convert-for-ndi-to-sdi.md:22): USB-B +5V -> LED -> RJ45
         [["id", "usb_b"],     ["face", [-1, 0, 0]], ["pos", [-16, 0]], ["kind", "usb_b"],
          ["dir", "power"],    ["panel", "NAUSB-W-B"], ["confidence", "photo"]],

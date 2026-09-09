@@ -1,6 +1,24 @@
 # Patch-wall layout contract
 
-Status: **revision 7, 2026-09-08.** Rev 7 is the pre-implementation architecture gate for the seven
+Status: **revision 8, 2026-09-09.** Rev 8 carries the user's fan-power decision (**D-14**, §10) into
+this contract. Two things change here and nothing else does:
+
+1. **§2.5 gains the `DBA-BL-B` ruling.** A blanked slot is a **reserved** slot, not a deleted one:
+   `MCC_PANEL_PARTS["DBA-BL-B"].hole_d` goes `0 → 24.0`, so the plate gets its full ⌀24.2 cutout and
+   the wall gets its full `d_win = 24.8` teardrop + two reliefs, and a purchased `DBA-BL-B` blanking
+   plate covers them. Any D connector can be fitted later **without reprinting anything**.
+   `depth`/`plug_len`/`bend` stay 3.2/0/0, so the blank still costs no bay depth and still ranks
+   `[0, 0]` — **innermost, §3 step 6 is unaffected.**
+2. **§16.6 is new**: the per-SKU consequences. The three decoders' **slot 3 becomes `DBA-BL-B`**;
+   **slot order is unchanged on all three**, and **every envelope figure in §16.1 is unchanged**.
+
+**Not changed by rev 8:** §1 (frame), §2.1–§2.4, §3's algorithm, §4 (end zones), §5 (bay/vent
+geometry), §6, §7, §7.1, §8's envelopes, and every T1-xx except the note added to T1-04. **One
+BLOCKING item** is recorded against the two Plus encoders — the internally-cabled Mini-DIN-8 plug
+vs. the fan bay (`architecture.md` §11 **R23**, measurement **M12**) — and it is a measurement, not
+a contract change. Rev-7 history follows.
+
+Rev 7 is the pre-implementation architecture gate for the seven
 remaining SKUs (GitHub issues #3–#9), built in parallel on seven branches. It adds **§16** (the
 per-SKU fit-check table, the per-SKU ruling, and the parallel-work rules), and makes two record
 corrections: **§2.5's boss-relief positions** (the *placed* plate puts its rear bosses at
@@ -384,6 +402,42 @@ all four connectors on the bench, then drop it in" assembly sequence that makes 
 handleable at all. The 1.0–1.24 mm crescent is the price and it is cheap. Recorded so it is not
 re-opened (§15 ruling 2026-09-08b, option C).
 
+### 2.5.1 `DBA-BL-B` — a blanked slot is a RESERVED slot (rev 8, 2026-09-09, D-14 part 4)
+
+**Ruling: give `DBA-BL-B` a real hole.** `MCC_PANEL_PARTS["DBA-BL-B"].hole_d = **24.0**` (was 0),
+class **etherCON/universal-D**; `depth 3.2`, `max_panel_t 4.0`, `plug_len 0`, `bend 0`,
+`kind "blank"`, `confidence "drawing"` — **all unchanged**. Consequence, slot by slot:
+
+| Where | With `hole_d = 0` (before) | With `hole_d = 24.0` (rev 8) |
+|---|---|---|
+| **Plate** (`mcc_panel_plate` → `mcc_panel_cutout` → `mcc_neutrik_d_cutout`) | 2 × ⌀3.4 M3 holes only; the field stays solid behind the blank | ⌀`24.0 + MCC_HOLE_COMP` = **⌀24.2** round cutout + the same 2 × ⌀3.4 holes + the same 2 rear bosses |
+| **Wall window** (`_mcc_patch_wall_window`) | the 2 boss reliefs only | the full **`union()`**: truncated-teardrop body circle `d_win = 24.2 + 2·MCC_CLR_SLIDE = **24.8**`, `cap_h = 12.8`, `w_flat = 9.48`, plus the 2 × ⌀8.88 reliefs — i.e. **byte-for-byte the `NE8FDP-B` window** |
+| **Bay depth** | 3.2 | **3.2, unchanged** — never the `max`, so `d_bay_free` and `W` do not move |
+| **Slot rank** `[bend, plug_len]` | `[0, 0]` | **`[0, 0]`, unchanged** — still the lowest row in `MCC_PANEL_PARTS`, so a blank still sorts **innermost** in its block (§3 step 5/6) |
+| **End zone / `L`** | keyed by port `kind`, not by `panel` | **unchanged** — `mcc_dev_side_allow()` never sees the part |
+
+**Why 24.0 and not 23.6.** The whole point is that the slot stays convertible. ⌀23.8 accepts
+`NAHDMI-W-B` / `NAUSB-W-B` / `NBB75DFGB` but **not** `NE8FDP-B`, whose documented minimum is ⌀24.0
+(`knowledge/neutrik/d-series-cutout.md:36`). ⌀24.2 accepts all four, and the 26 × 31 flange still
+overlaps it by ~0.9 mm per side — the identical margin every etherCON slot in this repo already has.
+
+**Asserts.** `mcc_cutout_d = 24.2` lands inside `neutrik.scad:48`'s 24-class band `[24.0, 24.6]` ✓.
+T1-34a: `w_flat = 9.48 ≤ MCC_APERTURE_BRIDGE_MAX (10.0)` ✓, `d_rel = 8.88 < 10.0` ✓,
+`cap_h = 12.8 > mcc_cutout_d/2 = 12.1` ✓. T1-34b intrusion = **1.235 mm** ≤ 1.5 ✓ (the etherCON
+figure — a blanked slot is now the etherCON case in every geometric respect). T1-34c/d are
+positional and unchanged. **These are the same numbers §16.2 already records as "constant across all
+seven"; a blank adds no new pass/fail.**
+
+**Required with it (deviation D18, `architecture.md` §13).** `neutrik.scad:39` decides "is this a
+blank?" from `kind == "blank"`, while `shell.scad:181` and `layout.scad:187` decide it from
+`mcc_panel_hole_d(part) == 0`. **Unify on `hole_d == 0`.** Left as is, the shell opens the window
+and the plate behind it stays solid — a slot that reads open from outside and is blind 3 mm in, with
+no assert to catch it (only the head-on `−Y → +Y` elevation, D11).
+
+**T1-04 note (rev 8).** "every slot carries exactly one part (external port or `DBA-BL-B`)" now has
+a *second* way to be satisfied: not only a padded, unallocated slot, but a real port whose `panel`
+is `"DBA-BL-B"`. Both are legal; the assert is unchanged.
+
 **Nothing in the shell needs a relief for the plate's bosses other than the two window circles.** The
 bosses run from `y = W/2 − 5` to `y = W/2 − 12`; the lip occupies `y ∈ [W/2 − 8, W/2 − 5]`, so the
 reliefs must be **through-holes** in the lip (a blind pocket cannot work — the boss is 7 mm long and
@@ -427,6 +481,19 @@ mcc_slot_for_port(dev, port_id) -> integer 1..n_slots
    - Block B: highest rank → slot `n_slots`, next → slot `n_slots-1`, …
 6. Any slot left unallocated (only possible if the caller pads `n_slots` up to 4 for a spare) is
    `DBA-BL-B`. Unallocated slots are always the innermost ones, which is where a blank belongs.
+
+> **Rev 8, 2026-09-09 — a blank can now also arrive from the *data*.** Since D-14 a device file may
+> carry `["panel", "DBA-BL-B"]` on a port that is deliberately not brought out (the decoders'
+> `usb_host`). Such a port is still **external** (`mcc_ports_external()` filters on
+> `panel != "none"`, `ports.scad:58`), so it still consumes a slot and `n_slots` does not change —
+> which is the whole point: the slot, its plate cutout and its wall window are all built and stay
+> reusable (§2.5.1). **The algorithm needs no change:** `DBA-BL-B`'s rank is `[0, 0]`, the lowest
+> row in `MCC_PANEL_PARTS`, so step 5 places it at the innermost end of its block automatically —
+> exactly where step 6 already puts padded blanks. On all three decoders the blanked port was
+> *already* the innermost of block B, so **the slot order does not move at all** (§16.6).
+> The one thing a developer must not do is set `["panel", "none"]` instead: that drops the port out
+> of `ext`, takes `n_slots` from 4 to 3, re-pitches the whole plate, moves the envelope, and leaves
+> no slot to convert later — the opposite of what was asked for.
 
 **Why "stiffest outermost".** The outermost slot is the one whose rear plug sits in the end-zone
 corner, directly opposite the device's end face. A cable to that slot makes exactly one 90° L. A
@@ -1138,6 +1205,7 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **D-10** | **PoE-splitter reservation defaults to a dongle-class 75 × 40 × 20 mm envelope** (`DONGLE-75x40x20`, `constants.scad:164`), `GAT-USBC` retained as a non-default alternative. | **User, 2026-09-08** | **fixed** in data; placement resolved by D-12 |
 | **D-11** | **The `develop` branch is dropped.** `feature/*` → `main` by CI-green PR; releases are annotated `vX.Y.Z` tags on `main`. | **User, 2026-09-08** | **fixed**; `render.yml` conforms and the docs were rewritten on 2026-09-08 (deviation D3 **resolved**) |
 | **D-12** | **The reserved splitter bay and the −X cable allowance SUM: `ez_neg = 27 + 20 = 47`.** §6's reservation rule is honoured unconditionally in every variant. Every `L` grows 20 mm (compact 194.9, plus 211.5); **both families cross the 180 mm span threshold, so all SKUs get 6 lid thumbscrews**; T1-28 passes by construction. `MCC_END_ZONE_NEG_EXTRA_SPLITTER` is derived from `MCC_SPLITTERS[part].size[2]`, so measurement M3 flows straight into `L`. | **User, 2026-09-08** (resolves R15; option (a) of three) | **fixed** |
+| **D-14** | **Fan power is device-sourced; a thermoswitch gates it; no PoE splitter by default; the decoders' host slot becomes a reusable blank.** (1) On stage everything is PoE from an 802.3at switch; the decoders' USB-A host port and the PTZ/Tally port are never used as such. (2) Fan = **NF-A4x10 5V plain** (0.05 A max) in series with a **KSD9700 45 °C normally-open** bimetal switch bonded to the device's metal top. (3) 5 V from the **USB-A host** port on the decoders, from **Mini-DIN-8 pin 8 (VCC, 5 V, 100 mA max) + pin 4 (GND)** on the encoders; **NDI to AIO stays passive** (it has neither port). **No splitter by default — the bay stays reserved per §6/D-12.** (4) The decoders' host slot becomes a **`DBA-BL-B` blank with the full ⌀24.0-class hole** (§2.5.1) so it stays convertible. **D-01 is untouched:** the Mini-DIN-8 is still `panel:"none"`, now internally cabled. | **User, 2026-09-09** | **fixed** in intent; **BLOCKING measurement M12** on `pro-convert-hdmi-plus` / `-sdi-plus` (R23), and the source ratings are unverified (R21/R22, M8–M11, M13) |
 | **D-13** | **The side-bolt boss is FLUSH — nothing protrudes from the far wall.** `MCC_GAP_FAR` 6 → **16** (derived: `boss_len + MCC_PAD_T − MCC_WALL`), `MCC_SIDE_BOLT_PROUD` 10 → **0**; the 17 mm captive stack sits inside `MCC_WALL + MCC_GAP_FAR = 19`. `W` grows 10 mm (compact 159.9, plus 166.4) — **the printed bbox is unchanged**, since rev 2's bbox already included the lug. The freed 10 mm becomes a 16 mm far-wall airflow duct. The boss becomes a ⌀20 internal thickening from the wall's inner face to the pad face, carried by a 3 mm central vertical support web down to the floor (a ≤45° conical blend alone would need a ⌀48 root and is rejected). Screw length, groove position and clip travel are all unchanged. | **User, 2026-09-08** (resolves R18) | **fixed** |
 
 ---
@@ -1222,6 +1290,17 @@ is shape-only.
 | **`MCC_APERTURE_LIP_WEB_MIN`** | **NEW — 2.0** | Minimum lip material between any part of a window and the plate's edge, mm. `fdm-rugged-enclosure-guidelines.md:127`. T1-34c |
 | **`MCC_INSERT_BORE_EXTRA`** | **NEW — 0.5 `assumed`** | Extra bore depth past a heat-set insert's own length so the insert seats fully, mm. Replaces the bare `+ 1` literal in `mcc_neutrik_d_bosses()`. T1-35 |
 | **`MCC_PLATE_RIM_W`** | **NEW — 6.0** | The plate's rim (border) width. It is the *same* number in three places today — `mcc_panel_plate()`'s `rim_w = 6` default, `_mcc_patch_wall_aperture()`'s local `rim_w = 6`, and the literal `6` passed to `_mcc_patch_wall_fixing_bosses()` — across two L2 files, and it feeds `mcc_panel_fixing_pos()`. That is a §3 "no magic numbers in L2" deviation and the exact drift hazard that produced **D6**. Name it once and pass it |
+
+### Rev-8 addendum (2026-09-09) — the fan-power decision (D-14)
+
+| Constant | Value | Purpose / where used |
+|---|---|---|
+| **`MCC_PANEL_PARTS["DBA-BL-B"].hole_d`** | **CHANGED — `0` → `24.0`** (`constants.scad:673`) | §2.5.1. Everything else in that row stays: `depth 3.2`, `max_panel_t 4.0`, `plug_len 0`, `bend 0`, `kind "blank"`, `confidence "drawing"`. Confidence stays `drawing` because 24.0 is the sourced D-series standard hole (`knowledge/neutrik/d-series-cutout.md:36`), not an invention |
+| **`MCC_PLUG_AXIAL` — new row `["blank", 0]`** | **NEW — 0** (`constants.scad:432-440`) | Defensive. `mcc_plug_axial()` accepts a *part number* as well as a kind and resolves it via `mcc_panel_kind()`; `"DBA-BL-B"` resolves to `"blank"`, which is **not** a row today, so any future caller passing the part asserts out. No current caller does — `shell.scad:374` passes the port's `kind` — so this is a trap-closer, not a fix |
+| **`MCC_PLUG_AXIAL` — row `["minidin8", …]`** | **NOT ADDED — the figure is `unknown`** | **R23 / M12.** Deliberately withheld: too small and T1-18(c) lies, too large and it fails `pro-convert-hdmi-plus` + `-sdi-plus` on a number nobody measured. Add it only once M12 lands, together with the T1-18(c) scope change below |
+| **T1-18(c) scope** | **NOT CHANGED YET** (`shell.scad:373`) | It filters `mcc_ports_external(dev)`, so an *internally cabled* port is invisible to it. That was correct while `panel:"none"` meant "not cabled"; D-14 breaks the equivalence. The fix (filter on "has a non-zero axial term" rather than on `panel`) needs every port `kind` to have a `MCC_PLUG_AXIAL` row — i.e. it is gated on M12 too. **Recorded, not implemented** |
+| **Thermoswitch height budget** | **≤ 8.8 mm** (plus) / **≤ 8.85 mm** (compact), derived: `H_int − mcc_cradle_deck(dev) − dev_h − MCC_LID_CLEAR` = `45 − 10.8 − 23.4 − 2.0` | **A sourcing constraint, not a constant.** The KSD9700's package is `unknown` (`poe-splitter-verification.md:172`), so nothing is modelled and nothing is asserted; the number goes on the BOM row and into M11. Optionally expose it as a derived, echoed field of `mcc_case_layout()` — that is free and self-documenting |
+| **Cable-management geometry** | **none added** | No zip-tie anchor, clip, channel or switch pocket. Free end-zone volume is already reserved; cable dressing stays the adhesive tie base at `BOM.md:67`. A printed anchor would be a new `mounts.scad` floor feature positioned from unmeasured cable geometry, guarded by a `mcc_floor_keepout()` pairwise assert that does not exist yet (**D16**). Deferred with an explicit trigger — see `architecture.md` §14 rev-8 verdict |
 
 **Explicitly NOT added: `MCC_APERTURE_TOP_OPEN`.** The top-open (U-notch) aperture is rejected, not
 parameterised — a flag for a rejected topology is an invitation to re-open a settled decision and to
@@ -1670,3 +1749,53 @@ one), so its three SKUs merge last, after the compact four have confirmed that n
 needed — and #5 (HDMI-ended, the closest plus analogue to a proven compact case) goes before #6 and
 #7. Branches may all be *developed* in parallel; it is the **merge** that is ordered, so that if the
 plus family does surface a library problem, it surfaces against a `main` that is already known good.
+
+---
+
+### 16.6 Per-SKU consequences of D-14 (rev 8, 2026-09-09)
+
+All eight SKUs exist on `main`. This table is what actually changes per SKU. **Every `L × W × H`,
+every `pitch`, every `x_dev_c`, every fastener position in §16.1 is unchanged** — `DBA-BL-B`'s
+`depth`/`plug_len`/`bend` are untouched, so `d_bay_free`, `W` and the slot pitch cannot move, and
+end zones are keyed by port `kind`, not by `panel`, so `L` cannot move either.
+
+| SKU | family | `fan` | Fan 5 V source | Slot 3 | Slot order | Envelope | Goldens touched |
+|---|---|---|---|---|---|---|---|
+| `pro-convert-for-ndi-to-hdmi` | compact | `false` | — (host port simply unused) | `NAUSB-W-B` → **`DBA-BL-B`** | **unchanged** | **unchanged** 193.9 × 159.85 × 51.0 | `.panel`, `.base`, `.base_fan` |
+| `pro-convert-for-ndi-to-sdi` | compact | `false` | — | `NAUSB-W-B` → **`DBA-BL-B`** | **unchanged** | **unchanged** 194.9 × 158.80 × 51.0 | `.panel`, `.base` |
+| `pro-convert-for-ndi-to-hdmi-4k` | plus | `true` | **USB-A host** (R21, M9) | `NAUSB-W-B` → **`DBA-BL-B`** | **unchanged** | **unchanged** 210.5 × 166.35 × 51.0 | `.panel`, `.base` |
+| `pro-convert-hdmi-plus` | plus | `true` | **Mini-DIN-8 pin 8** (R22, M10) | — | — | unchanged **unless M12 forces `fan_y`** | none from the blank; `.base` only if `fan_y` moves |
+| `pro-convert-sdi-plus` | plus | `true` | **Mini-DIN-8 pin 8** | — | — | same | same |
+| `pro-convert-hdmi-tx` | compact | `false` | (Mini-DIN-8, if a fan is ever fitted) | — | — | unchanged | none |
+| `pro-convert-sdi-tx` | compact | `false` | (Mini-DIN-8, if ever) | — | — | unchanged | none |
+| `pro-convert-for-ndi-to-aio` | compact | `false` | **none — stays passive** (no USB host, no Mini-DIN-8, `fan-power-sources.md:37-38,186`) | — | — | unchanged | none |
+
+**The blanking is driven by user decision 1 ("the decoders' USB-A host port is never used"), not by
+the fan.** That is why `-to-hdmi` and `-to-sdi` are blanked even though they carry no fan.
+
+**Why the slot order does not move.** On all three decoders the blanked `usb_host` was *already* the
+innermost port of block B — `-to-hdmi`/`-to-hdmi-4k`: `rank(hdmi_out) = [15, 35] > rank(usb_host) =
+[8, 20]`; `-to-sdi`: `rank(sdi_out) = [40.6, 40.6] > [8, 20]`. Dropping its rank to `[0, 0]` keeps it
+last. Slots 1 and 2 (`NE8FDP-B`, `NAUSB-W-B` `usb_b`) are block A and are untouched.
+
+**Expected golden deltas — read this before running `--update`.** The change is real but **small
+enough that `build.py golden` would pass without updating**, so "goldens still green" is *not*
+evidence the edit landed:
+
+- **`.panel`**: the slot-3 cutout grows ⌀23.8 → ⌀24.2 through the 2.0 mm field, i.e.
+  `π/4·(24.2² − 23.8²)·2 ≈ **30 mm³** less material` — roughly **0.2 %** of a ~13,500 mm³ plate,
+  under the 0.5 % tolerance but clearly visible in the JSON diff.
+- **`.base`**: the window body circle grows `d_win` 24.4 → 24.8 through the 3.0 mm lip, plus 0.2 mm
+  of extra cap rise — `≈ **46 mm³**`, i.e. **~0.01 %** of the base. **Expect it not to trip at all.**
+- `.lid` is unaffected on every SKU (no slot-dependent geometry).
+
+**Therefore the acceptance evidence for this change is visual, not numeric:** the mandatory
+straight-on `−Y → +Y` patch-wall elevation (§16.5) must show **four exactly-round ⌀24-class
+openings** on the three decoders, and `echo(mcc_slot_assignment(dev))` must print `DBA-BL-B` at
+slot 3. Update the goldens anyway, and check the volume moved in the direction and magnitude above.
+
+**Blocking item, encoders only.** `pro-convert-hdmi-plus` and `pro-convert-sdi-plus` must not be
+touched until **M12** (Mini-DIN-8 plug axial length) is measured — see `architecture.md` §11 **R23**
+for the worked geometry (30.0 mm to the fan frame, 25.0 mm to the reservation, plug length
+`unknown`) and the four resolution options. Everything in the decoder column above is independent of
+M12 and may proceed now.

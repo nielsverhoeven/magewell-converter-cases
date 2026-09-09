@@ -78,7 +78,24 @@ each per-variant table below, since the connector count varies 3–4 by SKU.)*
 |---|---|---|---|---|
 | Dongle-class 802.3af/at → 5 V USB PoE splitter | UCTRONICS U6114 (5 V/4 A) or U6115 (5 V/2.4 A) class, or equivalent — **dimensions unmeasured**, `MCC_SPLITTER_DEFAULT = "DONGLE-75x40x20"` is a placeholder envelope | 1 | On-edge orientation, 20×75×40 mm (X×Y×Z) reserved bay at the −X end | `lib/mcc/constants.scad:309-338` (`MCC_SPLITTERS`, `assumed` throughout — "measure before the shell is finalised"); `knowledge/components/poe-splitters.md:54-55` (U6114/U6115 electrical specs), `:211-215` (dimensions explicitly unpublished) |
 | RJ45 patch cable, short | generic Cat5e/6 | 2 | (a) etherCON feedthrough → splitter PoE-in; (b) splitter data-out → device RJ45 | `knowledge/components/poe-splitters.md:170-192` ("Required internal cabling" steps 1–2) |
-| USB Type-B power cable (Y-spliced to fan if fitted) | generic, splitter-output-connector-to-USB-B | 1 | Splitter 5 V out → device USB-B power in, fan leads spliced onto the same VBUS/GND upstream of the device | `knowledge/components/poe-splitters.md:186-191` (step 3) |
+| USB Type-B power cable (Y-spliced to fan if fitted) | generic, splitter-output-connector-to-USB-B | 1 | Splitter 5 V out → device USB-B power in — **fallback fan-power path only** (D-14 does not fit a splitter by default on any SKU; this wiring applies only if M9/M10 show the device's own USB-A-host/Mini-DIN-8 sources can't carry the fan, `.claude/knowledge/architecture.md` §6 "the splitter is the named fallback") | `knowledge/components/poe-splitters.md:186-191` (step 3) |
+
+### Fan power and thermal switch (`fan=true` only)
+
+Common to every SKU that ships or is built with a fan (Plus-family default: `pro-convert-hdmi-plus`,
+`pro-convert-sdi-plus`, `pro-convert-for-ndi-to-hdmi-4k`; optional `-D fan=true` on the compact
+decoders). Fan power is **device-sourced** (D-14, 2026-09-09) — no PoE splitter is fitted by default
+(see the PoE-splitter bay row above for the fallback path only). Two different sources by family, one
+shared thermal switch:
+
+| Item | Part number | Qty | Notes | Source |
+|---|---|---|---|---|
+| KSD9700 45 °C normally-open bimetal thermal switch | generic (commodity part, multiple Chinese suppliers, no single manufacturer datasheet — DigiKey/Mouser/LCSC/TME/Reichelt/Conrad all failed to return a stocked listing) | 1 | Body + adhesive pad **≤ 8.8 mm tall** (`plenum 10.8 − MCC_LID_CLEAR 2.0`, M11 — buy to this ceiling, do not model it); wired in series in the fan's +5V lead so the fan only runs once the device is genuinely hot; **DC switching at 5 V/≤0.05 A is unverified — every published rating is 250 V AC/5–16 A (M8: bench-test cold and after 50 cycles before relying on it)** | `knowledge/components/poe-splitter-verification.md:151-172` (sourcing), `:176-196` (DC-switching open question), `:229-233` (M8 bench-test recommendation); `.claude/knowledge/architecture.md` §5, §11 M8/M11 |
+| Thermal pad, ≤ 1 mm | generic thermal-interface pad | 1 | Bonds the KSD9700 to the device's metal top for accurate sensing — **must not seal or block the device's own top ventilation grille** | `.claude/knowledge/architecture.md` §5 "Fan power is device-sourced (D-14)" (device's own thermal design must stay unobstructed) |
+| USB-A-to-2-pin-fan-lead power cable | generic, ~0.3 m | 1 | **Decoders only** (NDI to HDMI, NDI to SDI, NDI to HDMI 4K). Plain `NF-A4x10 5V` ships **no** USB cable in the box (only the PWM variant does — `fans.md:13-24`), so this is purchased separately. Runs from the device's external `usb_host` port, through the DBA-BL-B-blanked slot, through the thermoswitch above, to the fan — rating under PoE is `unknown` and needs measurement M9 before relying on it | `knowledge/components/fans.md:13-24` (5V variant ships no USB cable), `:140-149` (general 5V-from-USB lead options); `knowledge/components/fan-power-sources.md:21,39-46`; `.claude/knowledge/architecture.md` §5 table row "Decoders ... R21, M9" |
+| Cut-down Mini-DIN-8 male pigtail | generic, wired to pin 8 VCC / pin 4 GND only | 1 | **Encoders only** (HDMI Plus, SDI Plus; TX if a fan is ever fitted). Runs from the device's internal (`panel:"none"`) Mini-DIN-8 "PTZ+TALLY" port, pin 8 VCC (5 V, 100 mA max) / pin 4 GND, through the thermoswitch above, to the fan — entirely inside the case. **Not** a splice onto the `usb_b` +5V feed (deviation D17: no 5 V there under PoE). The fan's 50 mA is half the port's 100 mA budget before inrush (R22, M10 — measure before relying on it) | `knowledge/components/fan-power-sources.md:80` (pin 8 rating), `:99-106` (Tally/matrix share the same budget); `knowledge/components/mini-din8-feedthrough.md:38`; `.claude/knowledge/architecture.md` §5 table row "Encoders ... R22, M10" |
+| **Warning:** the Magewell Tally Light (#99090) or the 8×32 LED Matrix Display (both pins 6/7 on the same Mini-DIN-8 jack) **must not be connected at the same time** as the fan on an encoder SKU — pin 8's 100 mA VCC budget is shared across the whole jack, and the fan's 50 mA plus either accessory's `unknown` draw risks exceeding it | — | — | Encoders only | `knowledge/components/fan-power-sources.md:99-106` (Tally/matrix share VCC, draw `unknown`) |
+| OmniJoin adaptor set / NA-AC2 3:2-pin adaptor cable | bundled with the fan | 1 | Ships **in the box** with every `NF-A4x10 5V` — not a separate purchase, listed here only so it isn't mistaken for missing hardware | `knowledge/components/fans.md:13-24` ("ships with NA-AC2 3:2-pin adaptor cable, OmniJoin adaptor set") |
 
 ---
 
@@ -191,7 +208,8 @@ mandate to always populate 4.
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
 | Noctua NF-A4x10 5V (plain 3-pin or PWM) | 1 | `models/pro-convert-hdmi-plus/case.scad`'s `fan` variant defaults **true** on this SKU (not the common-hardware table's "only when `fan=true`" case) — the Plus chassis' ~10 W thermal budget makes the fan not optional per `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 / architecture.md §11 R5, user decision 2026-09-08 | `knowledge/components/fans.md:13-24` (frame/current); `models/pro-convert-hdmi-plus/case.scad` (`fan = true` default, comment cites the decision) |
 | NA-AV3 anti-vibration mounts | 4 | Ships in the box with the fan above — **no separate screws to buy**, these both mount the fan and decouple it from the shell | `knowledge/components/fans.md:89-95` (bundled scope of delivery) |
-| USB-A to 2/3-pin fan power lead (or third-party equivalent), Y-spliced onto the `usb_b` power feed inside the case | 1 | 5 V/GND tapped from the incoming `NAUSB-W-B` power line upstream of the device — this SKU has no PoE splitter (`splitter = false`, bay reserved but unpopulated), so the fan cannot be fed from a splitter's 5 V rail the way a `splitter=true` build would (see the Common Hardware "PoE-splitter bay" row) | `knowledge/components/fans.md:140-149` ("General 5V-from-USB power options" — generic USB-A-to-fan-connector adaptor leads) |
+| KSD9700 45 °C normally-open bimetal thermal switch | 1 | Wired in series between the fan's +5V lead and the source below, bonded to the device's metal top; body + pad ≤ 8.8 mm tall (M11); **DC switching at 5 V/≤0.05 A is unverified (M8, bench-test before relying on it)** | `.claude/knowledge/architecture.md` §5 "Fan power is device-sourced (D-14)"; `knowledge/components/poe-splitter-verification.md:151-196` |
+| Cut-down Mini-DIN-8 male pigtail → 2-pin fan lead, through the thermoswitch above | 1 | **Fan power is NOT spliced onto the `usb_b` +5V feed** (deviation D17: under PoE the USB-B port carries no 5 V at all, so that wiring is unbuildable on a PoE-powered unit). Source is the device's own **Mini-DIN-8 "PTZ+TALLY" port, pin 8 VCC (5 V, 100 mA max) / pin 4 GND** — the port stays internal (`panel:"none"`), so this cable is entirely inside the case. The fan's 50 mA is half the port's 100 mA budget before inrush (**R22, M10 — measure before relying on it**); the Tally Light/LED matrix (pins 6/7) **must not be connected at the same time** as the fan — pin 8's budget is shared | `.claude/knowledge/architecture.md` §5 table row "Encoders ... Mini-DIN-8 pin 8 (VCC) ... 5V, 100mA max ... R22, M10"; `knowledge/components/fan-power-sources.md:80` (100 mA max load, pin table); `knowledge/components/mini-din8-feedthrough.md:38` |
 
 Note: the device file flags End B's own physical port pitch (HDMI IN / Mini-DIN-8 / HDMI OUT at
 ~22 mm) as tighter than `MCC_D_PITCH_H` (32 mm) — this does **not** affect the BOM above, since the
@@ -214,6 +232,9 @@ table's "only when `fan=true`" case.
 | M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
 | Noctua NF-A4x10 5V | 1 | Fan bay, fitted by default on this SKU (`fan = true`) — ships with 4× NA-AV3 anti-vibration mounts, no separate screws to buy | `knowledge/components/fans.md:13-24,89-95`; `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 (R5) |
+| NA-AV3 anti-vibration mounts | 4 | Ships in the box with the fan above — **no separate screws to buy**, these both mount the fan and decouple it from the shell | `knowledge/components/fans.md:89-95` (bundled scope of delivery) |
+| KSD9700 45 °C normally-open bimetal thermal switch | 1 | Wired in series between the fan's +5V lead and the source below, bonded to the device's metal top; body + pad ≤ 8.8 mm tall (M11); **DC switching at 5 V/≤0.05 A is unverified (M8, bench-test before relying on it)** | `.claude/knowledge/architecture.md` §5 "Fan power is device-sourced (D-14)"; `knowledge/components/poe-splitter-verification.md:151-196` |
+| Cut-down Mini-DIN-8 male pigtail → 2-pin fan lead, through the thermoswitch above | 1 | **Fan power is NOT spliced onto the `usb_b` +5V feed** (deviation D17: no 5 V there under PoE). Source is the device's own **Mini-DIN-8 "PTZ+TALLY" port, pin 8 VCC (5 V, 100 mA max) / pin 4 GND**, stays internal (`panel:"none"`) — cable is entirely inside the case. The fan's 50 mA is half the port's 100 mA budget before inrush (**R22, M10**); the Tally Light/LED matrix **must not be connected at the same time** as the fan | `.claude/knowledge/architecture.md` §5 table row "Encoders ... Mini-DIN-8 pin 8 (VCC) ... 5V, 100mA max ... R22, M10"; `knowledge/components/fan-power-sources.md:80`; `knowledge/components/mini-din8-feedthrough.md:38` |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 2 | `sdi_in`, `sdi_out` | `knowledge/components/cables.md:63,65,123` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -225,14 +246,17 @@ table's "only when `fan=true`" case.
 | Part | Qty | Notes | Source |
 |---|---|---|---|
 | Neutrik NAHDMI-W-B | 1 | `hdmi_out` port | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:19-20`; `lib/mcc/constants.scad:424` |
-| Neutrik NAUSB-W-B | 2 | `usb_host` (USB-A host, wired through the reversible A/B feedthrough) + `usb_b` (power) | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:21-25`; `lib/mcc/constants.scad:425`; `knowledge/neutrik/README.md:33` (reversible A/B) |
+| Neutrik NAUSB-W-B | 1 | `usb_b` (power + USB-NET config) | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:24-25`; `lib/mcc/constants.scad:425`; `knowledge/neutrik/README.md:33` |
+| Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used by the build, so the slot is built and reserved behind a blank plate instead, reusable later by swapping the blank for a connector | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:21-23`; `lib/mcc/constants.scad:673` (`MCC_PANEL_PARTS["DBA-BL-B"]`); `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:26-27`; `lib/mcc/constants.scad:423` |
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
+| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors (the DBA-BL-B blank has the same 2-boss fixing pattern as a fitted connector) | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_out` | `knowledge/components/cables.md:54,121` |
-| USB 2.0 A-to-A cable, 0.15 m | 1 | `usb_host` | `knowledge/components/cables.md:78,125` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
+
+This SKU is passive by default (`fan = false`, compact family) — no fan-power row here; see the
+"Fan power and thermal switch" common-hardware section below for what a `-D fan=true` build needs.
 
 ### pro-convert-for-ndi-to-hdmi-4k
 
@@ -246,15 +270,16 @@ ships with every unit of this SKU.
 
 | Part | Qty | Notes | Source |
 |---|---|---|---|
-| Neutrik NAUSB-W-B | 2 | `usb_host` (USB-A host) + `usb_b` (power) | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:23-31`; `lib/mcc/constants.scad:425` |
+| Neutrik NAUSB-W-B | 1 | `usb_b` (power + USB-NET config) | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:27-31`; `lib/mcc/constants.scad:425` |
+| Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used for peripherals on this build; instead it is internally cabled to the fan (see the fan-power row below), so the slot stays blanked and externally reusable | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:23-26`; `lib/mcc/constants.scad:673`; `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NAHDMI-W-B | 1 | `hdmi_out` port | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:27-28`; `lib/mcc/constants.scad:424` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:32-33`; `lib/mcc/constants.scad:423` |
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
+| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors (the DBA-BL-B blank has the same 2-boss fixing pattern as a fitted connector) | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
 | Noctua NF-A4x10 5V (plain 3-pin) | 1 | 40×40×10 mm case-cooling fan in the +X end wall's live cutout (`fan=true` default, `mcc_fan_cutout("NF-A4x10", grille=true)`) — additional to, and independent of, the device's own internal variable-speed fan | `knowledge/components/fans.md:13-24`; `lib/mcc/constants.scad:534-535` (`MCC_FANS`); `lib/mcc/fan.scad` |
 | M3 machine screw, ~8–10 mm (or the bundled NA-AV3 silicone anti-vibration mounts, push-fit, no screw) | 4 | Through `mcc_fan_cutout()`'s 4 clearance holes at the fan's 32 mm pitch (⌀4.3) into the fan's own threaded corners | `knowledge/components/fans.md:89-95` (NA-AV3 bundled in the NF-A4x10 5V box); `lib/mcc/constants.scad:535` (`hole_d=4.3`) |
-| USB-A-to-fan-connector power lead (generic, 2-/3-pin), or splice onto the device's own USB-B +5V feed | 1 | **The device's own external `usb_host` port (NAUSB-W-B, USB-A host) can power this fan**: NF-A4x10 5V draws 0.044 A typ / 0.05 A max, far under any USB host's current budget — a plain USB-A-to-fan-connector cable is the simplest wiring path (no separate internal 5V tap needed); wiring choice `assumed`, not verified against the device's actual USB-A host output rating | `knowledge/components/fans.md:20-24` (current draw), `:140-160` ("General 5V-from-USB power options") |
-| USB 2.0 A-to-A cable, 0.15 m | 1 | `usb_host` | `knowledge/components/cables.md:78,125` |
+| KSD9700 45 °C normally-open bimetal thermal switch | 1 | Wired in series between the fan's +5V lead and the source below, bonded to the device's metal top so the fan only runs once the device is actually hot; body + pad ≤ 8.8 mm tall (M11); **DC switching at 5 V/≤0.05 A is unverified — every published rating is 250 V AC/5–16 A (M8, bench-test before relying on it)** | `.claude/knowledge/architecture.md` §5 "Fan power is device-sourced (D-14)"; `knowledge/components/poe-splitter-verification.md:151-196` |
+| USB-A-to-2-pin-fan-lead power cable (generic, plain NF-A4x10 5V ships no USB cable in the box) | 1 | Power source is **the device's own external `usb_host` port**, internally cabled from the blanked DBA-BL-B slot through the thermoswitch to the fan — NOT a splice onto the `usb_b` power feed (that reasoning applies to the encoders, D17, see the HDMI Plus/SDI Plus sections above; the decoder's USB-A host port is a plausible 5 V source but its rating under PoE is **not stated by Magewell** and needs measurement M9 before relying on it) | `knowledge/components/fans.md:140-149` ("General 5V-from-USB power options"); `knowledge/components/fan-power-sources.md:21,39-46` (host-port rating `unknown`); `.claude/knowledge/architecture.md` §5 table row "Decoders ... device's USB-A host port ... unknown — R21, M9" |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -272,14 +297,17 @@ splitter hardware row here.
 | Part | Qty | Notes | Source |
 |---|---|---|---|
 | Neutrik NBB75DFGB | 1 | `sdi_out` port | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:21-23`; `lib/mcc/constants.scad:426` |
-| Neutrik NAUSB-W-B | 2 | `usb_host` (USB-A host) + `usb_b` (power) | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:24-28`; `lib/mcc/constants.scad:425` |
+| Neutrik NAUSB-W-B | 1 | `usb_b` (power + USB-NET config) | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:26-28`; `lib/mcc/constants.scad:425` |
+| Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used by the build; slot stays built and reusable behind a blank | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:24-25`; `lib/mcc/constants.scad:673`; `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:29-30`; `lib/mcc/constants.scad:423` |
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors | `knowledge/components/fasteners-and-hardware.md:17,22` |
+| M3×5.7 heat-set insert (Ruthex RX-M3x5.7) | 8 | 2 per connector rear boss × 4 connectors (the DBA-BL-B blank has the same 2-boss fixing pattern as a fitted connector) | `knowledge/components/fasteners-and-hardware.md:17,22` |
 | M3×8 machine screw | 8 | Paired 1:1 with the inserts above | `knowledge/components/fasteners-and-hardware.md:96` (`assumed` length) |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 1 | `sdi_out` | `knowledge/components/cables.md:63,65,123` |
-| USB 2.0 A-to-A cable, 0.15 m | 1 | `usb_host` | `knowledge/components/cables.md:78,125` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
+
+This SKU is passive by default (`fan = false`, compact family) — no fan-power row here; see the
+"Fan power and thermal switch" common-hardware section below for what a `-D fan=true` build needs.
 
 Note: this model's top-face rotary/menu/select layout is carried over from the shared decoder
 pattern at `confidence:"assumed"` (not independently photographed for this SKU per the device

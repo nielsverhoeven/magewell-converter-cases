@@ -36,13 +36,22 @@ use <util.scad>
 module mcc_neutrik_d_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, panel_t = MCC_WALL) {
     cutout_d    = mcc_cutout_d(part);
     kind        = mcc_panel_kind(part);
-    is_blank    = (kind == "blank");
+    is_blank    = mcc_panel_hole_d(part) == 0; // D18 (architecture.md §5 rev 8, layout-patch-wall.md
+                                                // §2.5.1): unify the blank test on hole_d==0, same as
+                                                // shell.scad:181 and layout.scad:187 — NOT `kind ==
+                                                // "blank"`. DBA-BL-B keeps kind "blank" (BOM/ghost
+                                                // discriminator) but now carries hole_d=24.0, so it is
+                                                // no longer geometrically blank: it gets the full round
+                                                // cutout like any other 24-class part. The kind-based
+                                                // branch below is dead on every current SKU; it stays
+                                                // as the guard for a possible future genuinely-solid
+                                                // blank (hole_d actually 0).
     is_24_class = mcc_panel_hole_d(part) >= 24.0;
 
     // Tier-1 asserts. architecture.md:346 "24.0 <= cutout_d <= 24.6 (never blow out the hole)" for
     // 24.0-class parts (etherCON/XLR); 23.6-24.2 for the 23.6-class parts (HDMI/USB/BNC), per the
-    // brief's own module contract. A blank plate (hole_d=0) has no functional hole, so it is
-    // exempt from the diameter check.
+    // brief's own module contract. A genuinely solid blank (hole_d=0) has no functional hole, so it
+    // is exempt from the diameter check — no current SKU takes this branch (see is_blank above).
     if (!is_blank) {
         assert(
             is_24_class ? (cutout_d >= 24.0 && cutout_d <= 24.6) : (cutout_d >= 23.6 && cutout_d <= 24.2),
