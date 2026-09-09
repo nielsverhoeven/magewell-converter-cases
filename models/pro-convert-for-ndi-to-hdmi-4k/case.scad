@@ -57,6 +57,9 @@ explode = 0;
 //               family's feasible switch_y interval is empty, layout-patch-wall.md §18.2) -- set
 //               explicitly (tied to `fan`) for the same BOM/documentation-parity reason "fan" is
 //               explicit here, rather than left to the default.
+//   "lid_vents" (bool, optional, default true) -- draws the lid vent field (issue #24) when true.
+//               Fed from the top-level `lid_vents` variable below so `-D lid_vents=false` renders
+//               the vent-less lid for comparison.
 //
 // fan = true (PLUS-FAMILY DEFAULT, user decision 2026-09-08 R5 --
 // .claude/knowledge/layout-patch-wall.md §16.2 item 4 / architecture.md §13 R5): the Plus chassis'
@@ -74,12 +77,14 @@ explode = 0;
 fan      = true;  // -D fan=false     renders WITHOUT the live +X fan cutout (bay stays reserved
                    //                 regardless -- architecture.md §6)
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
+lid_vents = true; // -D lid_vents=false   renders the lid without the vent field -- comparison only
 
 variant = [
     ["fan",         fan],
     ["splitter",    splitter],
     ["fan_switch",  fan],
     ["tripod_insert", true],
+    ["lid_vents", lid_vents],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K;

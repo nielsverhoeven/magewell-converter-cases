@@ -52,13 +52,18 @@ explode = 0;
 //   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
 //               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
 //               #32, D-18). This SKU is fan=false by default, so fan_switch defaults to false too.
+//   "lid_vents" (bool, optional, default true) -- draws the lid vent field (issue #24) when true.
+//               Fed from the top-level `lid_vents` variable below so `-D lid_vents=false` renders
+//               the vent-less lid for comparison.
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
+lid_vents = true; // -D lid_vents=false   renders the lid without the vent field -- comparison only
 
 variant = [
     ["fan",       fan],
     ["splitter",  splitter],
     ["tripod_insert", true],
+    ["lid_vents", lid_vents],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_SDI;

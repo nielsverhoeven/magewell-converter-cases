@@ -4,7 +4,9 @@
 //   mcc_shell_lid() (shell.scad), mcc_cradle() (cradle.scad), mcc_floor_features_add/cut()
 //   (mounts.scad), and mcc_vents() for each of the 3 vented wall faces (vents.scad), all for
 //   MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI — CSG export (-o out.csg) evaluates the full tree so every
-//   in-model Tier-1 assert fires, without tessellating.
+//   in-model Tier-1 assert fires, without tessellating. Also exercises the lid vent field (issue
+//   #24, T1-36/T1-37) via VARIANT/VARIANT_FAN (lid_vents=true) and VARIANT_NO_LID_VENTS
+//   (lid_vents=false).
 // Run:
 //   openscad --backend=Manifold -o out.csg tests/test_shell.scad
 //////////////////////////////////////////////////////////////////////
@@ -21,6 +23,7 @@ DEV = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
 VARIANT = [
     ["fan",             false],
     ["splitter",        false],
+    ["lid_vents",       true],
 ];
 VARIANT_FAN = [
     ["fan",             true],
@@ -39,15 +42,22 @@ VARIANT_PLUS_SWITCH = [
     ["fan",             true],
     ["splitter",        false],
     ["fan_switch",      true],
+    ["lid_vents",       true],
 ];
 // tripod_insert defaults to true (D-16) when the key is absent, as VARIANT/VARIANT_FAN above both
 // exercise implicitly. This variant explicitly sets it false, exercising the deck-lattice's
 // tripod_insert=false path (issue #29) -- the boss and its collar/bore-cut are omitted entirely.
 VARIANT_NO_TRIPOD = concat(VARIANT, [["tripod_insert", false]]);
+// Explicit lid_vents=false render (issue #24) -- exercises mcc_shell_lid()'s gate so a broken
+// default-true fallback would still be caught here even if every other VARIANT* left it implicit.
+VARIANT_NO_LID_VENTS = concat(VARIANT, [["lid_vents", false]]);
 
 // --- shell.scad: both halves, default (fan=false) variant ---
 mcc_shell_base(dev = DEV, cfg = VARIANT);
 translate([0, 250, 0]) mcc_shell_lid(dev = DEV, cfg = VARIANT);
+
+// --- shell.scad: lid with lid_vents=false (issue #24 -- comparison/gate check) ---
+translate([0, 750, 0]) mcc_shell_lid(dev = DEV, cfg = VARIANT_NO_LID_VENTS);
 
 // --- shell.scad: base with fan=true (exercises the fan-cutout branch) ---
 translate([250, 0, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_FAN);
@@ -77,6 +87,15 @@ echo(str("mcc test_shell: T1-30 net intake area=", area, " mm^2, threshold=",
     MCC_VENT_AREA_RATIO * PI / 4 * MCC_FAN_APERTURE_D * MCC_FAN_APERTURE_D, " mm^2"));
 assert(area >= MCC_VENT_AREA_RATIO * PI / 4 * MCC_FAN_APERTURE_D * MCC_FAN_APERTURE_D,
     str("mcc test_shell: T1-30 net intake area ", area, " below threshold"));
+
+// --- vents.scad: lid vent field area sanity (issue #24, T1-36) -- convenience echo only; the
+// actual authority is the in-model assert inside mcc_lid_vents_cut() (called via mcc_shell_lid()
+// above), same discipline the T1-30 block already follows for the wall vents (D15's lesson). ---
+lid_area = mcc_lid_vent_area(DEV, VARIANT);
+echo(str("mcc test_shell: T1-36 net lid vent area=", lid_area, " mm^2, threshold=",
+    MCC_LID_VENT_AREA_RATIO * PI / 4 * MCC_FAN_APERTURE_D * MCC_FAN_APERTURE_D, " mm^2"));
+assert(lid_area >= MCC_LID_VENT_AREA_RATIO * PI / 4 * MCC_FAN_APERTURE_D * MCC_FAN_APERTURE_D,
+    str("mcc test_shell: T1-36 net lid vent area ", lid_area, " below threshold"));
 
 translate([750, 0, 0])
     difference() {

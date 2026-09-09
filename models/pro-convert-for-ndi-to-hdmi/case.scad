@@ -57,8 +57,12 @@ explode = 0;
 //               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
 //               #32, D-18). Independent flag so a future variant could ship the fan without the
 //               switch, or vice versa, without a library change.
+//   "lid_vents" (bool, optional, default true) -- draws the lid vent field (issue #24) when true.
+//               Fed from the top-level `lid_vents` variable below so `-D lid_vents=false` renders
+//               the vent-less lid for comparison.
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
+lid_vents = true; // -D lid_vents=false   renders the lid without the vent field -- comparison only
 
 // "base_fan" (build.py's extra_parts marker above, issue #11) is the base rendered with the fan
 // cutout forced live, independent of whatever `-D fan=...` was (or wasn't) passed -- this is what
@@ -75,6 +79,7 @@ variant = [
     // lost by this.
     ["fan_switch", false],
     ["tripod_insert", true],
+    ["lid_vents", lid_vents],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
