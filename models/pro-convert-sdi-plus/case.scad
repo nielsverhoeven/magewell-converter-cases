@@ -53,6 +53,12 @@ explode = 0;
 //               a collar (T1-41). Pass false to omit both the boss and its bore cut.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
+//   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
+//               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
+//               #32, D-18). This is one of the 3 Plus-family SKUs the switch ships on (the compact
+//               family's feasible switch_y interval is empty, layout-patch-wall.md §18.2) -- set
+//               explicitly (tied to `fan`) for the same BOM/documentation-parity reason "fan" is
+//               explicit here, rather than left to the default.
 //   "lid_vents" (bool, optional, default true) -- draws the lid vent field (issue #24) when true.
 //               Fed from the top-level `lid_vents` variable below so `-D lid_vents=false` renders
 //               the vent-less lid for comparison.
@@ -64,8 +70,9 @@ splitter = false; // -D splitter=true (reserved key; no live cutout exists yet e
 lid_vents = true; // -D lid_vents=false   renders the lid without the vent field -- comparison only
 
 variant = [
-    ["fan",       fan],
-    ["splitter",  splitter],
+    ["fan",         fan],
+    ["splitter",    splitter],
+    ["fan_switch",  fan],
     ["tripod_insert", true],
     ["lid_vents", lid_vents],
 ];

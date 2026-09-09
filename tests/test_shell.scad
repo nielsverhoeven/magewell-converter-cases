@@ -15,6 +15,7 @@ $fa = 1; $fs = 0.4;
 
 include <mcc/mcc.scad>
 include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
+include <mcc/devices/pro-convert-hdmi-plus.scad>
 
 DEV = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
 // "external_ports" is DROPPED from cfg (D12, architecture.md §13 -- inert, never implemented; the
@@ -27,6 +28,20 @@ VARIANT = [
 VARIANT_FAN = [
     ["fan",             true],
     ["splitter",        false],
+    // ["fan_switch",false]: the compact family's feasible switch_y interval is EMPTY (D-18,
+    // layout-patch-wall.md §18.2) -- without this, T1-43 fails on this SKU's own base_fan golden.
+    ["fan_switch",      false],
+];
+
+// Fan-switch coverage (rev 11, #32, D-18 §18.4): B6 stops the compact VARIANT_FAN above from
+// exercising the switch cutout at all, so without a plus-family branch the feature would ship
+// untested by `smoke` (D15's lesson, repeated). DEV_PLUS/VARIANT_PLUS_SWITCH exist ONLY to give
+// mcc_switch_cutout()/mcc_switch_pad() and T1-43/T1-44 a real render-time exercise.
+DEV_PLUS = MCC_DEV_PRO_CONVERT_HDMI_PLUS;
+VARIANT_PLUS_SWITCH = [
+    ["fan",             true],
+    ["splitter",        false],
+    ["fan_switch",      true],
     ["lid_vents",       true],
 ];
 // tripod_insert defaults to true (D-16) when the key is absent, as VARIANT/VARIANT_FAN above both
@@ -47,9 +62,12 @@ translate([0, 750, 0]) mcc_shell_lid(dev = DEV, cfg = VARIANT_NO_LID_VENTS);
 // --- shell.scad: base with fan=true (exercises the fan-cutout branch) ---
 translate([250, 0, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_FAN);
 
+// --- shell.scad: plus-family base with fan=true + fan_switch=true (exercises the switch cutout) ---
+translate([1000, 0, 0]) mcc_shell_base(dev = DEV_PLUS, cfg = VARIANT_PLUS_SWITCH);
+
+// --- cradle.scad standalone ---
 // --- shell.scad: base with tripod_insert=false (issue #29 -- boss/collar/bore-cut all omitted) ---
 translate([250, 500, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_NO_TRIPOD);
-
 // --- cradle.scad standalone (default tripod_insert=true, D-16) ---
 translate([250, 250, 0]) mcc_cradle(dev = DEV, cfg = VARIANT);
 

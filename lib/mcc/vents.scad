@@ -20,6 +20,7 @@ use <ports.scad>     // mcc_dev_slug() (assert messages) -- D20, layout-patch-wa
 use <layout.scad>
 use <fan.scad>       // mcc_fan_cutout()
 use <fasteners.scad> // mcc_side_bolt_keepout()
+use <switch.scad>    // mcc_switch_keepout(), mcc_fan_switch_enabled() (B8)
 
 // Function: _mcc_in_any_range()
 // Description:
@@ -151,6 +152,22 @@ module mcc_vents(dev, cfg, face) {
 
     } else if (face == [1, 0, 0]) {
         fan_flag = struct_val(cfg, "fan");
+
+        // B8 (architecture.md §3): switch.scad owns the switch's own keep-out shape; this is the
+        // one place besides shell.scad's own cut that reads it, so no future +X vent-slot array
+        // (none exists today besides the fan opening itself) can ever be authored to land inside
+        // it. layout.scad's own T1-43 already guarantees this from pure numbers -- this is the
+        // geometry-level echo of that guarantee, at the point where the +X wall's real cuts are
+        // actually drawn.
+        if (mcc_fan_switch_enabled(cfg)) {
+            switch_pos = struct_val(l, "switch_pos");
+            ko = mcc_switch_keepout(mcc_switch_spec(MCC_SWITCH_DEFAULT));
+            pad_d = struct_val(ko, "pad_d");
+            fan_frame = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame");
+            assert(fan_pos[1] - fan_frame[1] / 2 - (switch_pos[1] + pad_d / 2) >= -MCC_EPS,
+                "mcc: fan/switch keep-out overlap on the +X wall -- see T1-43 (layout.scad)");
+        }
+
         if (fan_flag == true) {
             // Local frame (mcc_fan_cutout(), fan.scad): wall spans local Z=[0,wall_t], hole
             // pattern centred at local (0,0). rotate([0,90,0]) maps local Z -> world X, local Y ->
@@ -158,7 +175,7 @@ module mcc_vents(dev, cfg, face) {
             // at world X=L/2-MCC_WALL and centres the pattern on (fan_pos[1], fan_pos[2]).
             translate([L / 2 - MCC_WALL, fan_pos[1], fan_pos[2]])
                 rotate([0, 90, 0])
-                    mcc_fan_cutout("NF-A4x10", wall_t = MCC_WALL, grille = true);
+                    mcc_fan_cutout(MCC_FAN_DEFAULT, wall_t = MCC_WALL, grille = true);
         }
     }
 }

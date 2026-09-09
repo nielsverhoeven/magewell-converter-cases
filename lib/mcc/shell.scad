@@ -18,6 +18,7 @@ use <layout.scad>
 use <panel.scad>       // mcc_panel_cutout(), mcc_panel_fixing_pos() indirectly via layout.scad
 use <fasteners.scad>
 use <fan.scad>
+use <switch.scad>
 use <poe_splitter.scad>
 use <cradle.scad>
 use <mounts.scad>
@@ -372,7 +373,7 @@ module mcc_shell_base(dev, cfg) {
     // borrowed lateral one.
     pos_ext = [for (p = mcc_ports_external(dev)) if (mcc_port_face(p)[0] > 0) p];
     axial_terms = [for (p = pos_ext) mcc_plug_axial(mcc_port_kind(p))];
-    fan_env_depth = struct_val(mcc_fan_spec("NF-A4x10"), "frame")[2] + 5;
+    fan_env_depth = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame")[2] + 5;
     assert(struct_val(l, "x_dev_hi") + max(concat([0], axial_terms)) <= L / 2 - MCC_WALL - fan_env_depth + MCC_EPS,
         str("mcc: T1-18(c) +X axial cable clearance fails on \"", mcc_dev_slug(dev), "\""));
     // Reservation rule (architecture.md §6): the splitter bay must never intrude into the device's
@@ -414,6 +415,18 @@ module mcc_shell_base(dev, cfg) {
                 mcc_floor_features_add(dev, cfg);
 
                 _mcc_patch_wall_fixing_bosses(struct_val(l, "plate_size"), MCC_PLATE_RIM_W, W / 2, struct_val(l, "z_conn_c"));
+
+                // Fan switch pad (rev 11, #32, D-18): the +X wall is thickened INWARD locally so
+                // the recess cut below (mcc_switch_cutout(), in the outer difference()) has
+                // somewhere to sit -- D-13 pattern, no envelope figure moves. Same translate/
+                // rotate convention as vents.scad's fan cutout (local Z=0 -> world inner face,
+                // architecture.md rev-11 header finding B2 -- switch_pos[0] is the OUTER face).
+                if (mcc_fan_switch_enabled(cfg)) {
+                    switch_pos_add = struct_val(l, "switch_pos");
+                    translate([L / 2 - MCC_WALL, switch_pos_add[1], switch_pos_add[2]])
+                        rotate([0, 90, 0])
+                            mcc_switch_pad(mcc_switch_spec(MCC_SWITCH_DEFAULT), wall_t = MCC_WALL);
+                }
             }
 
             _mcc_patch_wall_aperture(l, dev);
@@ -438,6 +451,17 @@ module mcc_shell_base(dev, cfg) {
 
             if (struct_val(cfg, "fan") == true)
                 mcc_vents(dev, cfg, [1, 0, 0]);
+
+            // Fan switch cutout (rev 11, #32, D-18): translate([L/2-MCC_WALL, ...]) -- NOT
+            // switch_pos[0]=L/2 directly -- copying vents.scad:146 exactly (architecture.md
+            // rev-11 header finding B2: the naive translate cuts X in [L/2,L/2+3], outside the
+            // shell, removes zero material, and shows a golden delta of exactly zero).
+            if (mcc_fan_switch_enabled(cfg)) {
+                switch_pos_cut = struct_val(l, "switch_pos");
+                translate([L / 2 - MCC_WALL, switch_pos_cut[1], switch_pos_cut[2]])
+                    rotate([0, 90, 0])
+                        mcc_switch_cutout(mcc_switch_spec(MCC_SWITCH_DEFAULT), wall_t = MCC_WALL);
+            }
 
             mcc_vents(dev, cfg, [0, -1, 0]);
             mcc_vents(dev, cfg, [-1, 0, 0]);

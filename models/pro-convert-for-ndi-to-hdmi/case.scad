@@ -53,6 +53,10 @@ explode = 0;
 //               a collar (T1-41). Pass false to omit both the boss and its bore cut.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
+//   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
+//               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
+//               #32, D-18). Independent flag so a future variant could ship the fan without the
+//               switch, or vice versa, without a library change.
 //   "lid_vents" (bool, optional, default true) -- draws the lid vent field (issue #24) when true.
 //               Fed from the top-level `lid_vents` variable below so `-D lid_vents=false` renders
 //               the vent-less lid for comparison.
@@ -69,6 +73,11 @@ fan_effective = (part == "base_fan") ? true : fan;
 variant = [
     ["fan",       fan_effective],
     ["splitter",  splitter],
+    // The compact family's feasible fan-switch switch_y interval is EMPTY (D-18,
+    // layout-patch-wall.md §5/§18.2) -- explicit so the base_fan golden (which forces fan=true)
+    // never trips T1-43. Compact is fan=false by default anyway, so no user-facing feature is
+    // lost by this.
+    ["fan_switch", false],
     ["tripod_insert", true],
     ["lid_vents", lid_vents],
 ];

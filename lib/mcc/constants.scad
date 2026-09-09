@@ -759,6 +759,26 @@ MCC_FANS = [
     ["NF-A6x25", [["frame", [60, 60, 25]], ["pitch", 50], ["hole_d", 4.3]]],
 ];
 
+// Name of the fan fitted by default, key into MCC_FANS above. architecture.md §10 D-18 / rev 11
+// (#32) -- pulled out so layout.scad and vents.scad/shell.scad never repeat the "NF-A4x10" string
+// literal (architecture.md §3 "no magic numbers").
+MCC_FAN_DEFAULT = "NF-A4x10";
+
+// Function: mcc_fan_spec()
+// Usage:
+//   spec = mcc_fan_spec(name);
+// Description:
+//   Looks up a fan record (frame/pitch/hole_d) from MCC_FANS above by name, e.g. "NF-A4x10" or
+//   "NF-A6x25". MOVED HERE from lib/mcc/fan.scad (L1), rev 11, #32, architect verdict B7: it is a
+//   pure function over an L0 table (architecture.md §3 bans a *module* in constants.scad, not a
+//   function), and layout.scad — which may not `use` an L1 geometry provider — needs it to compute
+//   the fan-frame clearance for the fan-switch band solve legally, instead of open-coding
+//   MCC_FANS[search(["NF-A4x10"], MCC_FANS)[0]][1] at L1. No geometry change; no golden change.
+function mcc_fan_spec(name) =
+    let(ind = search([name], MCC_FANS)[0])
+    assert(ind != [], str("mcc: unknown fan \"", name, "\""))
+    MCC_FANS[ind][1];
+
 // Minimum total intake vent free area, as a multiple of the fan aperture's own circular area
 // (pi/4 * fan_aperture_d^2), when a fan bay is reserved. assumed —
 // knowledge/design/thermal-guidelines.md:104-109 gives only the qualitative rule "vent free area
@@ -804,6 +824,88 @@ MCC_LID_VENT_AREA_RATIO = 1.0;  // minimum net lid-vent free area, as a multiple
                                   // own circular area (pi/4 * MCC_FAN_APERTURE_D^2) -- same heuristic
                                   // as MCC_VENT_AREA_RATIO/T1-30, applied to the new top exhaust path.
                                   // assumed -- thermal-guidelines.md:104-109.
+
+// -----------------------------------------------------------------------------------------
+// Section: Fan switch
+// knowledge/components/switches.md. Rev 11, #32, architecture.md §10 D-18 / layout-patch-wall.md
+// §5+§18. A table + a named default, mirroring MCC_FANS/MCC_SPLITTERS above (architect verdict
+// B5) -- the plan's original single MCC_FAN_SWITCH struct is rejected for the same reason a
+// hard-coded MCC_FAN struct would be: swapping the part must be a data edit, never a geometry
+// edit. Three candidates are recorded in knowledge/components/switches.md; only MTS-101 is placed.
+// -----------------------------------------------------------------------------------------
+
+// [name, [["hole_d",d],["nut_d",d],["keepout_d",d],["pad_d",d],["body_d",d],["depth",d],
+//         ["actuator_proud_h",h],["panel_t_min",t],["panel_t_max",t],["clr",c],["confidence",c]]]
+//
+// MTS-101 (SPST ON-OFF mini toggle -- the SPST sibling of the ticket's own researched MTS-102,
+// same bushing/cutout/depth mechanical family; knowledge/components/switches.md).
+// hole_d/depth/actuator_proud_h/panel_t_min/panel_t_max: assumed -- generic 1/4-40NS mini-toggle
+// bushing convention (Finglai/LCSC MTS-102 datasheet family), no legible numeric callout reached
+// this pass. BLOCKING measurement M17 (architecture.md §11 R29/§12) buys one and measures all
+// five before the first full-size print.
+// nut_d: assumed 8.0 mm across-flats (generic 1/4-40NS hex nut), circumscribed via the standard
+// hex AF-to-circumscribed factor 1/cos(30 deg) -- architect verdict B5 ("a 1/4-40 bushing nut is
+// ~8 mm across flats -> ~9.24 mm circumscribed").
+// keepout_d: nut_d + 2*MCC_CLR_SLIDE -- the single generic panel-mount keep-out figure
+// mcc_switch_keepout() (switch.scad) exposes to callers outside the two-band solve below (e.g.
+// vents.scad, B8) -- NOT the same figure as pad_d/body_d, which are two DIFFERENT depths' worth of
+// footprint, both wider than keepout_d because they also carry the T1-44 lip margin.
+// pad_d/body_d: architect-derived (layout-patch-wall.md §5/§18, D-18/T1-43) -- a recessed toggle
+// needs a nut pocket of ~10 mm (nut_d rounded up), so body_d = 10.0 (the plain nut-pocket
+// footprint, used against the deeper corner-boss obstruction) and pad_d = body_d +
+// 2*MCC_APERTURE_LIP_WEB_MIN = 10 + 4 = 14.0 (the wider near-wall footprint, carrying this repo's
+// own 2.0 mm minimum-lip-material precedent, used against the fan reservation and the shallower
+// gusset-strip obstruction).
+// clr: 1.5 mm, NOT the plan's original 3.0 mm (which was "chosen, mirroring MCC_GAP_DEV/
+// MCC_SIDE_BOLT_PAD_T", but made every SKU's T1-43 band infeasible under the corrected two-band
+// formula). 1.5 is chosen instead so the T1-43 band solve reproduces the architect's own worked
+// verdict figures exactly: plus family switch_y in [-62.535,-59.325] (pro-convert-hdmi-plus/
+// pro-convert-for-ndi-to-hdmi-4k, a 3.21 mm window) and compact infeasible by 0.04 mm
+// (layout-patch-wall.md §18.2) -- confirmed by hand against the raw band widths there
+// (pad 17.60/20.85, body 14.96/18.21 mm, compact/plus).
+MCC_SWITCHES = [
+    ["MTS-101", [
+        ["hole_d",           6.4],
+        ["nut_d",            8.0 / cos(30)],
+        ["keepout_d",        8.0 / cos(30) + 2 * MCC_CLR_SLIDE],
+        ["pad_d",            14.0],
+        ["body_d",           10.0],
+        ["depth",            13.0],
+        ["actuator_proud_h", 10.0],
+        ["panel_t_min",       0.8],
+        ["panel_t_max",       3.2],
+        ["clr",               1.5],
+        ["confidence",   "assumed"],
+    ]],
+];
+
+// Name of the switch fitted by default, key into MCC_SWITCHES above. D-18 (architecture.md §10).
+MCC_SWITCH_DEFAULT = "MTS-101";
+
+// Function: mcc_switch_spec()
+// Usage:
+//   spec = mcc_switch_spec(name);
+// Description:
+//   Looks up a switch record from MCC_SWITCHES above by name, e.g. "MTS-101" -- mirrors
+//   mcc_fan_spec()'s own pattern (both pure lookups over an L0 table), so callers never open-code
+//   MCC_SWITCHES[search([name], MCC_SWITCHES)[0]][1] (architecture.md §3, the same rule verdict B7
+//   applies to MCC_FANS).
+function mcc_switch_spec(name) =
+    let(ind = search([name], MCC_SWITCHES)[0])
+    assert(ind != [], str("mcc: unknown switch \"", name, "\""))
+    MCC_SWITCHES[ind][1];
+
+// Minimum flush clearance below the wall's outer face for the switch actuator's tip, mm -- the
+// T1-25 analogue for a switch (architecture.md R29): recess_t = actuator_proud_h + this. assumed,
+// mirrors T1-25's own 1.0 mm margin (fasteners.scad mcc_captive_side_bolt_boss() head-recess rule,
+// "head_rec_h >= head_h + 1.0").
+MCC_SWITCH_FLUSH_CLR = 1.0;
+
+// Stop-and-report guard (architecture.md R29 / T1-44(e)): if a measured actuator (M17) forces a
+// recess deeper than this, the part is wrong -- do not answer it by shaving the recess. assumed,
+// chosen so today's ~11 mm computed well (10.0 mm proud + 1.0 mm flush clearance) passes with only
+// ~1 mm of margin, matching R29's own "near the depth where a fingertip can no longer reach" note.
+MCC_SWITCH_WELL_DEPTH_MAX = 12.0;
 
 // -----------------------------------------------------------------------------------------
 // Section: PoE splitter envelope

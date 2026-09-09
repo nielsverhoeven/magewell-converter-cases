@@ -158,6 +158,16 @@ requested only the plain 5V and 12V variants.)
   were not independently verified for this document — treat any specific such product's specs as
   `unknown` unless verified directly.
 - Source: [FAQ: Can I power fans via a wall socket or USB?][usb-faq]
+- **KUOQIY USB-A → 3/4-pin PWM fan adapter cable** (5-pack, amazon.nl ASIN B0D1C36WKB, ≈€7.98/5,
+  5 V, 30 cm, black): confirmed by the fan-switch ticket (issue #32) that this specific product's
+  fan-side connector mates **directly** with the `NF-A4x10 5V`'s own native 3-pin connector — no
+  OmniJoin adaptor or NA-AC2 3:2-pin adaptor cable needed for this cable, unlike the general
+  "generic third-party adaptor cables ... not independently verified" caveat above, which this
+  narrows for this one specific product only. Chosen as this repo's decoder fan-power lead
+  (`.claude/knowledge/architecture.md` §5, `docs/plans/2026-09-09-fan-switch.md` §3) because the
+  plain `NF-A4x10 5V` ships no USB cable of its own (see the table above). Amazon fetches for this
+  ASIN returned HTTP 500 during this pass — the spec above is per the ticket's own citation, not
+  independently re-verified from the listing.
 
 ---
 
