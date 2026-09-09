@@ -85,13 +85,46 @@ consequences for this skill:
   `knowledge/neutrik/d-series-cutout.md:92-93`). Do not thin below 2.0 mm even for etherCON, which
   officially tolerates up to 4 mm — a uniform seat keeps the panel-plate module parameter-free per
   connector kind.
-- **Screw fixing**: the Neutrik screw holes (±9.5, ±12.0 mm) sit *inside* the 26×31 flange footprint,
-  so they cannot land on shell material outside the flange. Use **local rear bosses** at the two
-  screw positions, protruding rearward from the 2.0 mm seat to ~7 mm total, each with an M3 heat-set
-  insert (5.7 mm, `MCC_INSERT_M3`). **Self-tapping directly into 2 mm of ASA is not an approved
-  option** — the plate is too thin to hold a self-tap reliably. The Neutrik **MFD** M3 fixing plate is
-  the documented alternative if a boss ever proves impractical for a specific connector, but it adds
-  an SKU per connector — don't reach for it as a default.
+- **Screw fixing (rev 10, 2026-09-09, GitHub issue #30 — supersedes the pre-#30 heat-set-insert
+  boss)**: the Neutrik screw holes (±9.5, ±12.0 mm) sit *inside* the 26×31 flange footprint, so they
+  cannot land on shell material outside the flange. The connector's own two screws thread directly
+  into a **printed M3×0.5 internal thread** in the same local rear pad, via BOSL2
+  `screw_hole(thread=true)` — not into a heat-set insert. Geometry lives in one public module,
+  `mcc_thread_pad()` (`lib/mcc/neutrik.scad`), called both by `mcc_neutrik_d_bosses()` (production)
+  and by `models/coupons/m3-thread-ladder.scad` (the calibration ladder) — never call BOSL2
+  `screw_hole()` directly from `models/**`. Pad OD (`MCC_THREAD_M3_PAD_D = 8.28`) and height
+  (`MCC_THREAD_M3_PAD_H = 7.0`) are pinned equal to the pre-#30 boss's own OD/height, so no shell
+  wall-window geometry moved when this landed. **Self-tapping directly into 2 mm of ASA is still not
+  an approved option** — that remains the reason this is a *pad*, not a thread in the 2 mm plate
+  field itself (~4 turns, rejected). The Neutrik **MFD** M3 fixing plate is the documented
+  alternative if a pad ever proves impractical for a specific connector, but it adds an SKU per
+  connector — don't reach for it as a default.
+  - **Print orientation is the reason this is printable at all**: the panel plate prints flange-face
+    down, so the pad's bore axis is **vertical**, growing straight up off the bed — the single best
+    orientation for a printed internal thread (no bridging, no thread-flank overhang).
+  - **`$fn` policy exception, scoped to the thread bore only** (`architecture.md` §3, rev 10): the
+    thread bore is `$fn=32`, not the repo's usual `$fn≥64` minimum — BOSL2 `screw_hole()` accepts no
+    `circum` argument, so the usual circumscribe mechanism is unavailable, and the measured cost of
+    `$fn=64` on a real thread is ~26× the render time and ~38× the STL size of a plain bore (~13×/
+    ~19× at `$fn=32`) — see `architecture.md` §3 for the full citation. **The pad's own outer
+    cylinder keeps `$fn=64` + `circum=true`** — this exception never extends past the thread bore.
+  - **`MCC_THREAD_M3_SLOP` (default 0.05) is the load-bearing tuning constant, not `MCC_HOLE_COMP`.**
+    BOSL2 grows an internal thread by `4·$slop` in *diameter* (`lib/BOSL2/screws.scad:753`) — a
+    plausible-looking but too-large `$slop` silently erases the entire M3×0.5 thread (only 0.2705 mm
+    of nominal radial engagement). Calibrate with `models/coupons/m3-thread-ladder.scad`
+    (rungs `[0.02, 0.035, 0.05, 0.065, 0.08]`) before trusting this default — acceptance is **≥5
+    insert/remove cycles per pad**, not one successful seat (R28), because a connector gets
+    unscrewed for cable service and repeat-cycle stripping is exactly the failure mode a heat-set
+    insert existed to prevent.
+  - **`MCC_THREAD_FAST` (default `false`, override with `-D MCC_THREAD_FAST=true`)** substitutes a
+    plain `MCC_M3_CLR_D` clearance bore for the real thread — fast dev-iteration renders and the
+    interactive case-viewer artifact only (same `MCC_SHOW_GHOST` precedent: default `false`/safe,
+    opt in via `-D`). **Never** for a release, coupon, or print export — goldens and CI always use
+    the real thread.
+  - **Out of scope, and don't conflate the two**: the panel *plate's own* 4 retention bosses
+    (`_mcc_patch_wall_fixing_bosses()` in `shell.scad`, screwing the plate into the shell's rabbet)
+    are a completely different physical system and are **unchanged** — still M3 heat-set inserts.
+    Issue #30 only converted the connector-to-plate fixing covered by this section.
 - **Print orientation**: the panel plate prints flat, face-down, so its holes are true circles with
   no bridging — see `print-check` for the full orientation rule.
 - **Aperture roof in the shell**: the rabbet's roof is a ≤45° self-supporting chamfer, never a flat
@@ -132,7 +165,12 @@ numbers below are an engineering recommendation derived from the flange size, al
 | Each flange fits on the panel with ≥4 mm web to the frame | 26×31 mm + margin ≤ available panel area |
 | Panel seat thickness | ≤ `mcc_panel_max_t(part)` |
 | Clear depth behind the cutout | ≥ `mcc_bay_depth(part)` |
-| Heat-set boss OD | ≥ `MCC_BOSS_MIN_RATIO` (1.8) × insert OD |
+| Connector-fixing thread pad wall (T1-42a, rev 10) | `(pad_d − (major_d + 4·$slop))/2` ≥ `MCC_THREAD_WALL_MIN` (2.0) |
+| Connector-fixing thread engagement (T1-42b, rev 10) | `(pad_h − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH` ≥ `MCC_THREAD_ENGAGE_MIN_TURNS` (3) |
+| Connector-fixing residual radial thread engagement vs `$slop` (T1-42c, rev 10 — the one that would have caught a too-large `$slop`) | `0.5·(major_d − minor_d) − 2·$slop` ≥ `MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135) |
+
+The plate's own 4 retention bosses (out of scope for issue #30, see the note above) still follow the
+pre-#30 rule: Heat-set boss OD ≥ `MCC_BOSS_MIN_RATIO` (1.8) × insert OD.
 
 ## Coupons — how the placeholder numbers get replaced
 
@@ -148,6 +186,11 @@ numbers, and neither has been printed yet — do not treat any `assumed`-confide
   is the *only* way to replace the `plug_len`/`bend` placeholders in `MCC_PANEL_PARTS` (currently
   `TODO(teamlead)`-flagged, `confidence:"assumed"`, per the comment block above the table in
   `constants.scad`).
+- **`m3-thread-ladder`** (`models/coupons/m3-thread-ladder.scad`, new rev 10, GitHub issue #30) — 5
+  printed M3 thread pads at production `pad_d`/`pad_h`/`$fn` (built from the same `mcc_thread_pad()`
+  the connector-fixing boss module calls), sweeping `$slop` across `[0.02, 0.035, 0.05, 0.065, 0.08]`.
+  Calibrates `MCC_THREAD_M3_SLOP` (default 0.05, `assumed`) — the only way to replace this placeholder
+  is a real M3 machine screw threaded and unthreaded ≥5 times per pad (R28).
 
 **Writing a measured result back**: edit the relevant row in `lib/mcc/constants.scad`'s
 `MCC_PANEL_PARTS` (or the constant it feeds), replace the value, and update the comment to name the
