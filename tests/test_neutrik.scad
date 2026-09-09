@@ -13,32 +13,41 @@ $fa = 1; $fs = 0.4;
 include <mcc/mcc.scad>
 
 // --- Default parameters -------------------------------------------------------------------
-// T1-35 (layout-patch-wall.md §9, rev 6 / deviation D10): mcc_neutrik_d_bosses()'s bore is now
-// SPLIT -- an insert bore from the rear tip (depth insert.len + MCC_INSERT_BORE_EXTRA) plus an
-// MCC_M3_CLR_D screw-clearance through-bore for the remainder of boss_h, so no solid material
-// remains anywhere on the screw axis between the flange face and the insert. At the default
-// boss_h=7: insert_bore_depth = 5.7+0.5 = 6.2, thru_depth = 0.8 (both > 0).
+// T1-42a/b/c (architecture.md rev 10, GitHub issue #30): mcc_neutrik_d_bosses()'s bore is now a
+// printed M3x0.5 internal thread via mcc_thread_pad() -- pad wall, engaged turns, and residual
+// radial engagement vs $slop all self-assert at the module's own default parameters.
 mcc_neutrik_d_cutout("NE8FDP-B");
 mcc_neutrik_d_bosses("NE8FDP-B");
 mcc_neutrik_d_flange_outline();
 
-// --- Minimum-ish parameters: seat_t == panel_t (no rear pocket cut at all) -----------------
+// --- Minimum-ish parameters: seat_t == panel_t (no rear pocket cut at all), AND the shortest
+// pad_h that still satisfies T1-42b's >=3-turn floor exactly ------------------------------
 translate([40, 0, 0])
     mcc_neutrik_d_cutout("NAHDMI-W-B", mirror = true, seat_t = 1.0, panel_t = 1.0);
 translate([40, 0, 0])
-    // boss_h == insert_bore_depth exactly (thru_depth == 0, the T1-35 boundary: the insert bore
-    // alone reaches all the way to the panel-side face, so the `if (thru_depth > 0)` branch in
-    // mcc_neutrik_d_bosses() is skipped without leaving any solid on the screw axis).
+    // pad_h at the T1-42b boundary: chamfer + MIN_TURNS*pitch = 0.5 + 3*0.5 = 2.0.
     mcc_neutrik_d_bosses("NAHDMI-W-B", mirror = true,
-        boss_h = struct_val(MCC_INSERT_M3, "len") + MCC_INSERT_BORE_EXTRA);
+        pad_h = MCC_THREAD_M3_CHAMFER + MCC_THREAD_ENGAGE_MIN_TURNS * MCC_THREAD_M3_PITCH);
 
-// --- Maximum-ish parameters: etherCON at its full 4 mm panel-thickness rating --------------
+// --- Maximum-ish parameters: etherCON at its full 4 mm panel-thickness rating, AND a long pad_h
+// well past the production default -- exercises a long threaded bore -----------------------
 translate([80, 0, 0])
     mcc_neutrik_d_cutout("NE8FDP-B", mirror = false, seat_t = 2.0, panel_t = 4.0);
 translate([80, 0, 0])
-    // boss_h=12 well past insert_bore_depth (6.2) -- exercises a long screw-clearance through-bore
-    // (thru_depth = 5.8) on top of the insert bore.
-    mcc_neutrik_d_bosses("NE8FDP-B", mirror = false, boss_h = 12);
+    mcc_neutrik_d_bosses("NE8FDP-B", mirror = false, pad_h = 12);
+
+// --- MCC_THREAD_FAST fast-path equivalence: the cheap clearance-bore substitute (production
+// toggle: `-D MCC_THREAD_FAST=true`, architect verdict B6) must keep exactly the same pad
+// envelope (OD/height) as the real-thread default. Both branches in mcc_thread_pad() share one
+// `cyl(h = pad_h, d = pad_d, ...)` outer-solid statement -- only the difference()'d bore differs
+// -- so the envelope is identical BY CONSTRUCTION; this instantiates both (via the `fast`
+// override, same overridable-default idiom as mcc_ghost(dev, show=MCC_SHOW_GHOST)) so a future
+// edit that gives the two branches their own separate outer-cylinder call, and lets them diverge,
+// at least renders both paths in one smoke pass. The actual numeric cross-check (bbox
+// byte-identical between a MCC_THREAD_FAST=false and =true panel render) is a Tier-3 golden
+// comparison, not a Tier-2 assert -- see the PR verification notes.
+translate([120, 0, 0]) mcc_thread_pad(fast = false); // real thread (default path)
+translate([140, 0, 0]) mcc_thread_pad(fast = true);  // MCC_THREAD_FAST override
 
 // --- Panel plate: single slot and a 2-slot plate at the minimum D-series pitch -------------
 translate([0, 60, 0])
