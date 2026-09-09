@@ -1,6 +1,69 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 9, 2026-09-09.** Rev 9 is the architecture gate for four researcher plans:
+Status: **revision 11, 2026-09-09.** Rev 11 is the architecture gate for
+`docs/plans/2026-09-09-fan-switch.md` (issue #32 — an external manual on/off switch for the fan in
+the **+X end wall beside the ⌀38 fan aperture**, plus the KUOQIY USB-A → 3/4-pin fan-power cable).
+Verdict: **APPROVED WITH CHANGES — 8 blocking (B1–B8) + 1 blocking user decision (U)**; full verdict
+and rulings in that plan file's **§9 "Architect verdict"** and in `layout-patch-wall.md` **§18**.
+
+What rev 11 changes here: **§3's L1 list gains `lib/mcc/switch.scad`** and the rule that the pure
+accessor `mcc_fan_spec()` moves **down to L0 `constants.scad`** (with `MCC_FAN_DEFAULT`) so
+`layout.scad` can read the fan frame without importing an L1 geometry provider; §11 gains **R29**;
+§12 gains measurement **M17** and open question **Q19**; §13 gains deviation **D23**. New asserts
+**T1-43 / T1-44 / T1-45** and decision **D-18** are in `layout-patch-wall.md` §9/§10; the placement
+contract is `layout-patch-wall.md` §5 "Fan switch". **No envelope figure moves on any SKU** — the
+switch pad is an *internal* wall thickening (the D-13 pattern: material moves inward, never outward),
+so `bbox` is unchanged on every part.
+
+**The two findings that matter most.**
+
+1. **B2 — the plan's `shell.scad` call site cuts nothing at all.** It translates to
+   `switch_pos[0] = L/2` and then `rotate([0,90,0])`, which maps the cutout module's local
+   `Z ∈ [0, wall_t]` onto world `X ∈ [L/2, L/2 + 3]` — *outside* the shell. `vents.scad:146` does the
+   same job correctly with `translate([L/2 − MCC_WALL, fan_pos[1], fan_pos[2]])`. The failure is
+   silent: the `difference()` removes zero material, the mesh stays watertight and single-shell, and
+   the only symptom is a golden delta of **exactly zero** — which the plan's own §4.7 ("expect a
+   small, real volume delta") invites a developer to `--update` past. **Convention, recorded once:
+   `fan_pos`/`switch_pos` carry the wall's OUTER-face plane in X; every call site subtracts
+   `MCC_WALL` itself.**
+2. **U — a *flush* switch does not fit the compact family beside the fan, at any clearance.** The +X
+   wall's free Y band is bounded by the fan's 40 mm reservation on one side and, at two different
+   depths, by the `(+X, −Y)` corner lid-fastener boss (⌀8.28 at `y = −(W/2 − 10)`, `x ∈ L/2 −
+   [14.14, 5.86]`) and its 3 mm gusset strip on the other. Raw bands: **pad 17.60 / body 14.96 mm
+   (compact)**, **20.85 / 18.21 mm (plus)**. A recessed ⌀6.4 toggle needs a ⌀14 pad (nut pocket
+   ⌀ ≈ 10 + 2 × `MCC_APERTURE_LIP_WEB_MIN`) and a ⌀10-class body: on **compact the feasible interval
+   for `switch_y` is empty** (`y ≤ −59.325` from the fan, `y ≥ −59.285` from the boss); on **plus it
+   is 3.2 mm wide** and the design works. Moving `fan_y` does not rescue compact — the +Y side is
+   capped by the connector bay at `fan_y ≤ −25.7`, worth ≤ 5.1 mm — so R20 stays closed and the IP65
+   ⌀20.2 candidate stays unplaced. **Ruling: the switch ships on the `plus` family; every compact
+   variant (including the `base_fan` golden and `tests/test_shell.scad`'s `VARIANT_FAN`) sets
+   `["fan_switch", false]` explicitly**, and the user decides whether that is permanent (see §18 U).
+
+Rev 10 history follows. Rev 10 is the architecture gate for
+`docs/plans/2026-09-09-printed-m3-threads.md` (issue #30 — the Neutrik D-flange fixing holes become
+**printed M3×0.5 internal threads** in the existing rear pad on the panel plate, replacing the M3
+heat-set inserts). Verdict: **APPROVED WITH CHANGES — 7 blocking (B1–B7)**; full verdict, rulings
+and dispatch scope in that plan file's **§9 "Architect verdict"**.
+
+What rev 10 changes here: **§5 "Connector fixing" gains the dated evolution note below** (the
+connector-fixing bosses become threaded pads; **the plate's own 4 retention bosses in `shell.scad`
+are UNCHANGED — still heat-set inserts**); **§3's `$fn` policy gains one named, bounded exception**
+for `screw_hole(thread=true)` bores; §9's assert list gains **T1-42a/b/c**; §11 gains **R28**; §12
+gains measurement **M16**. **No envelope figure moves on any SKU** — the pad's OD (8.28) and height
+(7.0) are pinned to their pre-#30 values precisely so the wall window, `d_rel = 8.88` and every
+T1-34a–d number are numerically unchanged.
+
+**The blocking correction that matters most (B1).** The plan's `MCC_THREAD_M3_SLOP = 0.15` produces
+**no thread at all**. BOSL2 enlarges an internal thread by **`4·$slop` in diameter**
+(`lib/BOSL2/screws.scad:753`, `lib/BOSL2/threading.scad:179`), i.e. `2·$slop` per side, while M3×0.5
+has only `0.5·(3.000 − 2.459) = 0.2705 mm` of radial engagement. At `$slop = 0.15` the hole grows
+0.30 mm per side — more than the whole thread depth — leaving a plain ⌀3.6 bore. **`$slop = 0.05`**
+(BOSL2's own tested figure, `screws.scad:767`). The general rule this repo takes from it:
+**`$slop` on a BOSL2 internal thread is `2·$slop` per side, and it must always be checked against
+the thread's own radial engagement** — that check is now assert **T1-42c**, and it is the assert
+that would have caught this before the printer did.
+
+Rev 9 history follows. Rev 9 is the architecture gate for four researcher plans:
 `docs/plans/2026-09-09-mount-rail-and-brackets.md` (#25/#26/#27), `…-cradle-deck.md` (#29),
 `…-lid-vents.md` (#24), and their cross-cutting merge order. Verdicts:
 
@@ -243,6 +306,8 @@ L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS 
                                           mounts.scad (case floor) and models/brackets/*.scad
                                           (rev 9, D-15). NOT named bracket.scad — see below
     lib/mcc/fan.scad                      fan bay envelope, grille, finger guard
+    lib/mcc/switch.scad                   panel-switch cutout + recess pocket + keep-out
+                                          (rev 11, #32). Geometry only — no dev/cfg
     lib/mcc/poe_splitter.scad             splitter bay envelope + tie-down
     lib/mcc/ghost.scad                    device ghost + plug envelopes (visual only)
         │
@@ -294,6 +359,29 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
     **constants** (L0), never from `mcc_rail_sill_size()`.
   - `shell.scad` reaches the rail only through `mounts.scad`, never by `use <rail.scad>` — the floor
     rule (§6) has one owner.
+- **`switch.scad` (L1, added rev 11, #32).** Owns the panel-switch void and nothing else:
+  `mcc_switch_cutout(spec, wall_t)` (subtractive: through-bore + outer recess pocket),
+  `mcc_switch_keepout(spec)` (**pure**, the wall-plane pad footprint + the body depth behind it) and
+  the optional `mcc_switch_ghost(spec)`. Rules:
+  - **It is a generic panel-switch provider, not a fan file.** The *part* is a row in an L0 table
+    (`MCC_SWITCHES`, default `MCC_SWITCH_DEFAULT`), exactly like `MCC_FANS`/`MCC_SPLITTERS` — three
+    candidate parts are already recorded in `knowledge/components/switches.md`, and swapping to one
+    of them must be a data edit, never a geometry edit. A bare single-part `MCC_FAN_SWITCH` struct
+    is rejected for that reason.
+  - **The caller places it**, exactly as `vents.scad` places `mcc_fan_cutout()`: the module is
+    authored with local `Z ∈ [0, wall_t]` spanning the wall, inner face at local `Z = 0`.
+  - **`layout.scad` must NOT `use <switch.scad>`** (§3's L1-provider ban). Its clearance asserts read
+    the `MCC_SWITCHES` row directly — the same rule that keeps `mcc_floor_keepout()`'s `"mount_rail"`
+    row on the `MCC_RAIL_*` constants (rev 9).
+  - Consumers: `shell.scad` (the cut, in `mcc_shell_base()` after the fan cutout) and `vents.scad`
+    (which must not place a +X slot inside `mcc_switch_keepout()`).
+- **`mcc_fan_spec()` moves from `fan.scad` (L1) to `constants.scad` (L0), rev 11**, together with a
+  new `MCC_FAN_DEFAULT = "NF-A4x10"`. It is a **pure function over an L0 table** and was misplaced at
+  L1 from the start; §3 forbids a *module* in `constants.scad`, not a function. This is what lets
+  `layout.scad` compute the fan-frame clearance legally instead of open-coding
+  `MCC_FANS[search(["NF-A4x10"], MCC_FANS)[0]][1]` at L1 — and it removes the `"NF-A4x10"` string
+  literal from `vents.scad:148` and `shell.scad:375` (§3 "no magic numbers in L2"). No geometry
+  changes; no golden moves.
 - **`models/brackets/*.scad` are assemblies, not cases.** They sit at the same level as
   `models/<slug>/case.scad` and `models/coupons/*.scad`: they may import only the barrel
   `<mcc/mcc.scad>`, own their own plate/holes/ribs, and must never re-derive the rail profile.
@@ -335,6 +423,19 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
   `MCC_HOLE_COMP`) so the polygonal approximation is circumscribed rather than inscribed. An
   inscribed 24.2 mm hole at `$fn=32` is effectively 24.08 mm — that matters when the Neutrik flange
   only overlaps the hole by ~0.9 mm per side.
+- **The one sanctioned exception: `$fn = 32` on a BOSL2 `screw_hole(thread=true)` bore** (rev 10,
+  issue #30). Scoped to the **thread bore only** — the pad/boss cylinder around it still takes
+  `$fn = 64` with `circum = true`. Justification, in this order: (1) `screw_hole()` accepts **no
+  `circum` argument**, so the circumscribing mechanism above is simply unavailable; (2) the residual
+  inscribed error at `$fn = 32` on ⌀3.0 is `3.0·(1 − cos(180/32))/2 = 0.0072 mm per side` — **2.7 %
+  of the thread's 0.2705 mm radial engagement**, and ~7 % of the `$slop` term, so the fit is carried
+  by `$slop` (and by assert T1-42c), not by facet count; (3) the measured cost is real —
+  `$fn = 64` is ~26× the render time and ~38× the STL size of a plain bore, `$fn = 32` roughly halves
+  both (table in the plan's §3.3). **This is a bounded carve-out, not a loosening of the policy**:
+  it does not extend to any other hole class, and any future use must cite this bullet. Note also
+  that the far bigger STL-size lever is **ASCII → binary STL** (~6×, lossless); `scripts/build.py`
+  emits ASCII today (`build.py:64,423`, no `--export-format`). That is a separate ticket, deliberately
+  **not** folded into #30 because it changes every export and every golden's provenance.
 
 ---
 
@@ -496,6 +597,45 @@ D-connectors down".**
    2026-09-08c C2. T1-35's wording is unchanged and is satisfied strictly by a through-bore.
    The `neutrik-tile` coupon (§9 Tier 4) exists to catch exactly this class of defect and has not
    been printed; **print it before the first full-size case.**
+
+3. **The connector's own two screws thread into a printed M3 pad, not a heat-set insert (rev 10,
+   2026-09-09, GitHub issue #30).** This **supersedes bullet 1's "Preferred: … with an M3 heat-set
+   insert" and the "Self-tapping directly into 2 mm of ASA is not an approved option" line — for the
+   connector-fixing system only.** (That line remains true and remains the reason this is a *pad*,
+   not a thread in the 2 mm plate field: option A, threading the plate itself, gives ~4 turns and was
+   rejected.) The pad is the *same* boss as before — `MCC_THREAD_M3_PAD_D = 8.28`,
+   `MCC_THREAD_M3_PAD_H = 7.0`, both **pinned equal to the pre-#30 heat-set boss** — with the insert
+   bore replaced by a BOSL2 `screw_hole(thread=true)` M3×0.5 bore. Consequences, all deliberate:
+   - **No shell geometry moves.** Because the OD is pinned, the wall window's boss reliefs
+     (`d_rel = boss_od + 2·MCC_CLR_SLIDE = 8.88`) and every T1-34a–d figure are unchanged.
+     **`layout.scad:189` must therefore derive `d_rel` from `MCC_THREAD_M3_PAD_D`, not from
+     `MCC_BOSS_MIN_RATIO · MCC_INSERT_M3.od`** — otherwise one physical diameter has two independent
+     sources and they drift the first time anyone edits `MCC_INSERT_M3` (which stays in use for the
+     plate-fixing bosses). Same rule as the `rail.scad` ruling in §3 and D6: both halves of a mating
+     interface come out of one file. `layout.scad:395`'s `insert_hole_r` (T1-34d) correctly stays on
+     `MCC_INSERT_M3` — that is the shell's own plate-fixing boss.
+   - **The bore stays a genuine through-hole**, open at the pad's rear tip *and* its panel-facing
+     face — unchanged from the rev-7 T1-35 fix, and for the same Manifold reason. Do **not**
+     blind-pocket it. Bonus property worth knowing: with a through-bore an over-long screw cannot
+     bottom out and jack the connector off its seat; **under**-length is the only failure mode.
+   - **Print orientation is what makes this legal.** The plate prints face-down
+     (`print-check/SKILL.md:59`), so model `−Z` is printer `+Z` and the bore axis is **vertical** —
+     one full circle per layer, no bridging, no thread-flank overhang. The same thread in a vertical
+     shell wall (option B) would be a horizontal M3 bore, unprintable without unremovable internal
+     support. **Print orientation, not Manifold, is the deciding argument.**
+   - **The plate's own 4 retention bosses (`_mcc_patch_wall_fixing_bosses()` in `shell.scad`) are
+     UNCHANGED — still M3 heat-set inserts.** Two different physical systems: connector-to-plate vs.
+     plate-to-shell. Issue #30's own text conflated them; do not repeat that. Converting the
+     plate-fixing bosses is a separable follow-up ticket, and it is the point at which
+     `mcc_thread_pad()` should move from `neutrik.scad` to its natural home `fasteners.scad`.
+   - **One implementation shape, one source.** The pad+thread is a public `mcc_thread_pad()` in
+     `neutrik.scad`; `mcc_neutrik_d_bosses()` and the `m3-thread-ladder` coupon both call it. A
+     coupon that hand-rolls its own copy of the geometry cannot calibrate a production constant, and
+     an L4 model calling BOSL2 `screw_hole()` directly violates §3's "models import only the barrel".
+   - **Unretired until a coupon says so.** The fixing is `assumed` until `m3-thread-ladder` **and**
+     `neutrik-tile` are printed in ASA and tested — see **R28** and **M16**. The fallback is a
+     one-module revert (swap the bore back to an insert bore); it is cheap *only* because the pad's
+     external footprint was pinned.
 
 ### Panel cutout dispatcher
 
@@ -807,6 +947,7 @@ contracts, so a bad parameter fails loudly at render instead of quietly at the p
 | `24.0 ≤ cutout_d ≤ 24.6` (never blow out the hole — flange overlap is only ~0.9 mm/side) | `d-series-cutout.md:36-43` |
 | clear depth behind each cutout ≥ `mcc_bay_depth(part)` | `placement-and-depth.md:66-71` |
 | heat-set boss OD ≥ 1.8 × insert OD, ≥ 2 mm material to any edge | `fasteners-and-hardware.md:123-131` |
+| **printed-thread pad: wall ≥ 2.0 mm, ≥ 3 engaged turns, residual radial engagement ≥ 50 % of nominal after `$slop`** (T1-42a/b/c, rev 10) | §5 "Connector fixing" bullet 3; `lib/BOSL2/screws.scad:753` |
 | rib thickness ≤ 0.6 × adjoining wall, height ≤ 3 × thickness | `fdm-rugged-enclosure-guidelines.md:65-70` |
 | no two floor features overlap (`mcc_floor_keepout()`) | §6 floor rule |
 | every port with `panel != "none"` has a cutout, and vice versa | §7 |
@@ -819,8 +960,14 @@ port on `[0,-1,0]`; keep-out ∩ vent = ∅; bolt axis inside the device side fa
 clip pocket inside the wall; keep-out ∩ cradle-rib = ∅), and the three rev-4 additions (duct floor,
 intake free area vs. the fan aperture, flush boss). Rev 5 added T1-32/T1-33/T1-34; **rev 6 retires
 T1-34 and adds T1-34a–d (aperture shape, roundness, containment, fixing-boss clearance) and T1-35
-(no solid material on any fastener's screw axis between the bearing face and its insert).** Full
-table with sources: `layout-patch-wall.md` §9. Do not
+(no solid material on any fastener's screw axis between the bearing face and its insert).**
+**Rev 9 adds T1-36 … T1-41** (rail sill, rail keep-out, floor residual, deck grid, pad-pocket
+island, vent/keep-out). **Rev 10 adds T1-42a/b/c — the printed connector-fixing thread: pad wall
+thickness, engaged turns, and residual radial thread engagement vs. `$slop`** (issue #30). **T1-42c
+is the load-bearing one**: `0.5·(major − minor) − 2·$slop ≥ MCC_THREAD_ENGAGE_MIN_RADIAL`. It exists
+because a BOSL2 internal thread grows by `4·$slop` in *diameter*, so a plausible-looking `$slop` can
+silently erase the entire thread and leave a plain bore that every other assert happily passes.
+Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
 
@@ -844,6 +991,13 @@ is printed:
 - `tg-ladder` — tongue-and-groove clearance ladder to calibrate `MCC_CLR_TG`.
 - `insert-boss` — heat-set boss hole-diameter ladder for ASA.
 - `tolerance-ladder` — general fit ladder.
+- `m3-thread-ladder` (**new, rev 10, issue #30**) — 5 printed M3 thread pads at production
+  `pad_d`/`pad_h`/`$fn`, sweeping `$slop` across **`[0.02, 0.035, 0.05, 0.065, 0.08]`** (per-side
+  0.04–0.16 mm, i.e. 15–59 % of the 0.2705 mm nominal engagement). The ladder must be built from the
+  same `mcc_thread_pad()` the production module calls — a coupon that duplicates the geometry cannot
+  calibrate it. **Acceptance is ≥ 5 insert/remove cycles per pad, not one successful seat**: a
+  connector gets unscrewed for cable service, and repeat-cycle stripping is the exact failure mode
+  heat-set inserts existed to prevent (**R28**). Print it in the same batch as `neutrik-tile`.
 
 Every coupon result is written back into `constants.scad` as a calibrated constant with a comment
 naming the coupon and the date.
@@ -1307,6 +1461,48 @@ flat-lid print convention does not support today; (b) the field is centred on ex
 D-14 bonds the **KSD9700** to the device's metal top, so debris entering the slots lands on that
 switch and its joints. Neither is a blocker; both are recorded so they are not rediscovered.
 
+**R28 — M3 is below the conservative floor for printed FDM internal threads, and the connector
+fixing now depends on one. NEW 2026-09-09 (rev 10, #30).** Sourced FDM-thread guidance treats **M6
+and larger** as the safe default on a 0.4 mm nozzle and calls M3–M5 viable only "on well-tuned
+machines" with "precise clearance calibration and test prints". This repo has now committed the
+**connector-to-plate fixing** — the joint that holds a Neutrik connector in the patch wall on a
+touring case — to exactly that class of thread. The sizing targets the upper end of what the source
+considers viable (13 engaged turns, 2.44 mm wall), and the geometry is favourable (vertical bore
+axis, printed off the bed), but **the premise is not retired by any of that.**
+- **The gate is physical, and it is `m3-thread-ladder` + `neutrik-tile` in ASA (M16).** No full-size
+  case is printed on the strength of a render.
+- **The acceptance criterion is repeat cycles, not a single seat.** The failure mode that matters is
+  a thread that survives installation and strips on the third service disassembly — which is
+  precisely what the heat-set insert was there to prevent. **≥ 5 insert/remove cycles per pad.**
+- **The fallback is cheap and pre-planned:** revert `mcc_thread_pad()`'s bore to the heat-set insert
+  bore. Nothing else moves — no envelope, no wall window, no `d_rel`, no golden bbox — because the
+  pad's OD (8.28) and height (7.0) were pinned to their pre-#30 values for exactly this reason.
+  That pinning is the mitigation; do not let a later "optimisation" of the pad take it away.
+- **Second-order:** the two systems are now different. If the ladder passes and the connector fixing
+  goes threaded while the plate's own 4 retention bosses stay inserts, the build sheet must say so —
+  a builder who heat-sets all 12 bosses destroys the connector pads irreversibly.
+
+**R29 — the external fan switch is the first *user-operated moving part* on the outside of the case,
+and it sits on the most exposed wall. NEW 2026-09-09 (rev 11, #32).** Every other exterior feature on
+this case is passive and flush (D-13, T1-25, §5's sacrificial bezel). A switch is neither: it has a
+throw, a fixed panel-clamp range, and an actuator that wants to stand proud. Three carried risks:
+- **Actuation vs. recession is a hard trade, and it is bounded by ~3 mm of ASA.** The requirement is
+  "survives a 1 m drop onto concrete, never switches by accident on a dark stage", which
+  `fdm-rugged-enclosure-guidelines.md:182`'s recessed-connector principle answers only if the
+  actuator's tip finishes **below** the wall's outer face (T1-44, the T1-25 analogue). A ⌀6.4 mini
+  toggle's lever is ~10 mm proud (`assumed`, **M17**), so the well is ~11 mm deep — near the depth
+  where a fingertip can no longer reach the lever. **`MCC_SWITCH_WELL_DEPTH_MAX` exists to make that
+  a loud failure**: if the measured lever forces a deeper well, the part is wrong and the ticket
+  comes back for a low-profile actuator. A developer must not answer it by shaving the recess.
+- **Every governing dimension is `assumed`, and the fit margin is 1.6 mm.** Lever height, nut
+  across-flats, body depth and the panel-clamp range all come from a family-analogue datasheet, and
+  the plus family's feasible `switch_y` interval is only 3.2 mm wide. This is the `DONGLE-75x40x20`
+  situation again: buy the part, measure it (**M17**), then print.
+- **The contact is unrated at 5 V DC / 0.05 A**, exactly like the KSD9700 (R22, M8). Same treatment:
+  bench-test, do not block on it. Stacking the manual switch *and* the thermoswitch in series
+  (wiring variant (b)) stacks that risk — which is why (a) is the default and (b) is an explicit,
+  documented user option, not a silent default.
+
 ---
 
 ## 12. Open questions / assumptions
@@ -1368,6 +1564,15 @@ switch and its joints. Neither is a blocker; both are recorded so they are not r
     device file as the mechanism, and the alternative key is inert — but it is a knowing
     compromise, not the end state. When D12 is settled, the blanking moves to the variant config
     and the device files revert to describing the device.
+19. **Does the fan switch ship on the compact family at all, and in which wiring variant?
+    NEW 2026-09-09 (rev 11, #32) — needs the user.** Two independent questions the architect has
+    deliberately not answered: (a) the compact family cannot host a *flush* switch beside the fan
+    (§18 U — the feasible `switch_y` interval is empty); the shipped answer is "plus family only,
+    compact explicitly `fan_switch = false`". The alternatives are a protruding guard (reverses D-13
+    and moves §1's envelope table), moving `fan_y` (re-opens R20 and buys ≤ 5.1 mm — not enough), or
+    a smaller low-profile actuator (needs sourcing). (b) wiring variant **(a) manual switch only**
+    (recorded default) vs. **(b) manual master + KSD9700 in series**. (b) has **no geometry impact**
+    either way — it is a BOM row, so it must not gate the branch.
 
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
@@ -1390,9 +1595,12 @@ switch and its joints. Neither is a blocker; both are recorded so they are not r
 | **M14** | **Buy one 50 mm half coupler (Doughty T57010 / Global Truss equivalent, M12) and measure its mounting-flange bolt pattern, flange plate L × W, and overall depth** | **R25 — BLOCKING for issue #27.** No fetched source publishes the flange pattern; `MCC_TRUSS_MOUNT_PATTERN` cannot be authored honestly without it, and a placeholder produces a plate that does not bolt on. Also fixes the truss plate's own outline, which must be ≥ the case footprint | User, after buying one |
 | **M15** | **Print `models/coupons/rail-latch` and pull-test it:** slide force, axial retention at disengage (target **≥ 30 N**, `assumed`), thumb-release force, and the achieved dovetail fit at `MCC_CLR_SLIDE = 0.3` | R24 — every `MCC_RAIL_*` figure is `assumed`. Calibrates `MCC_RAIL_CLR`, `MCC_RAIL_LATCH_ENGAGE` and the retention target the same way `tg-ladder` calibrates `MCC_CLR_TG`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale |
 
+| **M17** | **Buy one panel switch of the chosen class and measure: actuator height proud of the panel, mounting-hole ⌀, nut across-flats (⇒ circumscribed ⌀), body depth behind the panel, and the panel-clamp thickness range** | **R29 — gates the pocket geometry for issue #32.** All five are `assumed` from a family-analogue datasheet, and all five are load-bearing: the actuator height sets `recess_t` (T1-44), the nut ⌀ sets `pad_d` and therefore whether the part fits the +X band at all (T1-43), and the clamp range decides whether a 2.0 mm residual panel is legal. The plus family's feasible `switch_y` window is 3.2 mm wide — this is not a figure to leave `assumed` through a print | User, after buying one (≈ €1–2) |
+
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
-> **Rev 9** adds M14 (truss coupler flange) and M15 (rail-latch coupon).
+> **Rev 9** adds M14 (truss coupler flange) and M15 (rail-latch coupon). **Rev 10** adds M16
+> (`m3-thread-ladder` + `neutrik-tile` in ASA). **Rev 11** adds M17 (panel switch, above).
 
 ---
 
@@ -1424,6 +1632,7 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D20** | 2026-09-09 | §3 include discipline: a library file imports its own direct dependencies | `lib/mcc/vents.scad:14-19` `use`s `util`, `layout`, `fan`, `fasteners` — but **not** `ports.scad`. `docs/plans/2026-09-09-lid-vents.md` §3.2 calls `mcc_dev_slug(dev)` in every new lid-vent assert message, and `mcc_dev_slug()` lives in `ports.scad` | OpenSCAD's `use <>` is **not transitive** — `use <layout.scad>` does not re-export what `layout.scad` itself `use`s. Every new assert message becomes an undefined-function error, and because it is inside `str()` inside an `assert`, it only fires on the path that was supposed to report a real failure. `mounts.scad:20` already carries the exact fix, with the exact comment | **Open — one-line fix, must land with issue #24.** Add `use <ports.scad>   // mcc_dev_slug() (assert messages)` to `vents.scad`, matching `mounts.scad:20` |
 | **D21** | 2026-09-09 | §6: a floor keep-out is a plan-view registry for the `mounts.scad` non-overlap assert; `cradle.scad` never cuts the floor and never consumes floor-feature *labels* | `docs/plans/2026-09-09-cradle-deck.md` §5.2 `_mcc_deck_rib_blocked()` tests a candidate rib's **whole-length AABB** against `mcc_floor_keepout()`, with a hard-coded string allowlist (`"case_tripod_insert"`, `"fishtail_reserve"`) inside `cradle.scad` | Two defects. (a) Because each rib spans the deck's full interior on its axis, **any** keep-out band crossing the deck deletes every perpendicular rib line — with the ruled `MCC_RAIL_Y = −20` the rail band sits under the deck and would silently remove the entire Y-rib set. (b) It puts label strings owned by `layout.scad`/`mounts.scad` into `cradle.scad` with no assert tying them together; a renamed label silently turns the filter off. The plan itself records the logic is unverified against any real collision (its PLAN-ASSUMPTION 3) | **Open — decided at the rev-9 gate. Preferred: delete the filter for v1.** The deck lattice is purely additive and lives entirely above `z = MCC_FLOOR_T`; nothing in the floor needs vertical daylight through it, and if something ever does, §6 already routes that request through `mounts.scad`. If the teamlead wants forward-compat instead, it must be (i) evaluated **per rib segment**, not per rib, and (ii) driven by an allowlist published as a constant next to `mcc_floor_keepout()` in `layout.scad`, never by literals in `cradle.scad` |
 | **D22** | 2026-09-09 | §9 Tier 1: "rib thickness ≤ 0.6 × adjoining wall, height ≤ 3 × thickness" (`fdm-rugged-enclosure-guidelines.md:65-70`) | Already violated by the shipped cradle: `MCC_CRADLE_RIB_T = 3.0` against a 3.0 mm floor gives 1.0 ×, not ≤ 0.6 ×; `MCC_CRADLE_RIB_H = 9.0` gives exactly 3.0 : 1. `docs/plans/2026-09-09-cradle-deck.md` §5.1 then proposes a *second*, derived thickness `deck_h/3 ≈ 3.62` for the new deck ribs to keep the height ratio | The §9 rule is stated unscoped, so every future rib decision re-litigates it, and the plan's answer makes rib thickness a function of `dev_h` — two devices in the same family would print different deck geometry, and one part would carry two extrusion widths | **Resolved at the rev-9 gate by SCOPING the rule, not by relaxing it.** The ≤0.6 ×-wall / ≤3 ×-thickness rule governs **stiffening ribs standing off a plate or wall face** (a cantilevered fin — e.g. the bracket plates' cross ribs, which must satisfy it). It does **not** govern **floor-standing structural webs** that land on the floor slab along their whole length and are cross-braced at every intersection — the deck ladder and the far-flank ribs. Ruling: the deck ladder reuses **`MCC_CRADLE_RIB_T = 3.0`**; `MCC_RIB_HEIGHT_RATIO_MAX` is introduced only for the bracket-plate ribs; `_mcc_cradle_deck_rib_t()` is **not** created |
+| **D23** | 2026-09-09 | §6 reservation rule: "`shell.scad` always reserves the fan bay … even when `fan = false`", and one physical allowance has one definition (§3 "no magic numbers") | `lib/mcc/fan.scad:39` `mcc_fan_envelope()` is **defined and never called** — grep of `lib/**`, `models/**`, `tests/**` finds no call site. The reservation that *does* exist is numeric and lives elsewhere: `shell.scad:375-377` (T1-18(c)) recomputes the bay depth inline as `frame[2] + 5`, duplicating `fan.scad:42`'s `clr = 5` literal | Half true, half not, and the half that is missing is the half issue #32 needs. The bay's **depth** *is* reserved unconditionally (T1-18(c) runs regardless of `cfg.fan`) — but by a **second, independent copy** of the 5 mm intake allowance, so the two can drift and the module version is dead code that a reader will trust. The bay's **Y/Z footprint** is reserved by nothing at all: until T1-43 lands there is no check that any other +X-wall feature stays off the fan | **Open — separate ticket, NOT issue #32.** Either wire `mcc_fan_envelope()` into a real reservation (`%`-ghost + an intersection assert) or delete it; either way promote the intake clearance to a named L0 constant `MCC_FAN_INTAKE_CLR = 5.0` and have both `fan.scad` and `shell.scad` read it. Found by the researcher (plan §8 PLAN-ASSUMPTION 6); the finding is upheld, the "safe to proceed without fixing this" conclusion is upheld too — #32's switch sits *beside* the fan, not behind it |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---

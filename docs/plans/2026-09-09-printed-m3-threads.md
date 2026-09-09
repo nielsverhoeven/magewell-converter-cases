@@ -550,3 +550,130 @@ within the Team Charter's "single terse line on a truly exceptional quirk" allow
    facet count matters far less than hole-diameter facet count for a part whose real limiting factor is
    nozzle extrusion width, not a citation. If the architect or user disagrees, `$fn=64` still works
    (§3.3's table gives its exact cost) — this is a cost/quality tradeoff call, not a correctness one.
+
+---
+
+## 9. Architect verdict — 2026-09-09 (architecture.md rev 10)
+
+**Verdict: APPROVE WITH CHANGES — 7 blocking (B1–B7).** The design decision at the heart of this
+plan (option C: extend the existing rear pad, pin its OD/height to today's values) is **correct and
+approved**, and the pinning is the single best call in the document — it is what keeps the wall
+window, `d_rel = 8.88` and every T1-34a–d number numerically unchanged, and it is what makes the
+R28 fallback a one-module revert instead of a case redesign. The scope correction in §0 (two flange
+holes, not four; the plate's own 4 retention bosses stay heat-set inserts) is also correct.
+
+**B1 is a correctness defect that would have reached the printer.** As written, the plan produces
+**no thread at all**.
+
+### Blocking changes
+
+| # | Change | Why |
+|---|---|---|
+| **B1** | **`MCC_THREAD_M3_SLOP = 0.15` → `0.05`**, and re-cut the coupon ladder to `[0.02, 0.035, 0.05, 0.065, 0.08]`. | BOSL2 enlarges an internal thread by **`4·$slop` in diameter** (`lib/BOSL2/screws.scad:753`, `lib/BOSL2/threading.scad:179`) = **`2·$slop` per side**. M3×0.5 has only `0.5·(3.000 − 2.459) = 0.2705 mm` of radial thread engagement. At `$slop = 0.15` the hole grows **0.30 mm per side** — more than the entire thread depth. The result is a plain ⌀3.6 bore with the thread mathematically erased. Ladder rungs 0.15/0.20/0.25 are all degenerate (plain ⌀3.6/3.8/4.0 bores), so **3 of the 5 rungs test nothing**. `$slop = 0.05` is BOSL2's own tested figure (`screws.scad:767`). §2's text is self-contradictory — it quotes "4·$slop" and then calls $slop "per-side"; per-side is `2·$slop`, so the sourced 0.10–0.20 mm per-side range maps to `$slop = 0.05–0.10`, not 0.15. |
+| **B2** | **Renumber `T1-36a`/`T1-36b` → `T1-42a`/`T1-42b`.** | **T1-36 … T1-41 are already allocated** by rev 9 (`layout-patch-wall.md:14`, issues #25/#26/#29/#24). Next free number is T1-42. |
+| **B3** | **`bevel1=true` → `bevel2=true`**, and **`MCC_THREAD_M3_CHAMFER = 1.0` → `0.5`** (sourced, not `assumed`). | With `anchor=BOTTOM` at `z = −pad_h`, the hole's *bottom* is the pad's **rear tip**; the screw enters at the pad's panel-facing face, which is the hole's **top**. `bevel1` chamfers the wrong end — it removes engagement at the far tip and leaves no lead-in where the screw actually starts. Resolves PLAN-ASSUMPTION 4: `screws.scad:995` sets `bevelsize = pitch`, so BOSL2's bevel is **0.5 mm**, not 1.0. The repo's "never invent a dimension" rule applies — this is now derivable, so it must not stay `assumed`. Turns become `(7.0 − 0.5)/0.5 = 13`, still ≫ 3. |
+| **B4** | **`lib/mcc/layout.scad:189` must derive `d_rel` from `MCC_THREAD_M3_PAD_D`**, i.e. `d_rel = MCC_THREAD_M3_PAD_D + 2*MCC_CLR_SLIDE`. | The plan pins `MCC_THREAD_M3_PAD_D = 8.28` as a bare literal and *explicitly decouples it* from `MCC_INSERT_M3` — but `layout.scad:189` still computes the mating relief as `MCC_BOSS_MIN_RATIO * MCC_INSERT_M3.od + 2*MCC_CLR_SLIDE`. That leaves **two independent sources for one physical diameter**, and the drift path is live because the plate-fixing bosses keep using `MCC_INSERT_M3`. This is exactly §3's "both halves of a mating interface must come out of one file or they drift" (the D6 / `rail.scad` rule). `layout.scad:395`'s `insert_hole_r` (T1-34d) legitimately **stays** on `MCC_INSERT_M3` — that one is the shell's own plate-fixing boss. Numerically 8.28 either way; **no geometry moves.** |
+| **B5** | **Extract a public `mcc_thread_pad(pad_d, pad_h, slop)` in `neutrik.scad`.** `mcc_neutrik_d_bosses()` calls it twice; the coupon calls it through the barrel. Coupon drops `include <BOSL2/screws.scad>`. | As drafted, `models/coupons/m3-thread-ladder.scad` calls BOSL2 `screw_hole()` directly and hand-rebuilds the pad — an L4 file duplicating L1 geometry, against §3 ("model files import **only** `<mcc/mcc.scad>`") and §4 (copied geometry drifts). It also defeats the coupon's own purpose: a ladder that can drift from production geometry cannot calibrate a production constant. Keep the module in `neutrik.scad` for now — its natural long-term home is `fasteners.scad`, but moving it there today would create the repo's **first L1→L1 edge** for no benefit. Move it when/if the follow-up ticket converts `shell.scad`'s 4 plate-fixing bosses (`shell.scad` already uses `fasteners.scad`). |
+| **B6** | **Rename `MCC_THREAD_PREVIEW` (default `true`) → `MCC_THREAD_FAST` (default `false`)**, opt **in** to the cheap bore via `-D MCC_THREAD_FAST=true`. | `PREVIEW=true` meaning "render the *expensive real* thread" reads backwards to every future reader, and a default-`true` flag whose dangerous state is `false` inverts the repo's existing convention. `MCC_SHOW_GHOST` is the precedent: a `constants.scad` variable, default `false`, opt-in by `-D` (`docs/plans/2026-09-08-l2-first-case.md:725`). **Mechanism = `-D`, not a `build.py` build-time flag** — §8 already requires the full `-D` set in every manifest, so the fast path self-documents in every artefact. **Goldens, CI `render`, `check`, and every release/coupon export use the real thread (the default)**, which makes a stray fast-path render fail the golden automatically. §3.1's comment "NEVER set false for a release export" is not a gate; the golden is. |
+| **B7** | **STEP export of the `panel` part must use the thread-free geometry.** Render a second `panel._step.stl` with `-D MCC_THREAD_FAST=true`, convert that, and record `"threads": "omitted"` plus the `-D` set in the manifest's `step` sub-object (`build.py:531`). **Policy change — needs the user's nod (see "Escalated" below).** | The plan is silent on STEP. `scripts/mesh_to_step.py` sews **one planar face per triangle** and then merges only *coplanar* facets via `ShapeUpgrade_UnifySameDomain` (`mesh_to_step.py:5-8,186`). A helical thread flank has **no coplanar neighbours**, so ~30 k facets per panel survive as ~30 k separate B-rep faces (≈0.5 M+ STEP entities per panel). `cmd_step` converts an already-rendered STL (`build.py:578`), so this is a real pipeline step, not a flag. A 30 k-face faceted helix is worse than useless to a CAD consumer; STEP is an interchange artefact, not a print artefact. |
+
+### Rulings on the specific questions asked
+
+**`$fn = 32` exception — APPROVED, narrowly, with one correction.** §3's `$fn` policy exists so that
+a hole which must pass a real part is *circumscribed*, because an inscribed polygon undersizes it.
+`screw_hole()` accepts no `circum`, so that mechanism is unavailable — but the inscribed error at
+`$fn = 32` on ⌀3.0 is `3.0·(1 − cos(180/32))/2 = 0.0072 mm per side`, i.e. **2.7 % of the thread's
+0.27 mm engagement** and ~7 % of the corrected `$slop` term. The fit is carried by `$slop`, not by
+facet count, so the policy's *intent* is satisfied. Grant the exception **scoped to the thread bore
+only**, on two conditions: (i) **the pad's outer cylinder keeps `$fn = 64`** — the plan drops it to
+32 for no reason; it is an additive boss, the saving is ~30 facets, and the change churns geometry
+this ticket has no need to touch; (ii) the carve-out is written into `architecture.md` §3 as a
+**named, bounded** exception, not as a general loosening.
+
+**Preview fast-path — APPROVED as a `-D` define, not a build-time flag.** See B6.
+
+**STL size / release zips — accepted, but the plan is optimising the wrong lever.** The measured
+9.1 MB at `$fn = 32` is an **ASCII** STL (29,740 facets × ~300 B). `build.py` writes `-o <part>.stl`
+(`build.py:64,423`) with no `--export-format`, so OpenSCAD emits ASCII. **Binary STL would be
+~1.5 MB — a 6× reduction, lossless, three times better than the 2× the `$fn` downgrade buys.**
+**Do not fold this into #30**: it changes every export in the repo and the provenance of every
+golden. Raise it as a separate ticket. Meanwhile the release-zip cost is ~9 MB per SKU on the
+**panel STL only** (base/lid untouched), ~72 MB across 8 SKUs; 3MF is zipped XML and will be far
+smaller. Acceptable in the interim given the binary-STL lever exists.
+
+**M3-below-M6 premise — recorded as R28, coupon is the gate.** The plan's own mitigation is sound
+and the fallback is genuinely cheap *because* of the pinned OD/height. One addition, and it is not
+optional: **R28's real exposure is not "the thread strips once" but "the thread strips after N
+re-openings."** A connector gets unscrewed for cable service; that repeat duty cycle is the exact
+failure mode heat-set inserts exist to prevent. **The coupon acceptance criterion must therefore be
+≥ 5 insert/remove cycles per pad, not a single successful seat.** A ladder that only proves "a screw
+went in once" does not retire R28.
+
+**Pad height vs `max_panel_t` — CHECKED, no violation, and no new risk.** `mcc_panel_max_t()`
+(`constants.scad:708`) is compared against **`seat_t` only** (`neutrik.scad:62-65`); `seat_t` stays
+2.0 and every part's `max_panel_t` is 2.0 or 4.0 (`constants.scad:679-683`) — untouched by this
+ticket. The pad is rear-side boss material at the screw positions, not panel thickness at the flange
+seat, and §5 already sanctions "protruding rearward from the 2.0 mm seat to ~7 mm total". Because
+pad OD **and** height are numerically unchanged, **every** connector-body/latch clearance question
+is exactly as it was before #30. *Pre-existing item recorded, not a #30 blocker:* the pad at radius
+`norm([9.5, 12]) = 15.28` with OD 8.28 reaches inward to `r = 11.14`, i.e. **inside** the ⌀24.2
+cutout radius 12.1, by ~0.96 mm over the full 7 mm of pad depth — the same ~1 mm the wall-relief
+intrusion records (T1-34b, 1.04–1.24 mm). Whether a fitted connector's rear body clears it is
+**unverified**, because `neutrik-tile` has never been printed. #30 makes that pad load-bearing in a
+new way, so **print `neutrik-tile` physically in the same batch as `m3-thread-ladder`** — the plan
+only re-*renders* it.
+
+**Thread orientation — CONFIRMED CORRECT.** `.claude/skills/print-check/SKILL.md:59` pins the
+connector panel plate to "**Face-down, flat on the bed**". With the front face at local `Z = 0` and
+the pad growing to `Z = −pad_h`, model `−Z` is printer `+Z`: the bore axis is **vertical**, one full
+circle per layer, no bridging and no thread-flank overhang, and the bore is open at both ends (pad
+tip up, plate clearance hole down at the bed). The plan's reasoning and its rejection of option B
+(horizontal M3 bore in a vertical shell wall) are both sound.
+
+**Screw length (M3×10, `unknown` sourcing) — accepted as a starting figure, BOM wording corrected.**
+Two points the plan under-sells: (a) the bore is a genuine **through**-hole, so an over-long screw
+**cannot bottom out and jack the connector off its seat** — it simply protrudes into a 34–40 mm-deep
+bay, which is clear. **Under**-length is the only real failure mode, so the BOM row must state the
+*minimum*, not just a nominal: `≥ flange_t + MCC_PANEL_SEAT_T (2.0) + 3 × MCC_THREAD_M3_PITCH (1.5)`.
+(b) The plan is right that Neutrik ships **self-tapping** screws (`d-series-cutout.md:100-104`) —
+those must **not** be driven into a printed M3 thread. That needs an explicit build-sheet line,
+because the obvious builder error is to use the screws that came in the box.
+
+**Assert list — T1-42a/b as proposed, plus a mandatory T1-42c; no neighbour-collision assert needed.**
+
+| Assert | Condition | Value after B1/B3 |
+|---|---|---|
+| **T1-42a** | pad wall `(pad_d − (major + 4·$slop))/2 ≥ MCC_THREAD_WALL_MIN (2.0)` | **2.44 mm** ✓ |
+| **T1-42b** | engagement `(pad_h − chamfer)/pitch ≥ MCC_THREAD_ENGAGE_MIN_TURNS (3)` | **13 turns** ✓ |
+| **T1-42c** | **NEW, required** — residual radial engagement `0.5·(major − minor) − 2·$slop ≥ MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135 = 50 % of nominal). Needs `MCC_THREAD_M3_MINOR_D = 2.459` (ISO 68-1). | **0.1705 ≥ 0.135** ✓ — and at the plan's original `$slop = 0.15` it evaluates to **−0.0295 and fails loudly.** This is the assert that would have caught B1; it is mandatory, not nice-to-have. |
+
+**No neighbouring-slot assert is required.** Pad OD and positions are unchanged, and the two pads of
+one connector sit on the *diagonal*. At the 32 mm minimum slot pitch the nearest pads of adjacent
+slots are `Δx = 32 − 19 = 13`, `Δy = 24` → **27.3 mm apart**, against an 8.28 mm OD. Real pitch
+today is 41.97–63.45 mm (`architecture.md` §11 R3). Existing T1-34c/T1-34d plus the ≥32 mm
+slot-pitch assert already bound this; adding another would be redundant. Arithmetic recorded here so
+nobody re-derives it.
+
+**Goldens — 8 `.panel.json` move, and sequencing matters.** Agreed that `.base`/`.lid`/`.base_fan`
+must **not** move, and that a diff there is a regression to investigate rather than `--update`
+through. One addition: **regenerate goldens only *after* B1's `$slop` fix.** Running
+`golden --update` on the 0.15 value would commit a threadless bore as the accepted baseline, and the
+defect would then be invisible to every future review.
+
+### Escalated to teamlead/user — one item
+
+**B7 is a change to §8's export policy, not a correctness fix**, so it is the one item I will not
+decide alone: *should the `panel` part's STEP ship without threads?* My recommendation is **yes**
+(a faceted helix has negative value to a CAD consumer, and the STL/3MF carry the real geometry), but
+it needs confirmation that nobody consumes the panel STEP expecting a threaded feature. **If the
+answer is slow, the fallback is "skip STEP for the `panel` part entirely"** — a one-line change
+either way, and it does not block B1–B6.
+
+### Dispatch
+
+**Cleared to dispatch now** on base `feature/plans-2026-09-09`, branch
+`feature/issue-30-printed-m3-threads` — **scoped to B1–B6**, which are self-contained and touch no
+build tooling. **Carve B7 out** and hold it for the user's answer; it is the only item that touches
+`scripts/build.py`. Sequence within the branch: B1+B3 (constants) → B2 (assert numbers) → B4
+(`layout.scad` single-source) → B5 (`mcc_thread_pad()` extraction) → B6 (flag rename) → tests →
+coupon → `build.py all` → goldens **last**.

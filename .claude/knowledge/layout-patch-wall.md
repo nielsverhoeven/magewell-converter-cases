@@ -1,5 +1,54 @@
 # Patch-wall layout contract
 
+Status: **revision 11, 2026-09-09.** Rev 11 is the architecture gate for
+`docs/plans/2026-09-09-fan-switch.md` (**#32** — an external manual fan on/off switch in the +X end
+wall beside the ⌀38 fan aperture). Verdict: **APPROVED WITH CHANGES — 8 blocking + 1 user
+decision**; full ruling in **§18** below and in that plan's **§9 "Architect verdict"**.
+
+**Nothing in this contract's envelopes moves.** The switch pad is an *internal* thickening of the +X
+wall (the D-13 pattern — material moves inward, never outward), so §1/§8's `L`/`W`/`H` are untouched
+on every SKU and `bbox` is unchanged on every part. What changes here:
+
+1. **§5 gains a "Fan switch" subsection** — the two-band placement contract (`pad` band vs the 3 mm
+   gusset strip near the wall; `body` band vs the corner lid-fastener boss deeper in) and the
+   band-solved `switch_y`.
+2. **§9 gains T1-43 / T1-44 / T1-45.** The plan proposed "T1-38/T1-39" — **both were already taken by
+   rev 9** (rail-groove floor thickness, deck-ladder grid), and rev 10 went to T1-42c. Third
+   consecutive plan to collide on assert numbering: **the next free ID is always the maximum in §9,
+   not the maximum a plan remembers.**
+3. **§10 gains decision D-18** (flush actuator, plus-family only).
+
+Rev 10 history follows. Rev 10 is the architecture gate for
+`docs/plans/2026-09-09-printed-m3-threads.md` (**#30** — the Neutrik D-flange fixing holes become
+printed M3×0.5 internal threads in the existing rear pad, replacing the heat-set inserts). Verdict:
+**APPROVED WITH CHANGES — 7 blocking**; the full verdict lives in that plan's **§9 "Architect
+verdict"** and the design record in `architecture.md` **§5 "Connector fixing" bullet 3**.
+
+**Nothing in this contract's geometry moves.** §1's frame, §2/§2.5's aperture spec, §3's slot rule,
+§4's end zones, §7/§7.1 and §8's envelopes are all untouched, and **no `L`/`W`/`H` figure changes on
+any SKU** — because `MCC_THREAD_M3_PAD_D` (8.28) and `MCC_THREAD_M3_PAD_H` (7.0) are **pinned equal
+to the pre-#30 heat-set boss**. What changes here:
+
+1. **§9 gains T1-42a/b/c** (thread-pad wall, engaged turns, residual radial engagement vs `$slop`).
+   **T1-36 … T1-41 were already taken by rev 9** — the plan's own "T1-36a/T1-36b" numbering
+   collided and was renumbered.
+2. **One single-source fix in `lib/mcc/layout.scad:189`:** `d_rel` must be derived from
+   `MCC_THREAD_M3_PAD_D + 2·MCC_CLR_SLIDE`, **not** from
+   `MCC_BOSS_MIN_RATIO · MCC_INSERT_M3.od + 2·MCC_CLR_SLIDE`. Numerically identical today (8.88), so
+   §2.5 and T1-34a–d are invariant — but after #30 the pad is no longer built from `MCC_INSERT_M3`,
+   while `MCC_INSERT_M3` stays in live use for the plate-fixing bosses. Leaving both would give one
+   physical diameter two independent sources; this is the same rule that put
+   `mcc_panel_fixing_pos()` in `layout.scad` (D6) and that named `rail.scad` after its interface.
+   **`layout.scad:395`'s `insert_hole_r` (T1-34d) correctly stays on `MCC_INSERT_M3`** — that is the
+   shell's own plate-fixing boss, which is out of #30's scope.
+3. **No new neighbour-collision assert is needed, and the arithmetic is recorded so nobody adds
+   one.** The two pads of a connector sit on the *diagonal* (±9.5, ∓12). At the 32 mm minimum slot
+   pitch the nearest pads of two adjacent slots are `Δx = 32 − 19 = 13`, `Δy = 24` → **27.3 mm
+   apart**, against an 8.28 mm OD. Achieved pitch today is 41.97–63.45 mm. T1-34c/T1-34d plus the
+   ≥32 mm slot-pitch assert already bound this.
+
+**Not changed by rev 10:** everything else in this file. Rev-9 history follows.
+
 Status: **revision 9, 2026-09-09.** Rev 9 is the architecture gate for the mount rail (#25), the TV
 and truss brackets (#26/#27), the cradle-deck lattice (#29) and the lid vents (#24). Verdicts,
 `PLAN-ASSUMPTION` rulings, the required changes and the ordered developer dispatch are all in the
@@ -676,6 +725,61 @@ Reserved in every variant even when disabled (`architecture.md` §6 reservation 
 - Assert: the fan bay may not be placed on the +Y face, and may not intersect the end-zone cable
   envelope of the +X end.
 
+### Fan switch — **+X end wall, −Y of the fan aperture** (rev 11, #32, D-18)
+
+An external manual on/off switch in series with the fan's +5 V lead. Gated by `cfg["fan_switch"]`,
+defaulting to `cfg["fan"]`. Geometry: `lib/mcc/switch.scad`; part data: `MCC_SWITCHES` /
+`MCC_SWITCH_DEFAULT` (L0); position: `switch_pos` from `mcc_case_layout()`.
+
+**Two bands, at two depths — this is the whole placement problem.** The switch competes for the +X
+wall's `−Y` region against the fan on one side and the `(+X, −Y)` corner lid fastener on the other,
+and the corner fastener presents *two different* obstructions at *two different* X depths:
+
+| Obstruction | Extent | Binds |
+|---|---|---|
+| Fan reservation | `y ∈ [fan_y − 20, fan_y + 20]` (the 40 mm `NF-A4x10` frame) | both bands, `+Y` side |
+| Gusset strip (`_mcc_gusset_web`, `shell.scad:68`) | `MCC_WALL`-wide in Y at `y = −(W/2 − e)`, running in X **to the wall's outer face** | the **pad** band (`x ≳ L/2 − 6`) |
+| Corner lid-fastener boss | ⌀`MCC_BOSS_MIN_RATIO·MCC_INSERT_M3.od` = 8.28 at `y = −(W/2 − e)`, `x ∈ L/2 − [14.14, 5.86]` | the **body** band (`x ≲ L/2 − 5.86`) |
+
+Raw band widths (fan-frame edge → obstruction edge), both families at the default `fan_y = y_dev_c`:
+
+| Family | `W` | `fan_y` | pad band (vs gusset) | body band (vs boss) |
+|---|---|---|---|---|
+| `compact` | 159.85 | −30.825 | **17.60 mm** | **14.96 mm** |
+| `plus` | 166.35 | −30.825 | **20.85 mm** | **18.21 mm** |
+
+`switch_y` is **solved as the centre of the feasible interval**, not offset a fixed distance from the
+fan — a fixed offset spends all the slack on the fan side and leaves the binding constraint
+unchecked:
+
+```
+y_hi = fan_y − fan_frame[1]/2 − clr − pad_d/2                  // fan side
+y_lo = max( gusset_y_edge + clr + pad_d/2 ,                    // pad vs gusset strip
+            boss_y_edge   + clr + body_d/2 )                   // body vs corner boss
+switch_y = (y_lo + y_hi)/2          assert y_hi >= y_lo        // T1-43
+switch_z = z_conn_c = 25.5                                     // universal, same as the fan
+switch_pos = [L/2, switch_y, switch_z]                         // X = the wall's OUTER face
+```
+
+**`switch_pos[0]` is the outer-face plane, matching `fan_pos`.** Every call site subtracts
+`MCC_WALL` itself (`vents.scad:146` is the reference). Getting this wrong removes **zero** material
+and is invisible in every automated check — see `architecture.md` rev-11 header, finding B2.
+
+**The pocket is a well, not a cosmetic dish.** `recess_t = actuator_proud_h + MCC_SWITCH_FLUSH_CLR`,
+so the actuator tip finishes **below** the wall's outer face — the same rule T1-25 already imposes on
+the side-bolt head. Since `MCC_WALL` is 3 mm, the wall is **locally thickened inward** by a pad
+(`pad_t = recess_t + panel_t`, 45° blend on all four sides so it prints in a vertical wall); the
+residual `panel_t` must be ≥ `MCC_APERTURE_LIP_WEB_MIN` **and** inside the part's own clamp range
+(T1-44). Nothing protrudes and no envelope moves — D-13's pattern, applied again.
+
+**Compact does not fit and must be switched off explicitly (D-18).** At `pad_d = 14.0` / `body_d =
+10.0` (⌀6.4 toggle, nut pocket ⌀ ≈ 10) the compact interval is **empty** (`y_hi = −59.325 <
+y_lo = −59.285`); plus has a 3.2 mm window. `fan_y` cannot rescue it: the `+Y` side is capped by the
+connector bay at `fan_y ≤ −25.7` (compact), worth ≤ 5.1 mm, so **R20 stays closed** and the ⌀20.2
+IP65 candidate stays recorded-but-unplaced. Compact variants — including the `base_fan` golden part
+and `tests/test_shell.scad`'s `VARIANT_FAN` — carry `["fan_switch", false]` **explicitly**, with a
+comment pointing here.
+
 ### PoE-splitter bay — **−X end, on edge** (D-10; placement **RESOLVED by D-12**)
 
 Functionally correct end: the splitter's three connections (PoE in from etherCON, data out to the
@@ -1213,7 +1317,13 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-39** | *deck ladder grid is sane* — achieved interior pitch on each axis lies in `[MCC_CRADLE_DECK_GRID_PITCH_MIN, MCC_CRADLE_DECK_GRID_PITCH_MAX]` (16–32 mm), and each axis yields ≥ 1 interior rib | **new, rev 9** (#29). Guards a future SKU far outside today's size range producing a degenerate 1-bay or 50-rib deck. Today: 20.18/20.07 (compact), 23.50/22.23 (plus) |
 | **T1-40** | *the compliant-pad pocket lands on solid material* — the deck lattice keeps a solid island over the `MCC_CRADLE_FLOOR_PAD_MIN` (40 × 40) footprint for ≥ `MCC_CRADLE_FLOOR_PAD_T + 1.0` below the deck top | **new, rev 9** (#29). Without it the pocket is cut into open bays and the EPDM pad bears on the ~15 % of its area that happens to sit over a rib top — it dishes under the device and the "level cable run" §1 derives collapses |
 | **T1-41** | *the case tripod-insert boss is braced in a lattice deck* — when `cfg["tripod_insert"]` is true, solid material (a collar of radius ≥ `boss_od/2 + MCC_CRADLE_RIB_T`, or a grid line through `floor_center`) connects the boss to the lattice | **new, rev 9** (#29 × D-16). The boss used to be embedded in a solid block; in a lattice it becomes a lone ⌀17.1 × 13.85 post whose only connection is the 3 mm floor slab. `check`'s `len(split()) == 1` still passes (it *is* connected), so nothing else catches this — it is a stiffness defect, not a topology one |
+| **T1-43** | *the fan switch has somewhere to go* — the feasible interval of §5's band solve is non-empty: `y_hi >= y_lo`, where `y_hi = fan_y − fan_frame[1]/2 − clr − pad_d/2` and `y_lo = max(gusset_y_edge, boss_y_edge + (body_d − pad_d)/2) + clr + pad_d/2`. Evaluated **only** when `mcc_fan_switch_enabled(cfg)` | **new, rev 11** (#32). Two-sided by construction, so unlike the plan's own T1-38 it *can* fail — and it does, on the compact family (§5, D-18), which is exactly the information the assert exists to deliver. Lives in `layout.scad` and reads the `MCC_SWITCHES` row directly: §3 forbids `layout.scad` from importing `switch.scad` |
+| **T1-44** | *the actuator is fully recessed and the panel is legal* — (a) `recess_t >= actuator_proud_h + MCC_SWITCH_FLUSH_CLR`; (b) `panel_t = pad_t − recess_t >= MCC_APERTURE_LIP_WEB_MIN (2.0)`; (c) `panel_t_min <= panel_t <= panel_t_max` from the part row; (d) `pad_t >= MCC_WALL` (a pad may thicken the wall, never thin it); (e) `recess_t <= MCC_SWITCH_WELL_DEPTH_MAX` | **new, rev 11** (#32); replaces the plan's T1-39, which asserted (b) and (c) only. (a) is the **T1-25 analogue** and is the clause that makes the user's "no accidental switching, survives a 1 m drop" requirement geometric instead of aspirational — the plan's flat `recess_t = 1.0` under a ~10 mm lever fails it. (e) is the stop-and-report clause: if the **measured** (M17) actuator forces a well deeper than a fingertip can reach, the part is wrong and the ticket comes back — do not answer it by shaving the recess. Evaluated in `switch.scad` from pure numbers, like `_mcc_patch_wall_rabbet()`'s own residual-lip asserts |
+| **T1-45** | *the switch body fits the +X end zone* — `MCC_WALL + pad_t_extra + body_depth <= L/2 − x_dev_hi`, and the body clears the corner lid-fastener boss in Y by ≥ `clr` | **new, rev 11** (#32). The plan left this as "a straight-line X check … confirm at implementation time", i.e. a hand-check on the one axis where T1-18(c) already passes with **exactly zero slack** on every HDMI-ended SKU. It is cheap and pure; it belongs in the model. Note the two asserts measure different things: T1-18(c) charges the *cable* budget at the fan's Y, T1-45 charges the *switch* at its own Y |
 | **T1-35** | *the connector screw must reach its insert* — `mcc_neutrik_d_bosses()`'s bore is continuous from the boss's rear tip through to the panel's own screw clearance hole: `insert_bore_depth + thru_depth == boss_h` with `insert_bore_depth >= MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` and `thru_d >= MCC_M3_CLR_D`. **No solid material anywhere on the screw axis between the flange face and the insert.** Same rule for the 4 plate-fixing bosses in `shell.scad` | **new, rev 6** — the literal, mm-level form of the user's "there is no place to screw the D-connectors down". Today `bore_depth = len + 1 = 6.7` against `boss_h = 7`, leaving **0.3 mm of solid ASA** across the screw axis (`lib/mcc/neutrik.scad:117-120`), and the four `shell.scad` plate-fixing bosses have **no bore at all** (deviation D10). The `neutrik-tile` coupon exists precisely to catch this and has not been printed |
+| **T1-42a** | *printed thread pad has enough wall* — `(MCC_THREAD_M3_PAD_D − (MCC_THREAD_M3_MAJOR_D + 4·$slop))/2 ≥ MCC_THREAD_WALL_MIN (2.0)` | **new, rev 10** (#30). At pad_d 8.28 and `$slop` 0.05 → **2.44 mm** ✓. Same 2 mm minimum-wall-around-a-bore convention as `mcc_heat_set_boss()` and `MCC_APERTURE_LIP_WEB_MIN` |
+| **T1-42b** | *printed thread has enough engagement* — `(MCC_THREAD_M3_PAD_H − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH ≥ MCC_THREAD_ENGAGE_MIN_TURNS (3)` | **new, rev 10** (#30). At pad_h 7.0 and BOSL2's actual bevel size (`= pitch = 0.5`, `screws.scad:995`) → **13 turns** ✓. Note the chamfer constant is **0.5, sourced** — not the 1.0 the plan assumed |
+| **T1-42c** | *`$slop` has not erased the thread* — `0.5·(MCC_THREAD_M3_MAJOR_D − MCC_THREAD_M3_MINOR_D) − 2·$slop ≥ MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135, = 50 % of nominal). Needs `MCC_THREAD_M3_MINOR_D = 2.459` (ISO 68-1) | **new, rev 10** (#30) — **the assert that caught the plan's own defect.** BOSL2 enlarges an internal thread by **`4·$slop` in diameter** (`screws.scad:753`, `threading.scad:179`) = `2·$slop` per side, against only **0.2705 mm** of radial engagement on M3×0.5. The plan's `$slop = 0.15` removes 0.30 mm/side — the whole thread — leaving a plain ⌀3.6 bore that T1-42a, T1-42b, the mesh checks and the goldens all pass happily. At the corrected `$slop = 0.05` this evaluates to **0.1705 ≥ 0.135** ✓; at 0.15 it is **−0.0295** and fails loudly |
 
 ---
 
@@ -1237,6 +1347,7 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **D-15** | **The floor mount is a dovetail rail; VESA 75 × 75 is removed outright.** The case carries the **female** groove (recessed up into the floor, on a local sill that keeps ≥ `MCC_FLOOR_T` of material over it — T1-38); every printable bracket carries the **male** rail plus the spring-lip latch. Forced, not preferred: the exterior floor face is the bed-contact face, so a protruding feature is unprintable without flipping the base, and D-13 already commits this repo to "nothing protrudes". Interface geometry lives in **one** L1 file, `lib/mcc/rail.scad` (not `bracket.scad` — `architecture.md` §3). `MCC_RAIL_Y = **−20.0**` (§7.1, R24). Single insertion direction: end stop at one end, latch + thumb release at the other. **Removed, not deprecated:** no code path reinstates VESA. | **User, 2026-09-09** (issue #25) | **fixed** in intent; every `MCC_RAIL_*` figure is `assumed` until coupon **M15** |
 | **D-16** | **`cfg["tripod_insert"]` defaults to `true`.** The case keeps its own 1/4"-20 floor insert as a shipped feature alongside the rail; the flag exists so a future SKU that cannot satisfy T1-32 (0.10–0.15 mm of slack today, and the `ip_decoder` family at `dev_h = 24.5` will have less) can turn it off — **not** as a default-off opt-in. The researcher's plan proposed default `false`; that was **overruled**: the user asked to keep every mounting option and dropped only VESA. Set the key explicitly in all 8 `models/*/case.scad` for the same BOM/documentation-parity reason `fan` is explicit there. | **Teamlead, 2026-09-09**, on the user's stated scope | **fixed**; brings **T1-41** with it |
 | **D-17** | **The cradle deck is a ribbed lattice, not a solid slab.** `MCC_WALL`-wide perimeter frame + interior X/Y ladder ribs on a ~22 mm grid at `MCC_CRADLE_RIB_T = 3.0`, full deck height, no top plate — the device rests on rib top edges. Deck **height** and **footprint** are unchanged (both derived, §1/§7). Saves ≈46,000 mm³ (compact, ≈16 % of the base) / ≈66,000 mm³ (plus, ≈21 %); `bbox` must not move on any SKU. Brings T1-39/T1-40/T1-41. | Architect-derived from issue #29, gated rev 9 | **fixed**; the §7 row it replaces was never implemented |
+| **D-18** | **The external fan switch is a FLUSH, fully-recessed actuator in a locally thickened +X wall pad — and it ships on the `plus` family only.** (1) `recess_t` is derived from the actuator's proud height, not chosen (T1-44a); the wall gains an internal pad rather than an external guard, so no envelope moves (the D-13 pattern). (2) The part is a row in `MCC_SWITCHES`, not a hard-coded struct — three candidates are recorded in `knowledge/components/switches.md` and swapping is a data edit. (3) `switch_y` is **solved** between the fan reservation and the corner lid fastener's two obstructions (§5), never a fixed offset. (4) The compact family's feasible interval is **empty**; compact variants set `["fan_switch", false]` explicitly until the user rules otherwise. **`fan_y` does not move** — R20 stays closed, and the ⌀20.2 IP65 candidate stays recorded-but-unplaced. | Architect-derived from issue #32, gated rev 11 | **fixed** in intent; every `MCC_SWITCHES` figure is `assumed` until **M17**, and (4) is open to the user (`architecture.md` §12 Q19) |
 | **D-13** | **The side-bolt boss is FLUSH — nothing protrudes from the far wall.** `MCC_GAP_FAR` 6 → **16** (derived: `boss_len + MCC_PAD_T − MCC_WALL`), `MCC_SIDE_BOLT_PROUD` 10 → **0**; the 17 mm captive stack sits inside `MCC_WALL + MCC_GAP_FAR = 19`. `W` grows 10 mm (compact 159.9, plus 166.4) — **the printed bbox is unchanged**, since rev 2's bbox already included the lug. The freed 10 mm becomes a 16 mm far-wall airflow duct. The boss becomes a ⌀20 internal thickening from the wall's inner face to the pad face, carried by a 3 mm central vertical support web down to the floor (a ≤45° conical blend alone would need a ⌀48 root and is rejected). Screw length, groove position and clip travel are all unchanged. | **User, 2026-09-08** (resolves R18) | **fixed** |
 
 ---
@@ -1971,3 +2082,88 @@ merges, and a per-SKU before/after `volume_mm3` table in the PR body (§17.6).
 for the worked geometry (30.0 mm to the fan frame, 25.0 mm to the reservation, plug length
 `unknown`) and the four resolution options. Everything in the decoder column above is independent of
 M12 and may proceed now.
+
+---
+
+## 18. Ruling, 2026-09-09c — architecture gate for #32, the external fan switch (rev 11)
+
+Gates `docs/plans/2026-09-09-fan-switch.md`. **Verdict: APPROVED WITH CHANGES — 8 blocking (B1–B8)
+plus one blocking user decision (U).** The plan's *software* shape is right and conforms to §3: a new
+L1 provider, a constants record, a `layout.scad` position, one `shell.scad` call site, a `cfg` flag
+that defaults from `cfg["fan"]`. What is wrong is the *mechanical* half — the pocket does not meet
+the stated safety requirement, the placement formula does not check the constraint that actually
+binds, and the call site does not intersect the wall.
+
+### 18.1 Blocking changes
+
+| # | Change | Why |
+|---|---|---|
+| **B1** | **Renumber T1-38/T1-39 → T1-43 (band), T1-44 (recess/panel), T1-45 (body depth).** | T1-38/T1-39 are rev 9's (rail groove, deck grid); rev 10 reached T1-42c. Third collision in a row — take the next ID from §9, not from memory |
+| **B2** | **`translate([L/2 − MCC_WALL, switch_y, switch_z])`, not `switch_pos[0] = L/2`,** at the `shell.scad` call site; copy `vents.scad:146` exactly. Record the convention: `fan_pos`/`switch_pos` carry the wall's **outer-face** plane in X | As written the cut lands in `X ∈ [L/2, L/2+3]` — outside the shell. It removes **nothing**, stays watertight and single-shell, and shows a golden delta of exactly zero, which §4.7's "expect a small delta" invites a developer to `--update` past |
+| **B3** | **`recess_t = actuator_proud_h + MCC_SWITCH_FLUSH_CLR`, with an internal wall pad** (`pad_t = recess_t + panel_t`, 45° blend, `pad_t ≥ MCC_WALL`). Not a flat 1.0 mm | A 1 mm dish under a ~10 mm toggle lever is cosmetic. The requirement is the same one T1-25 already enforces on the side-bolt head: the actuator finishes **below** the outer face. The pad goes **inward** — the D-13 pattern — so no envelope moves |
+| **B4** | **Solve `switch_y` from both sides (§5), and assert both.** The binding obstruction is the `(+X, −Y)` corner lid fastener, at two depths: its 3 mm gusset strip near the wall and its ⌀8.28 boss deeper in | The plan's `switch_y = fan_y − 27` puts the fan gap at exactly `clr` by construction (its own T1-38 therefore cannot fail) and leaves the real constraint as prose. Its "clearance to gusset 6.65 mm" is also arithmetically unreproducible from its own definition — the gusset near edge is 9.85 mm from its keep-out edge, and the governing obstruction is the boss at 7.96 mm |
+| **B5** | **`MCC_SWITCHES` table + `MCC_SWITCH_DEFAULT`, not a single `MCC_FAN_SWITCH` struct.** Fields: `hole_d`, `nut_d` (circumscribed), `keepout_d`, `pad_d`, `body_d`, `depth`, `actuator_proud_h`, `panel_t_min/max`, `clr`, `confidence` | Every other purchasable part here is a table (`MCC_FANS`, `MCC_SPLITTERS`, `MCC_PANEL_PARTS`), and `switches.md` records **three** candidates. Also: `keepout_d = 8.0` is under-sized — a 1/4-40 bushing nut is ~8 mm **across flats**, i.e. ~9.24 mm circumscribed, and the pocket is round |
+| **B6** | **Compact family: `["fan_switch", false]` explicitly** in `models/pro-convert-for-ndi-to-hdmi/case.scad`'s `base_fan` branch and in `tests/test_shell.scad`'s `VARIANT_FAN`, with a comment citing §5 | Its feasible interval is empty (U, below). Without this the first compact render fails T1-43 and a developer's most likely "fix" is to shrink `clr` until it passes |
+| **B7** | **Move `mcc_fan_spec()` to `constants.scad` (L0) and add `MCC_FAN_DEFAULT`;** `layout.scad` then calls it instead of open-coding `MCC_FANS[search([...])[0]][1]`, and `vents.scad:148`/`shell.scad:375` drop their `"NF-A4x10"` literals | §3 bans `layout.scad` from importing an L1 geometry provider — but not from calling an L0 pure function over an L0 table. Same rule that keeps the rail keep-out row on `MCC_RAIL_*`. No geometry change, no golden change |
+| **B8** | **`mcc_switch_keepout()` (pure, in `switch.scad`) — mirroring `mcc_side_bolt_keepout()`** — and `vents.scad` consumes it. `layout.scad` must **not** call it | One owner for the keep-out shape. This is the half of PLAN-ASSUMPTION 5 that is overruled: no §6-style *bay reservation* (correct — a switch without a fan is meaningless), but yes a keep-out other features can test against |
+
+### 18.2 The user decision (U) — blocking for the compact family only
+
+**A flush switch does not fit the compact family beside the fan, at any clearance.** With
+`pad_d = 14.0` and `body_d = 10.0`: `y_hi = −59.325` (fan side) against `y_lo = −59.285` (boss side)
+— empty by 0.04 mm. The plus family has a 3.2 mm window and works. Three alternatives were evaluated
+and **all three are rejected by the architect**, so the choice is the user's:
+
+- **Flush rocker (KCD11-101, 14 × 8.5, 14 mm along Z) with a deeper recess — REJECTED.** Its snap-in
+  bezel (~15.5 × 10) sets the pocket, not its cutout, so the pad needs ≈14.6 mm against a 17.60 mm
+  pad band *and* a 12.5 mm body against a 14.96 mm body band — worse than the toggle on compact and
+  knife-edge on plus. Its snap-fit panel range is also typically ~1–1.5 mm, incompatible with the
+  2.0 mm minimum residual (T1-44b/c would fail as soon as the range is measured).
+- **Shift `fan_y` per family for the IP65 R13-112A (⌀20.2, real 24 V DC rating) — REJECTED.** The
+  `+Y` side is capped by the connector bay's inward reach (`fan_y ≤ −25.7` on compact), so the move
+  buys ≤ 5.1 mm where ≈10 mm is needed. It also re-opens **R20**, which says the default moves on
+  *measurement*, not on a switch's convenience, and it de-centres the fan from the device.
+- **Printed guard ribs around a proud toggle — REJECTED.** Any guard for an outward-protruding
+  actuator must itself protrude, which reverses **D-13** ("nothing protrudes from any wall on any
+  variant"), grows `L` by ~10 mm on every fan SKU and therefore moves §1's envelope table — a
+  user-facing figure, not an implementation detail.
+
+**Recorded default: ship on the `plus` family (3 SKUs), compact explicitly off.** The compact SKUs
+are `fan = false` by default anyway, so nothing a user builds today loses a feature. Revisit with
+M17 in hand, or with a sourced low-profile actuator ≤ 10 mm wide.
+
+### 18.3 PLAN-ASSUMPTION verdicts
+
+| # | Subject | Verdict |
+|---|---|---|
+| 1 | MTS-101 (SPST) over the ticket's MTS-102 (SPDT) | **UPHELD** — SPST is the electrically correct part for a series on/off |
+| 2 | `depth`/`panel_t_min`/`panel_t_max` are `assumed` | **UPHELD and escalated to M17**, extended to `actuator_proud_h` and `nut_d` — the two figures that actually decide the fit |
+| 3 | R13-112A recorded but not placed; no silent `fan_y` move | **UPHELD, and strengthened** — a `fan_y` move cannot buy compact enough band either, so it is not a fallback (18.2) |
+| 4 | Wiring (a) manual only as the BOM default | **UPHELD as provisional.** No geometry impact either way, so it must **not** gate the branch; the BOM row says "default pending user confirmation" and `architecture.md` §12 Q19 carries the question |
+| 5 | No reservation module for the switch | **PARTLY OVERRULED** — no §6 bay reservation (agreed), but a `mcc_switch_keepout()` is required (B8) |
+| 6 | `mcc_fan_envelope()` is dead code, out of scope | **UPHELD** — recorded as deviation **D23** with a separate ticket as fix owner. The bay's *depth* is in fact reserved unconditionally by T1-18(c); what is missing is a single definition of the 5 mm intake clearance and any Y/Z footprint check |
+
+### 18.4 Golden and test impact (corrects the plan's §4.7)
+
+- **Three goldens move**, not four: `pro-convert-for-ndi-to-hdmi-4k.base.json`,
+  `pro-convert-hdmi-plus.base.json`, `pro-convert-sdi-plus.base.json`.
+- **`pro-convert-for-ndi-to-hdmi.base_fan.json` must NOT move** (B6). If it does, the explicit
+  `fan_switch = false` wiring is broken — that is a regression, not a refresh.
+- **The delta is not necessarily negative.** With the internal pad the net is
+  `pad − through-bore − recess`, which may be **positive**; the plan's "sanity-check the delta is
+  material-removing" check is wrong and would mislead a developer. The invariant to check instead is
+  **`bbox` unchanged on all four SKUs** and `parts == 1`.
+- No `.lid.json` / `.panel.json` file is affected (correct in the plan).
+- `tests/test_shell.scad` gains an explicit plus-family `fan_switch = true` branch — the compact
+  `VARIANT_FAN` no longer exercises the cutout after B6, so without it the feature ships untested by
+  `smoke`. This is D15's lesson again: a contract that lives only in a test that no longer runs the
+  branch is not a contract.
+
+### 18.5 Knowledge and BOM
+
+`knowledge/components/switches.md` (new) and the `fans.md` KUOQIY note are **approved as scoped** —
+both are sourced third-party product facts and belong in the `knowledge/**` tree, not here. Two
+additions required: `switches.md` must record `actuator_proud_h` and `nut_d` per candidate (they are
+what decides fit, and neither appears in the plan's table), and must state the compact-family
+infeasibility so the next reader does not re-derive it. The BOM switch row is **plus-family only**,
+`assumed`, pending M17 and the U decision.
