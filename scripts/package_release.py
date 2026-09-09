@@ -15,6 +15,9 @@ Writes:
                                   that model's ports are below "measured" confidence — see
                                   `build.py confidence`).
     dist/coupons-<version>.zip   every discovered coupon's exports in one zip, one shared README.
+    dist/brackets-<version>.zip  every discovered models/brackets/*.scad target's exports in one
+                                  zip, one shared README (issue #26 — same flat, single-part,
+                                  no-device shape as a coupon, packaged the same way).
     dist/step/<slug>-<part>.step
                                   every rendered STEP file, copied loose out of exports/ with a
                                   unique, self-describing name (e.g.
@@ -133,37 +136,59 @@ def package_model(target: build.Target, version: str, sha: str) -> Path | None:
     return zip_path
 
 
-def package_coupons(targets: list[build.Target], version: str, sha: str) -> Path | None:
-    per_coupon: dict[str, list[Path]] = {}
+def _package_flat_parts(
+    targets: list[build.Target], version: str, sha: str, *, zip_stem: str, title: str, label: str,
+) -> Path | None:
+    """Shared body for package_coupons()/package_brackets(): both discover a flat list of
+    single-part targets (coupons, brackets — no base/lid split, no device record) and zip each
+    target's already-rendered files under `<target-stem>/<file>` in one shared zip with one
+    README. `zip_stem` names the zip (`dist/<zip_stem>-<version>.zip`); `label` is the noun used
+    in the skip/OK console lines (e.g. "coupons", "brackets")."""
+
+    per_target: dict[str, list[Path]] = {}
     for target in targets:
         files: list[Path] = []
         for part in target.parts:
             files += _collect_part_files(target.export_dir, part)
         if files:
-            per_coupon[target.name] = files
+            per_target[target.name] = files
 
-    if not per_coupon:
-        print("  [SKIP] coupons: nothing rendered — run `build.py all` first")
+    if not per_target:
+        print(f"  [SKIP] {label}: nothing rendered — run `build.py all` first")
         return None
 
     DIST_DIR.mkdir(parents=True, exist_ok=True)
-    zip_path = DIST_DIR / f"coupons-{version}.zip"
+    zip_path = DIST_DIR / f"{zip_stem}-{version}.zip"
     contents: list[str] = []
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for name, files in per_coupon.items():
-            slug = Path(name).name  # "coupons/neutrik-tile" -> "neutrik-tile"
+        for name, files in per_target.items():
+            slug = Path(name).name  # "coupons/neutrik-tile" -> "neutrik-tile"; "brackets/tv-bracket" -> "tv-bracket"
             for f in files:
                 arcname = f"{slug}/{f.name}"
                 zf.write(f, arcname=arcname)
                 contents.append(arcname)
-        # Coupons ARE the pre-release measurement step (architecture.md §9 Tier 4) — always flag.
+        # Coupons AND brackets are pre-release/unmeasured hardware (architecture.md §9 Tier 4 for
+        # coupons; the bracket's own PLAN-ASSUMPTION 5/6 retention-force and plate-thickness
+        # figures, layout-patch-wall.md §17.5, are likewise un-coupon-verified) — always flag.
         _write_readme(
-            zf, title="Calibration coupons", version=version, sha=sha,
+            zf, title=title, version=version, sha=sha,
             contents=sorted(contents), prerelease=True,
         )
-    n_files = sum(len(files) for files in per_coupon.values())
-    print(f"  [OK]   coupons: {zip_path.relative_to(build.REPO_ROOT)} ({n_files} files)")
+    n_files = sum(len(files) for files in per_target.values())
+    print(f"  [OK]   {label}: {zip_path.relative_to(build.REPO_ROOT)} ({n_files} files)")
     return zip_path
+
+
+def package_coupons(targets: list[build.Target], version: str, sha: str) -> Path | None:
+    return _package_flat_parts(
+        targets, version, sha, zip_stem="coupons", title="Calibration coupons", label="coupons",
+    )
+
+
+def package_brackets(targets: list[build.Target], version: str, sha: str) -> Path | None:
+    return _package_flat_parts(
+        targets, version, sha, zip_stem="brackets", title="Mounting brackets", label="brackets",
+    )
 
 
 def _step_asset_name(target: build.Target, part: str) -> str:
@@ -235,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
 
     models = build.discover_models()
     coupons = build.discover_coupons()
+    brackets = build.discover_brackets()
 
     made: list[Path] = []
     for target in models:
@@ -246,7 +272,11 @@ def main(argv: list[str] | None = None) -> int:
     if zp is not None:
         made.append(zp)
 
-    step_files = collect_step_files(models + coupons)
+    zp = package_brackets(brackets, version, sha)
+    if zp is not None:
+        made.append(zp)
+
+    step_files = collect_step_files(models + coupons + brackets)
     if step_files:
         print(f"  [OK]   step: {len(step_files)} file(s) -> {STEP_DIR.relative_to(build.REPO_ROOT)}")
     else:
