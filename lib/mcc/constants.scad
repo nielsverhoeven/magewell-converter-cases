@@ -112,12 +112,14 @@ MCC_INSERT_1_4_20 = [
     ["confidence", "assumed"],
 ];
 
-// M4 heat-set insert (Ruthex RX-M4x8.1 class), same keyed struct shape as MCC_INSERT_M3. Used by
-// the floor VESA 75x75 blind-insert bosses (mounts.scad, layout-patch-wall.md §7.1 rev-5 correction
-// H). No M4 insert figures exist in knowledge/components/fasteners-and-hardware.md (which sources
-// only the M3 RX-M3x5.7/RX-M3S family) — the figures below are typical brass/Ruthex M4 heat-set
-// insert dimensions (generic hardware-catalog range, not project-sourced), following the same
-// "typical" pattern already used for MCC_INSERT_1_4_20 above. confidence: assumed.
+// M4 heat-set insert (Ruthex RX-M4x8.1 class), same keyed struct shape as MCC_INSERT_M3. Currently
+// UNUSED in lib/mcc/** — it backed the floor VESA 75x75 blind-insert bosses, retired by issue #25
+// (D-15, rev 9, the mount rail replaces VESA). Kept as a generic M4 heat-set insert record for any
+// future floor/panel feature that needs one, rather than deleted along with its only caller. No M4
+// insert figures exist in knowledge/components/fasteners-and-hardware.md (which sources only the M3
+// RX-M3x5.7/RX-M3S family) — the figures below are typical brass/Ruthex M4 heat-set insert
+// dimensions (generic hardware-catalog range, not project-sourced), following the same "typical"
+// pattern already used for MCC_INSERT_1_4_20 above. confidence: assumed.
 MCC_INSERT_M4 = [
     ["hole_d", 5.5],
     ["od",     6.3],
@@ -506,24 +508,117 @@ MCC_FAN_APERTURE_D = 38.0; // +X end-wall fan aperture diameter, mm. DERIVED (in
 
 // Floor keep-out geometry (layout-patch-wall.md §7.1 floor table, rev-5 corrections).
 MCC_CASE_INSERT_KEEPOUT_D = 20.0; // plan-view keep-out disc for the case's own 1/4"-20 insert, mm.
-MCC_VESA_HOLE_D = 12.0;           // VESA 75x75 mounting-hole plan-view keep-out disc, mm (the holes
-                                    // themselves are blind M4 heat-set-insert bosses per §15 ruling
-                                    // H — see mounts.scad — this is only the keep-out footprint).
 MCC_STRAP_SLOT = [25, 5];         // strap-slot [length, width], mm. assumed.
 MCC_FISHTAIL_BAND = [60, 20];     // Magewell Fishtail M4 reservation band [x,y], mm — reserve-only,
                                     // hole pitch unknown (knowledge/magewell/accessories.md:26, M7).
 MCC_FLOOR_FEATURE_MIN_SEP = 15.0; // minimum centre-to-centre separation between any two floor
                                     // features, mm (or r1+r2+2.0 where larger) — layout-patch-wall.md
                                     // §7.1.
+MCC_FLOOR_FEATURE_EDGE_MIN = 2.0; // minimum edge-to-edge clearance between a floor feature and a
+                                    // disc-shaped keep-out it is not concentric with, mm — the
+                                    // "2.0 mm because disc-vs-rect" margin named per rev 9 R2
+                                    // (layout-patch-wall.md §17.2), replacing an ad-hoc inline 2.0.
 
 // Ghost-rendering visibility flag (architecture.md:304 "gated behind MCC_SHOW_GHOST (default false)").
 // Belt 2 of the two-belt ghost-exclusion rule; belt 1 is the `%` modifier used wherever ghost
 // geometry is drawn (lib/mcc/ghost.scad, lib/mcc/neutrik.scad's *_envelope() keep-out boxes).
 MCC_SHOW_GHOST = false;
 
-MCC_VESA75_PITCH = 75; // VESA MIS-D 75x75 mm mounting hole pitch, mm. assumed — external VESA standard,
-                        // not sourced from knowledge/** (no VESA reference exists there); included for the
-                        // floor-mounts VESA pattern per architecture.md:229 "VESA/Fishtail M4 pattern".
+// -----------------------------------------------------------------------------------------
+// Section: Mount rail (dovetail + spring-lip latch) — issue #25, replaces VESA (D-15, rev 9)
+// lib/mcc/rail.scad owns the geometry; this section owns only the shared cross-section constants
+// both mcc_rail_male() (bracket, #26/#27) and mcc_rail_female_cut() (case floor, mounts.scad) read,
+// per the D6 precedent (one file, both mating halves, so the profiles can never drift apart).
+// docs/plans/2026-09-09-mount-rail-and-brackets.md §1.1, architect verdict (`architecture.md` rev 9 /
+// `layout-patch-wall.md` §17.2) for the two blocking value corrections (R1/R2, called out below).
+// -----------------------------------------------------------------------------------------
+
+MCC_RAIL_DEPTH = 4.0; // dovetail groove depth (case-floor side), mm. issue #25's own cap ("depth
+                       // <= 4 mm so it does not raise the case much"). assumed.
+
+// R1 (blocking, layout-patch-wall.md §17.2): MCC_RAIL_DEPTH + MCC_FLOOR_T, NOT +2.0. At the plan's
+// original +2.0 (=6.0) the 4 mm groove leaves only 2.0 mm of ASA over it on the one surface that
+// carries the whole case when it is bracket-mounted — below the uniform MCC_WALL/MCC_FLOOR_T (3.0)
+// shell spec. Asserted as T1-38 in lib/mcc/rail.scad (>= MCC_FLOOR_T of residual floor over the
+// groove, not merely "> MCC_RAIL_DEPTH").
+MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + MCC_FLOOR_T; // = 7.0. Local floor thickening the groove is cut
+                                                  // into: MCC_RAIL_DEPTH (the groove) + MCC_FLOOR_T
+                                                  // (the residual floor T1-38 requires above it).
+
+MCC_RAIL_FLANK_ANGLE = 60; // dovetail flank angle from the floor/horizontal plane, deg. issue #25's
+                            // own "~60 deg" instruction; no repo-sourced dovetail-angle figure
+                            // exists. assumed.
+MCC_RAIL_MOUTH_W = 10.0;   // dovetail mouth width (narrow end, at the case's exterior floor face /
+                            // bracket rail tip), mm. assumed — clears the >=5 mm minimum clip width
+                            // (knowledge/components/fasteners-and-hardware.md:135) either side of the
+                            // latch tab with margin.
+MCC_RAIL_ROOT_W = MCC_RAIL_MOUTH_W + 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANGLE);
+                            // dovetail root width (wide end, deepest into the case floor / at the
+                            // bracket rail's base), mm. DERIVED, not hand-typed (architecture.md §3
+                            // "formulas not magic numbers") = 10.0 + 2*4.0/tan(60) ~= 14.6188.
+MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-local X), mm. assumed —
+                            // fixed across every SKU (one interface, every case; layout-patch-wall.md
+                            // §17.2 R4/§1.4). Fits the smallest family (compact, L=194.9) with
+                            // >= 19 mm margin per end past the end walls' inner faces.
+
+// R2 (blocking, layout-patch-wall.md §17.2/§11 R24): NEGATIVE, not +20.0 — the plan's own derivation
+// form (MCC_CASE_INSERT_KEEPOUT_D/2 + MCC_RAIL_ROOT_W/2 + MCC_FLOOR_FEATURE_EDGE_MIN, ~=19.31,
+// rounded up to 20.0 for margin) is kept, but NEGATED: the rail sits under the cradle deck and the
+// device (not free-standing in the connector bay), putting the case's mass BELOW the mount line when
+// the patch wall hangs down (#26's own orientation requirement). Rounded to 20.0 (not the exact
+// 19.31) so the disc/rect clearance in §1.4 (2.69 mm) comfortably exceeds MCC_FLOOR_FEATURE_EDGE_MIN.
+MCC_RAIL_Y = -20.0;
+
+MCC_RAIL_LATCH_ARM_L = 14.0;  // spring-lip latch cantilever arm length, mm. assumed — matches the
+                               // T_L=14 flexure-feature precedent (models/coupons/tg-ladder.scad) and
+                               // clears the L/t >= 8:1 rule below.
+MCC_RAIL_LATCH_ARM_T = 1.6;   // spring-lip latch cantilever arm thickness, mm. assumed — matches
+                               // MCC_TG_W's existing 1.6 mm feature-thickness precedent.
+                               // L/t = 14.0/1.6 = 8.75 >= 8:1
+                               // (knowledge/components/fasteners-and-hardware.md:133).
+MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED —
+                               // fasteners-and-hardware.md:134 "fillet >= 0.5x base thickness".
+MCC_RAIL_LATCH_ENGAGE = 2.0;  // latch nub engagement depth, mm.
+                               // fasteners-and-hardware.md:136 "≥ ~2 mm for a secure catch".
+MCC_RAIL_LATCH_W = 6.0;       // spring-lip latch cantilever arm width, mm. assumed — clears the
+                               // >=5 mm minimum clip width (fasteners-and-hardware.md:135).
+MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the open (insertion) end to the latch/detent, so the case
+                               // self-aligns on the dovetail before the latch has to do any work.
+                               // assumed. Named (not folded into MCC_RAIL_LATCH_X below) because
+                               // lib/mcc/rail.scad's modules re-derive the latch's own X position
+                               // from their OWN `len` parameter as -len/2 + MCC_RAIL_LATCH_LEAD_IN —
+                               // not from MCC_RAIL_LATCH_X directly, which is fixed to MCC_RAIL_LEN
+                               // — so a shorter test length (models/coupons/rail-latch.scad, len=60)
+                               // still gets a valid, in-bounds latch position.
+MCC_RAIL_LATCH_X = -MCC_RAIL_LEN / 2 + MCC_RAIL_LATCH_LEAD_IN; // = -55.0. Local X of the latch/
+                               // detent at the PRODUCTION length (MCC_RAIL_LEN) — informational/BOM
+                               // use; rail.scad's own geometry modules do not read this directly.
+MCC_RAIL_ACCESS_W = 10.0;     // thumb-release access cutout width, mm. assumed — fingertip/thin-tool
+                               // clearance, centred at MCC_RAIL_LATCH_X.
+MCC_RAIL_ACCESS_L = 14.0;     // thumb-release access cutout length, mm. assumed — same basis.
+
+// End-stop (closed, +X end — opposite the latch): a WIDTH feature, not a height bump. A bump raised
+// above MCC_RAIL_SILL_H cannot physically stop anything, because the case's own residual floor is
+// UNIFORMLY MCC_RAIL_SILL_H tall everywhere within the sill footprint (T1-38) — a Z-height shoulder
+// positioned anywhere inside the working rail length would sit in open interior air the whole slide,
+// never contacting the case. Instead, mcc_rail_male() extends its solid pedestal MCC_RAIL_END_STOP_L
+// beyond the dovetail's own working length (len), full MCC_RAIL_ROOT_W wide — OUTSIDE the female
+// groove's own footprint entirely, so it never collides during approach, and the case's own un-
+// grooved floor edge (immediately past the sill) contacts it exactly once the case reaches full
+// insertion (len/2 <-> the case's own sill boundary), capping over-travel by plain interference, not
+// a Z clearance trick.
+MCC_RAIL_END_STOP_L = 6.0;    // end-stop flange length beyond the rail's own working length, mm.
+                               // assumed — long enough to print/mold as a clean, obviously-distinct
+                               // shoulder; not calibration-critical (models/coupons/rail-latch.scad
+                               // verifies the fit).
+MCC_RAIL_END_STOP_H = 2.0;    // end-stop flange's EXTRA rise above MCC_RAIL_SILL_H, mm — cosmetic/
+                               // structural only (the flange sits outside the groove's footprint, so
+                               // this does not itself carry the stop function — see above). assumed.
+
+// MCC_RAIL_CLR: deliberately NOT a new constant. Reuse MCC_CLR_SLIDE (0.3, above) for the
+// per-side dovetail sliding-fit clearance — same coupon (tolerance-ladder / the new rail-latch
+// coupon) calibrates both, and a second clearance constant for the same physical fit class would
+// only drift from the first (docs/plans/2026-09-09-mount-rail-and-brackets.md §1.1).
 
 // -----------------------------------------------------------------------------------------
 // Section: Fans

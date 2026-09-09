@@ -253,10 +253,10 @@ module _mcc_patch_wall_aperture(l, dev) {
 //   bearing face flush with the rabbet lip's inner face (world Y = y_lip_inner).
 //   DEVIATION D10, RESOLVED (rev 6, 2026-09-08 — architecture.md §13): this boss now carries a
 //   real M3 bore, resolved LOCALLY inside this module via a per-boss difference() rather than the
-//   split add-then-cut-in-the-outer-difference() pattern used for the tripod/VESA floor bosses
-//   (mcc_tripod_insert_bore_cut() / mcc_floor_bore_cut() in mcc_shell_base() — see that module's
-//   own comment for why that split exists there: an overlapping un-bored sibling solid backfills a
-//   bore cut only in the outer difference()). That split pattern is NOT needed here because
+//   split add-then-cut-in-the-outer-difference() pattern used for the tripod/mount-rail floor
+//   features (mcc_tripod_insert_bore_cut() / mcc_rail_features_cut() in mcc_shell_base() — see that
+//   module's own comment for why that split exists there: an overlapping un-bored sibling solid
+//   backfills a bore cut only in the outer difference()). That split pattern is NOT needed here because
 //   nothing else in the union() overlaps one of these bosses — and it was independently retried
 //   and confirmed NOT to fix the failure below.
 //   ROOT CAUSE, diagnosed by isolated bisection (not merely "the rabbet cut interferes" — that
@@ -338,7 +338,7 @@ module _mcc_patch_wall_fixing_bosses(plate_size, rim_w, y_outer, z_c) {
 //   mounts.scad's tie-down and the reservation asserts below touch it).
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list (keys: "fan", "splitter", optionally "fan_y", "vesa" — see
+//   cfg = variant-config assoc-list (keys: "fan", "splitter", optionally "fan_y", "rail" — see
 //         models/pro-convert-for-ndi-to-hdmi/case.scad's own top-of-file comment for the full
 //         contract. NOT "external_ports": that key is INERT/DROPPED, D12, architecture.md §13 —
 //         the slot set comes solely from mcc_ports_external(dev), i.e. the device file's own
@@ -379,6 +379,9 @@ module mcc_shell_base(dev, cfg) {
     // own cradle footprint or the far-wall duct.
     assert(struct_val(l, "splitter_bay_x")[1] <= struct_val(l, "x_dev_lo") + MCC_EPS,
         "mcc: splitter bay reservation collides with the device envelope");
+    // D16 (architecture.md §13, fixed by issue #25): no two mcc_floor_keepout() rows overlap,
+    // except the concentric "case_tripod_insert"/"fishtail_reserve" pair (D19).
+    mcc_assert_floor_keepout_no_overlap(dev, cfg);
 
     union() {
         difference() {
@@ -415,17 +418,19 @@ module mcc_shell_base(dev, cfg) {
 
             _mcc_patch_wall_aperture(l, dev);
 
-            // Bore cuts for the tripod-insert and VESA "boss from below" features, which were
-            // split into a plain-solid ADD (above, inside the union) plus a separate bore CUT
-            // (here, in the OUTER difference) — see cradle.scad's mcc_tripod_insert_bore_cut() and
-            // mounts.scad's mcc_floor_bore_cut() for why: a bore differenced only against its own
-            // boss's local geometry gets silently backfilled by an overlapping, un-bored sibling
-            // solid (the floor slab). The 4 patch-wall plate-fixing bosses do NOT need this split
-            // — their bore (D10, rev 6, resolved) is cut locally inside
+            // Bore/groove cuts for the tripod-insert and mount-rail-sill "boss from below" features,
+            // which were split into a plain-solid ADD (above, inside the union) plus a separate
+            // CUT (here, in the OUTER difference) — see cradle.scad's mcc_tripod_insert_bore_cut()
+            // and mounts.scad's mcc_rail_features_cut() for why: a bore/groove differenced only
+            // against its own boss's local geometry gets silently backfilled by an overlapping,
+            // un-cut sibling solid (the floor slab). The 4 patch-wall plate-fixing bosses do NOT
+            // need this split — their bore (D10, rev 6, resolved) is cut locally inside
             // _mcc_patch_wall_fixing_bosses() itself, since nothing else in the union() overlaps
             // one of those bosses; see that module's own comment for the fuller history.
+            // mcc_floor_bore_cut() is RETIRED (architecture.md §6 rev 9, R5, issue #25) — this call
+            // site is now mcc_rail_features_cut(), the mount rail's own groove cut.
             mcc_tripod_insert_bore_cut(dev, cfg);
-            mcc_floor_bore_cut(dev, cfg);
+            mcc_rail_features_cut(dev, cfg);
 
             translate([x_bolt, -W / 2 - MCC_SIDE_BOLT_PROUD, z_bolt])
                 rotate([-90, 0, 0])
