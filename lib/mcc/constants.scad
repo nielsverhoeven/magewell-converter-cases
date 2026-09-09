@@ -741,6 +741,41 @@ MCC_FANS = [
 // several parallel paths, not the bottleneck).
 MCC_VENT_AREA_RATIO = 1.0;
 
+// Lid vents (GitHub issue #24) — additive top-exhaust field, centred over the device's own plenum,
+// separate from the far-wall/±X-end-wall chimney slots above. Same physical concern (chimney vent
+// sizing), applied to a new face — kept in this section rather than a new one for that reason. See
+// docs/plans/2026-09-09-lid-vents.md §1-2 for the full thermal/geometry reasoning and
+// layout-patch-wall.md §17.4 (R9/R10) for the architect-required changes (use <ports.scad> in
+// vents.scad; named constants here rather than the plan's inline 1.0/1.6 literals).
+MCC_LID_VENT_SLOT_W  = 2.0;  // lid vent slot width in X, mm. assumed -- ticket's own example figure.
+MCC_LID_VENT_SLOT_L  = 20.0; // lid vent slot length in Y, mm. assumed -- ticket's own example figure.
+MCC_LID_VENT_EDGE_MIN = 1.0; // minimum clearance from the lid vent field to the T&G groove band /
+                               // patch-wall MCC_T_PATCH stack, mm. Named per layout-patch-wall.md
+                               // §9 T1-37 / §17.4 R10 (replaces the plan's inline "1.0" literal).
+                               // assumed -- same minimum-edge-material class as
+                               // MCC_APERTURE_LIP_WEB_MIN.
+MCC_LID_VENT_WEB_MIN = 1.6;  // minimum web between adjacent lid-vent slots, mm. Named per
+                              // layout-patch-wall.md §17.4 R10 (replaces the plan's bare
+                              // "assert(... >= 1.6)" literal) -- same figure/rationale as
+                              // MCC_VENT_WEB_W, kept as its own named constant (not a reuse) so a
+                              // future change to the wall-vent web does not silently move this one.
+MCC_LID_VENT_WEB_W   = MCC_LID_VENT_WEB_MIN; // actual web used between lid-vent slots, mm. Equal to
+                              // the minimum today; kept as a separate symbol from
+                              // MCC_LID_VENT_WEB_MIN (the assert bound) so the two can diverge later
+                              // without renaming the bound.
+MCC_LID_VENT_ROW_GAP    = 6.0; // solid Y gap between the 2 slot rows, mm. assumed -- reserves room
+                                 // for an optional future underside stiffening rib (plan §2.4).
+MCC_LID_VENT_ROWS       = 2;    // number of slot rows. assumed -- plan §2.1 PLAN-ASSUMPTION C
+                                  // (ratified, layout-patch-wall.md §17.5).
+MCC_LID_VENT_END_MARGIN = 5.0;  // inset from x_dev_lo/x_dev_hi to the field's own X bounds, mm. assumed.
+MCC_LID_VENT_FASTENER_KEEPOUT_R = 10.0; // defensive keep-out radius around every lid_fastener_pos, mm.
+                                          // assumed -- counterbore radius 4.0 + >=2mm edge material
+                                          // (fdm-rugged-enclosure-guidelines.md §8), rounded up.
+MCC_LID_VENT_AREA_RATIO = 1.0;  // minimum net lid-vent free area, as a multiple of the fan aperture's
+                                  // own circular area (pi/4 * MCC_FAN_APERTURE_D^2) -- same heuristic
+                                  // as MCC_VENT_AREA_RATIO/T1-30, applied to the new top exhaust path.
+                                  // assumed -- thermal-guidelines.md:104-109.
+
 // -----------------------------------------------------------------------------------------
 // Section: PoE splitter envelope
 // knowledge/components/poe-splitters.md.

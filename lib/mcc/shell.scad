@@ -454,9 +454,12 @@ module mcc_shell_base(dev, cfg) {
 //   The lid half: a flat MCC_LID_T slab spanning [H-MCC_LID_T, H], with the mating groove (D-07)
 //   cut into its underside (MCC_TG_W+2*MCC_CLR_TG wide, MCC_TG_H deep, leaving 1.0 mm of lid above
 //   it — rev-5 ruling 4 / T1-33), and 6 captive-thumbscrew holes at the same `lid_fastener_pos`
-//   the base's bosses use. No cradle, no floor features, no side-bolt feature (all base-only). No
-//   vent cuts on this SKU: both vent bands (intake z=[5,23], exhaust z=[32,44]) sit entirely below
-//   the lid's own Z range (verified below by assert rather than assumed).
+//   the base's bosses use. No cradle, no floor features, no side-bolt feature (all base-only).
+//   The existing far-wall/end-wall vent bands (intake z=[5,23], exhaust z=[32,44]) sit entirely
+//   below the lid's own Z range on every current SKU (verified below by assert rather than
+//   assumed) and get no cut here — but the lid DOES cut its own, independent top-exhaust vent
+//   field (issue #24, mcc_lid_vents_cut(), vents.scad), gated on cfg["lid_vents"] (default true).
+//   The floor stays closed: mcc_shell_base() is untouched by issue #24.
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list.
@@ -465,6 +468,9 @@ module mcc_shell_lid(dev, cfg) {
     L = struct_val(l, "L"); W = struct_val(l, "W"); H = struct_val(l, "H");
     z_top = MCC_FLOOR_T + _mcc_h_int(); // 48.0, lid underside
     lid_pos = struct_val(l, "lid_fastener_pos");
+
+    lv_cfg = struct_val(cfg, "lid_vents");
+    lid_vents_flag = is_undef(lv_cfg) ? true : lv_cfg;
 
     assert(MCC_TG_H + 1.0 <= MCC_LID_T,
         str("mcc: T1-33 MCC_TG_H+1.0=", MCC_TG_H + 1.0, " exceeds MCC_LID_T=", MCC_LID_T));
@@ -490,6 +496,12 @@ module mcc_shell_lid(dev, cfg) {
         for (p = lid_pos)
             translate([p[0], p[1], z_top - MCC_EPS])
                 mcc_captive_thumbscrew_hole(lid_t = MCC_LID_T + 2 * MCC_EPS);
+
+        // Lid vent field (issue #24) — gated in this ONE place; mcc_lid_vents_cut() does not
+        // re-read cfg["lid_vents"] itself (layout-patch-wall.md §17.4: "gate the field in one
+        // place").
+        if (lid_vents_flag)
+            mcc_lid_vents_cut(dev, cfg);
     }
 }
 
