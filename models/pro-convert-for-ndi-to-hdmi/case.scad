@@ -46,8 +46,8 @@ explode = 0;
 //               reservation rule -- no live splitter geometry is drawn by any flag value yet).
 //               Fed from the top-level `splitter` variable below, likewise overridable via
 //               `-D splitter=true`.
-//   "vesa"      (bool, optional, default true) -- draws the 4 VESA 75x75 M4 heat-set bosses in
-//               the floor (mounts.scad, layout-patch-wall.md §15 ruling H). Pass false to omit.
+//   "rail"      (bool, optional, default true) -- cuts the tool-less dovetail mount-rail groove in
+//               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check

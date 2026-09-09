@@ -240,14 +240,17 @@ function _mcc_nearest_zero(vals) =
 // Usage:
 //   features = mcc_floor_keepout(dev, cfg);
 // Description:
-//   Pure function: every floor-plan feature `mounts.scad` places (case 1/4"-20 insert, VESA 75x75,
-//   the Fishtail reserve band, strap slots, splitter tie-down anchor, the side-bolt support-web
-//   footprint), each `[cx, cy, "circle"|"rect", size_or_d, "label"]`. NOT nullary (rev-5 correction
-//   2, layout-patch-wall.md §7.1) — strap slots, the splitter bay and the side-bolt web all depend
-//   on `L`, `W`, and `x_bolt`. `mounts.scad` draws the real geometry from this list and asserts
-//   pairwise non-overlap (MCC_FLOOR_FEATURE_MIN_SEP, or r1+r2+2.0 where larger) — this function
-//   only computes positions, per this file's "functions only" contract (ruling 1); it does not
-//   itself assert (the assert belongs to the L2 caller that owns the floor, architecture.md §6).
+//   Pure function: every floor-plan feature `mounts.scad` places (case 1/4"-20 insert, the mount
+//   rail (D-15, rev 9 — replaces VESA), the Fishtail reserve band, strap slots, splitter tie-down
+//   anchor, the side-bolt support-web footprint), each `[cx, cy, "circle"|"rect", size_or_d,
+//   "label"]`. NOT nullary (rev-5 correction 2, layout-patch-wall.md §7.1) — strap slots, the
+//   splitter bay and the side-bolt web all depend on `L`, `W`, and `x_bolt`. `mounts.scad` draws the
+//   real geometry from this list and asserts pairwise non-overlap (MCC_FLOOR_FEATURE_MIN_SEP, or
+//   r1+r2+2.0 where larger — D16, rev 9, exempting the "case_tripod_insert"/"fishtail_reserve" pair,
+//   which is deliberately concentric — D19) — this function only computes positions, per this file's
+//   "functions only" contract (ruling 1); it does not itself assert (the assert belongs to the L2
+//   caller that owns the floor, architecture.md §6). Rev 9: `layout.scad` must NOT `use <rail.scad>`
+//   (architecture.md §3) — the "mount_rail" row below is built from the MCC_RAIL_* L0 constants only.
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list (only used indirectly via mcc_case_layout()).
@@ -256,7 +259,9 @@ function mcc_floor_keepout(dev, cfg) =
         l = mcc_case_layout(dev, cfg),
         L = struct_val(l, "L"), W = struct_val(l, "W"),
         bay_x = struct_val(l, "splitter_bay_x"),
-        vesa_pos = [0, 0], // shell parameter default — case plan centre, layout-patch-wall.md §7.1
+        floor_center = [0, 0], // shell parameter default — case plan centre, layout-patch-wall.md §7.1.
+                                // Renamed from "vesa_pos" (D-15, rev 9, issue #25 owns the rename) —
+                                // still anchors the case 1/4"-20 insert and the Fishtail reserve band.
         strap_x_pos = L / 2 - 25, // nominal +X strap-slot X position, layout-patch-wall.md §7.1 table
         // Rev-5 correction 1: the nominal -X strap-slot X position collides with the reserved
         // splitter bay on every priority SKU — the reserved bay wins (architecture.md §6), so the
@@ -275,12 +280,13 @@ function mcc_floor_keepout(dev, cfg) =
         web_cy = web_y0 + web_len / 2
     )
     [
-        [vesa_pos[0], vesa_pos[1], "circle", MCC_CASE_INSERT_KEEPOUT_D, "case_tripod_insert"],
-        [vesa_pos[0] + MCC_VESA75_PITCH / 2, vesa_pos[1] + MCC_VESA75_PITCH / 2, "circle", MCC_VESA_HOLE_D, "vesa_ne"],
-        [vesa_pos[0] + MCC_VESA75_PITCH / 2, vesa_pos[1] - MCC_VESA75_PITCH / 2, "circle", MCC_VESA_HOLE_D, "vesa_se"],
-        [vesa_pos[0] - MCC_VESA75_PITCH / 2, vesa_pos[1] + MCC_VESA75_PITCH / 2, "circle", MCC_VESA_HOLE_D, "vesa_nw"],
-        [vesa_pos[0] - MCC_VESA75_PITCH / 2, vesa_pos[1] - MCC_VESA75_PITCH / 2, "circle", MCC_VESA_HOLE_D, "vesa_sw"],
-        [vesa_pos[0], vesa_pos[1], "rect", MCC_FISHTAIL_BAND, "fishtail_reserve"],
+        [floor_center[0], floor_center[1], "circle", MCC_CASE_INSERT_KEEPOUT_D, "case_tripod_insert"],
+        [floor_center[0], floor_center[1], "rect", MCC_FISHTAIL_BAND, "fishtail_reserve"],
+        // Mount rail (D-15, rev 9 — replaces VESA): MCC_RAIL_Y is already negative (R2/R24,
+        // layout-patch-wall.md §17.2) — under the cradle deck and the device, not free-standing in
+        // the connector bay. Size is the sill footprint [MCC_RAIL_LEN, MCC_RAIL_ROOT_W] (the wider
+        // of the groove's two widths, so the keep-out covers the whole sill, not just the mouth).
+        [0, MCC_RAIL_Y, "rect", [MCC_RAIL_LEN, MCC_RAIL_ROOT_W], "mount_rail"],
         [strap_x_pos, strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_y"],
         [strap_x_pos, -strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_neg_y"],
         [strap_x_neg, strap_y, "rect", MCC_STRAP_SLOT, "strap_neg_y"],

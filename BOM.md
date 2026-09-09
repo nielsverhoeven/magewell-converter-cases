@@ -63,7 +63,7 @@ in each per-variant table below, since the connector count varies 3–4 by SKU.)
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
 | 1/4"-20 brass heat-set insert | generic, ⌀8.8 mm hole / ⌀9.5 mm OD / 12.7 mm length (all `assumed`, typical brass-insert catalog range) | 1 | Case's own floor mount feature (tripod/cheeseplate) — **not** the device-retention side bolt, which threads directly into the device and needs no insert | `lib/mcc/constants.scad:102-113` (`MCC_INSERT_1_4_20`); no sourced figure exists in `knowledge/components/fasteners-and-hardware.md` for a 1/4"-20 insert specifically — flagged `confidence: assumed` in the constant's own comment |
-| M4 machine screw + nut/washer | generic M4 | 4 (optional) | VESA MIS-D 75×75 mm pattern, or the Magewell-Fishtail-compatible M4 hole pattern — either use, not both simultaneously | `lib/mcc/constants.scad:274-276` (`MCC_VESA75_PITCH`, `assumed` — no VESA reference in `knowledge/**`); `CLAUDE.md` fixed decisions (floor features); Fishtail bracket geometry itself: `knowledge/magewell/assets/magewell-fishtail-bracket.stl` |
+| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**) needs no BOM hardware of its own: both the female groove (case floor) and the male rail + spring-lip latch are printed features, no fasteners. See a future bracket's own `## Mounting brackets` section (issue #26/#27, not yet on `main`) for its own hardware. The Magewell-Fishtail-compatible M4 pattern remains a **reserve-only** band (hole pitch `unknown`, M7) — no hardware row until it is actually cuttable | `.claude/knowledge/architecture.md` §6 floor rule (rev 9); `lib/mcc/rail.scad` |
 | Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
 | Cable zip tie / adhesive mount base | generic | as needed | Internal cable dressing | `knowledge/components/fasteners-and-hardware.md:215-222` |
 
@@ -146,7 +146,7 @@ tracked in this document**):
 
 Each table below is one row per external port (`panel` ≠ `"none"` in the device's `lib/mcc/devices/*.scad`
 file) plus that SKU's connector-rear-boss hardware and internal patch cables. Common hardware
-(lid, panel-plate retention, side-bolt retention, floor insert, VESA/Fishtail, fan/splitter bays) is
+(lid, panel-plate retention, side-bolt retention, floor insert, mount rail, fan/splitter bays) is
 **not repeated per section** — see "Common hardware" above.
 
 Internal patch cable lengths follow `knowledge/components/cables.md`'s shortest **confirmed
@@ -280,11 +280,8 @@ ships with every unit of this SKU.
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
 
-Note: `vesa = true` (library default, set explicitly in `case.scad` for documentation parity) — the 4
-VESA 75×75 M4 floor bosses are present, hardware already covered by the "Case floor mounting" common
-section above (M4 machine screw + nut/washer, optional). `splitter = false` — the PoE-splitter bay is
-reserved (architecture.md §6) but unpopulated on this SKU, same as every other current variant; no
-splitter hardware row here.
+Note: `splitter = false` — the PoE-splitter bay is reserved (architecture.md §6) but unpopulated on
+this SKU, same as every other current variant; no splitter hardware row here.
 
 ### pro-convert-for-ndi-to-sdi
 

@@ -410,8 +410,9 @@ module mcc_case_tripod_insert_boss(h, od = undef) {
 // Usage:
 //   mcc_m4_hole([h=]);
 // Description:
-//   Generic M4 clearance through-hole, base at Z=0 growing toward +Z. Used by the (not-yet-built)
-//   floor VESA/Fishtail M4 pattern and any other generic M4 clearance need.
+//   Generic M4 clearance through-hole, base at Z=0 growing toward +Z. Currently unused in
+//   lib/mcc/** — kept as a generic M4 clearance-hole helper for any future need (the Fishtail M4
+//   pattern remains reserve-only, no holes cut; VESA is retired, issue #25, D-15).
 // Arguments:
 //   h = hole length, mm. Default: 20 (assumed — generous enough to guarantee a clean through-cut
 //       through any wall/floor/boss stack in this repo; override per call site).

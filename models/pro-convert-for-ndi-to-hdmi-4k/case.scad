@@ -43,9 +43,9 @@ explode = 0;
 //               reservation rule -- no live splitter geometry is drawn by any flag value yet).
 //               Fed from the top-level `splitter` variable below, likewise overridable via
 //               `-D splitter=true`.
-//   "vesa"      (bool, optional, default true) -- draws the 4 VESA 75x75 M4 heat-set bosses in
-//               the floor (mounts.scad, layout-patch-wall.md §15 ruling H). Set explicitly here
-//               (still `true`) for documentation parity, per this SKU's brief.
+//   "rail"      (bool, optional, default true) -- cuts the tool-less dovetail mount-rail groove in
+//               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Left at the
+//               library default (true) -- not overridden here.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- not overridden here;
 //               the fan sits on the device's own Y centreline.
 //
@@ -65,13 +65,10 @@ explode = 0;
 fan      = true;  // -D fan=false     renders WITHOUT the live +X fan cutout (bay stays reserved
                    //                 regardless -- architecture.md §6)
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
-vesa     = true;  // -D vesa=false    omits the 4 VESA 75x75 M4 floor bosses (library default is
-                   //                 already true; set explicitly here for documentation parity)
 
 variant = [
     ["fan",       fan],
     ["splitter",  splitter],
-    ["vesa",      vesa],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K;
