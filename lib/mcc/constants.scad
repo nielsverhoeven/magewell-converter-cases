@@ -635,6 +635,26 @@ MCC_FANS = [
     ["NF-A6x25", [["frame", [60, 60, 25]], ["pitch", 50], ["hole_d", 4.3]]],
 ];
 
+// Name of the fan fitted by default, key into MCC_FANS above. architecture.md §10 D-18 / rev 11
+// (#32) -- pulled out so layout.scad and vents.scad/shell.scad never repeat the "NF-A4x10" string
+// literal (architecture.md §3 "no magic numbers").
+MCC_FAN_DEFAULT = "NF-A4x10";
+
+// Function: mcc_fan_spec()
+// Usage:
+//   spec = mcc_fan_spec(name);
+// Description:
+//   Looks up a fan record (frame/pitch/hole_d) from MCC_FANS above by name, e.g. "NF-A4x10" or
+//   "NF-A6x25". MOVED HERE from lib/mcc/fan.scad (L1), rev 11, #32, architect verdict B7: it is a
+//   pure function over an L0 table (architecture.md §3 bans a *module* in constants.scad, not a
+//   function), and layout.scad — which may not `use` an L1 geometry provider — needs it to compute
+//   the fan-frame clearance for the fan-switch band solve legally, instead of open-coding
+//   MCC_FANS[search(["NF-A4x10"], MCC_FANS)[0]][1] at L1. No geometry change; no golden change.
+function mcc_fan_spec(name) =
+    let(ind = search([name], MCC_FANS)[0])
+    assert(ind != [], str("mcc: unknown fan \"", name, "\""))
+    MCC_FANS[ind][1];
+
 // Minimum total intake vent free area, as a multiple of the fan aperture's own circular area
 // (pi/4 * fan_aperture_d^2), when a fan bay is reserved. assumed —
 // knowledge/design/thermal-guidelines.md:104-109 gives only the qualitative rule "vent free area

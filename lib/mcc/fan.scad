@@ -14,16 +14,10 @@ use <util.scad>
 // fasteners.scad); the fan envelope's local frame has Z=0 at the mounting plane, growing toward
 // +Z (into the case interior) by the fan's own frame depth plus intake clearance.
 
-// Function: mcc_fan_spec()
-// Usage:
-//   spec = mcc_fan_spec(name);
-// Description:
-//   Looks up a fan record (frame/pitch/hole_d) from MCC_FANS (constants.scad) by name, e.g.
-//   "NF-A4x10" or "NF-A6x25".
-function mcc_fan_spec(name) =
-    let(ind = search([name], MCC_FANS)[0])
-    assert(ind != [], str("mcc: unknown fan \"", name, "\""))
-    MCC_FANS[ind][1];
+// mcc_fan_spec() MOVED to constants.scad (L0), rev 11 (#32, architect verdict B7) — it is a pure
+// function over an L0 table, and layout.scad (which may not `use` this L1 file) needs it too. This
+// file still calls it below; the call resolves via constants.scad, which fan.scad already
+// `include`s.
 
 // Module: mcc_fan_envelope()
 // Usage:

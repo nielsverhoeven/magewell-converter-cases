@@ -372,7 +372,7 @@ module mcc_shell_base(dev, cfg) {
     // borrowed lateral one.
     pos_ext = [for (p = mcc_ports_external(dev)) if (mcc_port_face(p)[0] > 0) p];
     axial_terms = [for (p = pos_ext) mcc_plug_axial(mcc_port_kind(p))];
-    fan_env_depth = struct_val(mcc_fan_spec("NF-A4x10"), "frame")[2] + 5;
+    fan_env_depth = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame")[2] + 5;
     assert(struct_val(l, "x_dev_hi") + max(concat([0], axial_terms)) <= L / 2 - MCC_WALL - fan_env_depth + MCC_EPS,
         str("mcc: T1-18(c) +X axial cable clearance fails on \"", mcc_dev_slug(dev), "\""));
     // Reservation rule (architecture.md §6): the splitter bay must never intrude into the device's

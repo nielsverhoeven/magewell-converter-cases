@@ -145,7 +145,7 @@ module mcc_vents(dev, cfg, face) {
             // at world X=L/2-MCC_WALL and centres the pattern on (fan_pos[1], fan_pos[2]).
             translate([L / 2 - MCC_WALL, fan_pos[1], fan_pos[2]])
                 rotate([0, 90, 0])
-                    mcc_fan_cutout("NF-A4x10", wall_t = MCC_WALL, grille = true);
+                    mcc_fan_cutout(MCC_FAN_DEFAULT, wall_t = MCC_WALL, grille = true);
         }
     }
 }
