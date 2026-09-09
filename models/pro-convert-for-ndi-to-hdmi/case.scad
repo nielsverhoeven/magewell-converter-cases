@@ -48,6 +48,9 @@ explode = 0;
 //               `-D splitter=true`.
 //   "rail"      (bool, optional, default true) -- cuts the tool-less dovetail mount-rail groove in
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
+//   "tripod_insert" (bool, optional, default true, D-16) -- draws the case's own 1/4"-20
+//               floor-mount insert boss (cradle.scad, T1-32), braced into the deck lattice with
+//               a collar (T1-41). Pass false to omit both the boss and its bore cut.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
@@ -62,6 +65,7 @@ fan_effective = (part == "base_fan") ? true : fan;
 variant = [
     ["fan",       fan_effective],
     ["splitter",  splitter],
+    ["tripod_insert", true],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
