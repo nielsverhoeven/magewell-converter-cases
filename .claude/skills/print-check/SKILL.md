@@ -59,6 +59,7 @@ stop and check the layout before committing plate time.
 | Connector panel plate | **Face-down, flat on the bed** | The ⌀23.8/24.2 mm holes print as true circles with no bridging; the flange seat is a true bed-flat surface. The same hole cut vertically is a 24 mm bridge that droops at the top (architecture.md §5 point 2). |
 | Shell base/lid | **Open side up** | Keeps the aperture rabbet's ≤45° chamfer self-supporting and avoids printing the deepest cavity upside down into supports. |
 | Any part with a boss/insert hole | Hole axis vertical (printing top-down through the hole), not horizontal | A horizontal insert hole is a small bridge/overhang per hole and prints out-of-round; a vertical hole prints as a clean circular wall. |
+| `models/brackets/tv-bracket.scad` | Flat, either face down — but **mount with the plate's own +Y axis up** (not a print-orientation choice; see `models/brackets/README.md` "Orientation") so the mated case hangs with its patch/cable wall down, not the fan/vent side against the TV. |
 
 No unsupported span over **10 mm** anywhere (the general shell rule, architecture.md §5) — check any
 new rabbet roof, vent hood, or aperture chamfer against this before slicing. Roofs ≤45° from vertical

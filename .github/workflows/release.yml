@@ -10,7 +10,8 @@ name: release
 #   3. scripts/build.py confidence --json reports every port below "measured" confidence and
 #      sets `prerelease=true` if any are found — this SOFTENS the old release gate (which used to
 #      fail the build on any WARNING: unmeasured) into a pre-release marker instead, per the issue.
-#   4. scripts/package_release.py builds one zip per device case plus a coupons zip, copies every
+#   4. scripts/package_release.py builds one zip per device case plus a coupons zip and a brackets
+#      zip (issue #26 — models/brackets/*.scad, packaged the same way as coupons), copies every
 #      rendered STEP file into dist/step/<slug>-<part>.step (unique, self-describing names — the
 #      old loose `<part>.step` names, e.g. base.step/lid.step/panel.step, collided across the now
 #      eight-plus device cases, since GitHub release assets must be unique repo-wide; see issue

@@ -43,6 +43,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 LIB_DIR = REPO_ROOT / "lib"
 MODELS_DIR = REPO_ROOT / "models"
 COUPONS_DIR = MODELS_DIR / "coupons"
+BRACKETS_DIR = MODELS_DIR / "brackets"
 TESTS_DIR = REPO_ROOT / "tests"
 GOLDEN_DIR = TESTS_DIR / "golden"
 EXPORTS_DIR = REPO_ROOT / "exports"
@@ -80,7 +81,7 @@ class Target:
     name: str            # e.g. "coupons/neutrik-tile", "pro-convert-hdmi-tx", or a bare path stem
     scad_path: Path
     parts: list[str]
-    kind: str = "model"  # "coupon" | "model" | "adhoc"
+    kind: str = "model"  # "coupon" | "bracket" | "model" | "adhoc"
 
     @property
     def export_dir(self) -> Path:
@@ -150,13 +151,29 @@ def discover_coupons() -> list[Target]:
     return targets
 
 
+def discover_brackets() -> list[Target]:
+    """models/brackets/*.scad — single-part flat plates (VESA sandwich bracket, truss bracket),
+    structurally identical in shape to a coupon target (no base/lid split, no device, no variant
+    config), so this mirrors discover_coupons() exactly rather than forcing them through
+    discover_models()'s case.scad-shaped mechanism (issue #26, architecture.md §3 rev 9,
+    layout-patch-wall.md §17.2)."""
+
+    if not BRACKETS_DIR.is_dir():
+        return []
+    targets = []
+    for scad_path in sorted(BRACKETS_DIR.glob("*.scad")):
+        stem = scad_path.stem
+        targets.append(Target(name=f"brackets/{stem}", scad_path=scad_path, parts=[stem], kind="bracket"))
+    return targets
+
+
 def discover_models() -> list[Target]:
     if not MODELS_DIR.is_dir():
         return []
     targets = []
     for case_path in sorted(MODELS_DIR.glob("*/case.scad")):
         slug = case_path.parent.name
-        if slug == "coupons":
+        if slug in ("coupons", "brackets"):
             continue
         parts = ["base", "lid"]
         try:
@@ -195,7 +212,7 @@ def _extra_parts(case_scad_text: str) -> list[str]:
 
 
 def discover_all() -> list[Target]:
-    return discover_coupons() + discover_models()
+    return discover_coupons() + discover_brackets() + discover_models()
 
 
 def resolve_targets(names: list[str], part_override: list[str] | None) -> list[Target]:
@@ -993,11 +1010,12 @@ def cmd_doctor(_args: argparse.Namespace) -> int:
     print(f"STEP backend:  {step_backend or 'NOT FOUND'}  ({step_detail})")
 
     coupons = discover_coupons()
+    brackets = discover_brackets()
     models = discover_models()
-    print(f"\nDiscovered targets: {len(coupons)} coupon(s), {len(models)} model(s)")
-    for t in coupons + models:
+    print(f"\nDiscovered targets: {len(coupons)} coupon(s), {len(brackets)} bracket(s), {len(models)} model(s)")
+    for t in coupons + brackets + models:
         print(f"  {t.kind:7s} {t.name:30s} parts={t.parts}  ({t.scad_path.relative_to(REPO_ROOT)})")
-    if not coupons and not models:
+    if not coupons and not brackets and not models:
         print("  (none yet — models/coupons/*.scad and models/*/case.scad are still being authored)")
 
     return 0

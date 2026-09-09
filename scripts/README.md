@@ -12,8 +12,8 @@ One build implementation, two entry points, per `.claude/knowledge/architecture.
   used by `build.py step`. Can also be run standalone for one file — see its own `--help`.
 - `release_version.py` — computes the next `vX.Y.Z` from Conventional Commits since the last
   `v*` tag. Used by `.github/workflows/release.yml`; see "Release tooling" below.
-- `package_release.py` — builds the per-device and coupon release zips from `exports/`. Also used
-  by `release.yml`.
+- `package_release.py` — builds the per-device, coupon, and bracket release zips from `exports/`.
+  Also used by `release.yml`.
 
 ## Setup
 
@@ -50,10 +50,11 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 
 | Command | Does |
 |---|---|
-| `doctor` | Print resolved OpenSCAD path/version, BOSL2 submodule SHA, venv/trimesh status, and every discovered coupon/model target. Run this first. |
-| `render --all` | Render every discovered coupon and model part to STL in `exports/`. |
+| `doctor` | Print resolved OpenSCAD path/version, BOSL2 submodule SHA, venv/trimesh status, and every discovered coupon/bracket/model target. Run this first. |
+| `render --all` | Render every discovered coupon, bracket, and model part to STL in `exports/`. |
 | `render coupons/neutrik-tile` | Render one coupon by name. |
 | `render coupons/neutrik-tile --format both` | Also emit `.3mf`. |
+| `render brackets/tv-bracket` | Render one bracket by name — `models/brackets/*.scad`, discovered by `discover_brackets()` (mirrors `discover_coupons()`: single-part flat plates, no base/lid split, no device record). |
 | `render pro-convert-hdmi-tx --part base --part lid` | Render specific parts of a model. |
 | `render path/to/some.scad --part base -D foo=1` | Render an ad-hoc `.scad` file with extra `-D` overrides. |
 | `render --all --release` | Release build: also fails if OpenSCAD emits `WARNING: unmeasured` (a port below `measured` confidence used for a real cutout). |

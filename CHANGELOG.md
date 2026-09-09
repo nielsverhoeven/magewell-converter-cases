@@ -47,6 +47,15 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
   decoders draw 5 V from their own USB-A host port (now blanked with `DBA-BL-B`, which carries a
   full D hole so the slot stays convertible), encoders from Mini-DIN-8 pin 8 VCC / pin 4 GND, each
   in series with a KSD9700 45 °C thermoswitch, with no splitter fitted by default on any SKU.
+- TV bracket (issue #26): `models/brackets/tv-bracket.scad` — a VESA 100×100/200×200 sandwich
+  plate that sits between a TV's own back panel and its existing wall/stand mount, carrying the
+  male mount rail (`lib/mcc/rail.scad`, issue #25) so a case clicks onto it tool-less. New
+  `scripts/build.py` `discover_brackets()` (registered in both `discover_all()` and
+  `cmd_doctor()`), `models/brackets/README.md`, `tests/golden/brackets/tv-bracket.json`, a
+  `## Mounting brackets` section in `BOM.md`, a `dist/brackets-<version>.zip` in
+  `scripts/package_release.py`, `MCC_M8_CLR_D`/`MCC_BRACKET_PLATE_T`/`MCC_RIB_HEIGHT_RATIO_MAX` in
+  `lib/mcc/constants.scad`, and a one-line orientation note in
+  `.claude/skills/print-check/SKILL.md`.
 
 <!-- No Changed / Deprecated / Removed / Fixed / Security entries yet. Keep a Changelog convention:
      add a subsection only once it has an entry; don't carry empty headings forward release to
