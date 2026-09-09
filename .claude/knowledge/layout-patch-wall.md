@@ -1,5 +1,36 @@
 # Patch-wall layout contract
 
+Status: **revision 10, 2026-09-09.** Rev 10 is the architecture gate for
+`docs/plans/2026-09-09-printed-m3-threads.md` (**#30** — the Neutrik D-flange fixing holes become
+printed M3×0.5 internal threads in the existing rear pad, replacing the heat-set inserts). Verdict:
+**APPROVED WITH CHANGES — 7 blocking**; the full verdict lives in that plan's **§9 "Architect
+verdict"** and the design record in `architecture.md` **§5 "Connector fixing" bullet 3**.
+
+**Nothing in this contract's geometry moves.** §1's frame, §2/§2.5's aperture spec, §3's slot rule,
+§4's end zones, §7/§7.1 and §8's envelopes are all untouched, and **no `L`/`W`/`H` figure changes on
+any SKU** — because `MCC_THREAD_M3_PAD_D` (8.28) and `MCC_THREAD_M3_PAD_H` (7.0) are **pinned equal
+to the pre-#30 heat-set boss**. What changes here:
+
+1. **§9 gains T1-42a/b/c** (thread-pad wall, engaged turns, residual radial engagement vs `$slop`).
+   **T1-36 … T1-41 were already taken by rev 9** — the plan's own "T1-36a/T1-36b" numbering
+   collided and was renumbered.
+2. **One single-source fix in `lib/mcc/layout.scad:189`:** `d_rel` must be derived from
+   `MCC_THREAD_M3_PAD_D + 2·MCC_CLR_SLIDE`, **not** from
+   `MCC_BOSS_MIN_RATIO · MCC_INSERT_M3.od + 2·MCC_CLR_SLIDE`. Numerically identical today (8.88), so
+   §2.5 and T1-34a–d are invariant — but after #30 the pad is no longer built from `MCC_INSERT_M3`,
+   while `MCC_INSERT_M3` stays in live use for the plate-fixing bosses. Leaving both would give one
+   physical diameter two independent sources; this is the same rule that put
+   `mcc_panel_fixing_pos()` in `layout.scad` (D6) and that named `rail.scad` after its interface.
+   **`layout.scad:395`'s `insert_hole_r` (T1-34d) correctly stays on `MCC_INSERT_M3`** — that is the
+   shell's own plate-fixing boss, which is out of #30's scope.
+3. **No new neighbour-collision assert is needed, and the arithmetic is recorded so nobody adds
+   one.** The two pads of a connector sit on the *diagonal* (±9.5, ∓12). At the 32 mm minimum slot
+   pitch the nearest pads of two adjacent slots are `Δx = 32 − 19 = 13`, `Δy = 24` → **27.3 mm
+   apart**, against an 8.28 mm OD. Achieved pitch today is 41.97–63.45 mm. T1-34c/T1-34d plus the
+   ≥32 mm slot-pitch assert already bound this.
+
+**Not changed by rev 10:** everything else in this file. Rev-9 history follows.
+
 Status: **revision 9, 2026-09-09.** Rev 9 is the architecture gate for the mount rail (#25), the TV
 and truss brackets (#26/#27), the cradle-deck lattice (#29) and the lid vents (#24). Verdicts,
 `PLAN-ASSUMPTION` rulings, the required changes and the ordered developer dispatch are all in the
@@ -1214,6 +1245,9 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-40** | *the compliant-pad pocket lands on solid material* — the deck lattice keeps a solid island over the `MCC_CRADLE_FLOOR_PAD_MIN` (40 × 40) footprint for ≥ `MCC_CRADLE_FLOOR_PAD_T + 1.0` below the deck top | **new, rev 9** (#29). Without it the pocket is cut into open bays and the EPDM pad bears on the ~15 % of its area that happens to sit over a rib top — it dishes under the device and the "level cable run" §1 derives collapses |
 | **T1-41** | *the case tripod-insert boss is braced in a lattice deck* — when `cfg["tripod_insert"]` is true, solid material (a collar of radius ≥ `boss_od/2 + MCC_CRADLE_RIB_T`, or a grid line through `floor_center`) connects the boss to the lattice | **new, rev 9** (#29 × D-16). The boss used to be embedded in a solid block; in a lattice it becomes a lone ⌀17.1 × 13.85 post whose only connection is the 3 mm floor slab. `check`'s `len(split()) == 1` still passes (it *is* connected), so nothing else catches this — it is a stiffness defect, not a topology one |
 | **T1-35** | *the connector screw must reach its insert* — `mcc_neutrik_d_bosses()`'s bore is continuous from the boss's rear tip through to the panel's own screw clearance hole: `insert_bore_depth + thru_depth == boss_h` with `insert_bore_depth >= MCC_INSERT_M3.len + MCC_INSERT_BORE_EXTRA` and `thru_d >= MCC_M3_CLR_D`. **No solid material anywhere on the screw axis between the flange face and the insert.** Same rule for the 4 plate-fixing bosses in `shell.scad` | **new, rev 6** — the literal, mm-level form of the user's "there is no place to screw the D-connectors down". Today `bore_depth = len + 1 = 6.7` against `boss_h = 7`, leaving **0.3 mm of solid ASA** across the screw axis (`lib/mcc/neutrik.scad:117-120`), and the four `shell.scad` plate-fixing bosses have **no bore at all** (deviation D10). The `neutrik-tile` coupon exists precisely to catch this and has not been printed |
+| **T1-42a** | *printed thread pad has enough wall* — `(MCC_THREAD_M3_PAD_D − (MCC_THREAD_M3_MAJOR_D + 4·$slop))/2 ≥ MCC_THREAD_WALL_MIN (2.0)` | **new, rev 10** (#30). At pad_d 8.28 and `$slop` 0.05 → **2.44 mm** ✓. Same 2 mm minimum-wall-around-a-bore convention as `mcc_heat_set_boss()` and `MCC_APERTURE_LIP_WEB_MIN` |
+| **T1-42b** | *printed thread has enough engagement* — `(MCC_THREAD_M3_PAD_H − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH ≥ MCC_THREAD_ENGAGE_MIN_TURNS (3)` | **new, rev 10** (#30). At pad_h 7.0 and BOSL2's actual bevel size (`= pitch = 0.5`, `screws.scad:995`) → **13 turns** ✓. Note the chamfer constant is **0.5, sourced** — not the 1.0 the plan assumed |
+| **T1-42c** | *`$slop` has not erased the thread* — `0.5·(MCC_THREAD_M3_MAJOR_D − MCC_THREAD_M3_MINOR_D) − 2·$slop ≥ MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135, = 50 % of nominal). Needs `MCC_THREAD_M3_MINOR_D = 2.459` (ISO 68-1) | **new, rev 10** (#30) — **the assert that caught the plan's own defect.** BOSL2 enlarges an internal thread by **`4·$slop` in diameter** (`screws.scad:753`, `threading.scad:179`) = `2·$slop` per side, against only **0.2705 mm** of radial engagement on M3×0.5. The plan's `$slop = 0.15` removes 0.30 mm/side — the whole thread — leaving a plain ⌀3.6 bore that T1-42a, T1-42b, the mesh checks and the goldens all pass happily. At the corrected `$slop = 0.05` this evaluates to **0.1705 ≥ 0.135** ✓; at 0.15 it is **−0.0295** and fails loudly |
 
 ---
 
