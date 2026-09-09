@@ -241,6 +241,93 @@ datasheet PDF is manually reviewed for a connector-specific screw callout.
 
 ---
 
+## 5. Captive side bolt — orderable options (issue #28)
+
+> **Which screw to order:** slotted **fillister-head** 1/4"-20 UNC × 3/4" (19.05 mm) machine screw,
+> A2 stainless steel, to ASME B18.6.3. It is the only head style checked in this research pass that
+> reliably clears the case's ⌀12×6 mm head recess (`MCC_SIDE_BOLT_HEAD_REC_D/H`,
+> `lib/mcc/constants.scad:155-163`) — see §5.1–5.2. Round-head and pan-head equivalents do not fit,
+> and no captive/thumb-screw candidate found fits the recess without enlarging it (§5.2).
+
+Research pass run 2026-09-09 for issue #28 ("Device retention screw: which 1/4"-20 slotted screw to
+order"). Scope is documentation only — this section and the corresponding `BOM.md` rows.
+`lib/mcc/constants.scad` is **not** changed by this section — see the follow-up flagged in §5.3.
+
+### 5.1 Recommended: slotted fillister-head screw (ASME B18.6.3)
+
+| Item | Value | Source |
+|---|---|---|
+| Standard | ASME B18.6.3 — Slotted Fillister Head Machine Screws | search result; standard number and head-dimension table as reported in the research pass — no direct standard-document URL was captured in the research handoff, see the Sources note below |
+| Thread / length | 1/4"-20 UNC × 3/4" (19.05 mm) | same |
+| Material | A2 stainless steel | same |
+| Head diameter | ⌀9.88–10.52 mm | same — compare `MCC_SIDE_BOLT_HEAD_D = 10.0` mm, `assumed` (`lib/mcc/constants.scad:155-158`) |
+| Head height | 5.26–6.02 mm | same — compare `MCC_SIDE_BOLT_HEAD_H = 4.5` mm, `assumed` (same constant block) |
+| Fit vs. the printed recess | Closest imperial match to the assumed head dimensions, and the only head style checked here that reliably clears the case's ⌀12×6 mm head recess (`MCC_SIDE_BOLT_HEAD_REC_D/H = 12.0/6.0`, `lib/mcc/constants.scad:159-163`) | analysis in the research pass, based on the standard's own head-dimension table |
+| Confirmed stock | zollschraubendirekt.de (Germany) | fetched — the one EU imperial-fastener specialist that fetched successfully in this research pass, confirming a slotted 1/4-20 × 3/4" screw in stock |
+
+The fillister head's own height range (5.26–6.02 mm) runs above the repo's current `assumed`
+`MCC_SIDE_BOLT_HEAD_H` (4.5 mm) by up to ~1.5 mm. This does not block ordering the screw — the
+recess depth `MCC_SIDE_BOLT_HEAD_REC_H = 6.0 mm` already has margin over the assumed head height —
+but is worth re-checking once the physical `side-bolt` coupon is measured (architecture's
+measurement list M4/M5). Not resolved in this ticket; `constants.scad` is unchanged.
+
+### 5.2 Alternative head styles considered (and rejected)
+
+| Head style | Head diameter (max) | Fits the ⌀12 mm recess? | Verdict |
+|---|---|---|---|
+| Slotted fillister head (ASME B18.6.3) | ⌀10.52 mm | Yes — reliable clearance | **Recommended, §5.1** |
+| Plain round head | up to ⌀11.99 mm | Marginal — near-zero clearance in the ⌀12 mm recess | Not recommended |
+| Pan head | up to ⌀12.50 mm | No — larger than the recess itself | Rejected |
+| Captive/thumb screw (e.g. Accu's socket-head captive screw) | not the limiting factor — drive style is | Drive is hex/socket, not slotted | Rejected — no captive/thumb-screw candidate found in this research pass fits the recess without enlarging it, and the one hex-drive candidate located would also deviate from the fixed D-09 "slotted screw" decision (`CLAUDE.md` "Fixed decisions" — Closure) |
+
+### 5.3 Retention E-clip — DIN 6799
+
+| Item | Value | Source |
+|---|---|---|
+| Part | RS PRO DIN 6799 external circlip | search result; RS Components UK/NL storefront listings — not independently fetched in this research pass, see §5.6 |
+| Stock number, steel | 0289203 | same |
+| Stock number, A2 stainless | 2096592 | same |
+| Spec as listed | "5 mm shaft, 4.8 mm groove diameter" | same |
+
+**Flag for a follow-up ticket:** every real DIN 6799 clip found in this research pass is spec'd for
+a **4.8 mm** groove diameter, not the 5.0 mm currently assumed in `MCC_SIDE_BOLT_CLIP.groove_d`
+(`lib/mcc/constants.scad:171-176`, `["groove_d", 5.0]`). Recommend correcting that constant once
+confirmed against the physical `side-bolt` coupon (M4). **Not applied in this ticket** —
+`lib/mcc/constants.scad` is out of scope for issue #28.
+
+### 5.4 EPDM preload washer
+
+No exact-match stock SKU for the case's OD18/ID8×2mm EPDM annulus (`MCC_SIDE_BOLT_PAD_*`,
+`lib/mcc/constants.scad:184-191`) was confirmed at Reichelt, Conrad, RS, or Farnell in this research
+pass. Recommend a generic self-adhesive rubber-washer assortment kit (Amazon.de/Amazon.nl), trimmed
+to size, or a custom die-cut from a UK rubber specialist, until a closer match is found — the same
+open item already noted in §4.1 above (`:186`, no exact stock SKU for the OD12×2.5 mm listed
+example either).
+
+### 5.5 Thread-locker
+
+Removable/medium-strength thread-locker (e.g. Loctite 243), **not** a nylon patch or a
+permanent/high-strength thread-locker. There is no nut on this joint — the screw threads directly
+into the device's own metal thread — and the fixed D-09 decision requires the device to stay
+removable (`CLAUDE.md` "Fixed decisions" — Closure), so a single-use nylon patch or a permanent
+locker would be the wrong tool for a joint meant to be undone repeatedly.
+
+### 5.6 What could not be verified
+
+- **Reichelt and Conrad** — confirmed, via a successful fetch, to **not stock imperial UNC hardware
+  at all**. A genuine absence, not a fetch failure.
+- **Accu.co.uk / accu-components.com, all RS Components regional domains, Bossard, McMaster-Carr,
+  and boltdepot.com** — blocked automated fetch (HTTP 403) in this research pass. Every figure
+  attributed to these sources above (including the RS PRO E-clip stock numbers in §5.3) comes from
+  search-index titles/snippets, not a page fetch — a human should confirm price and stock before
+  ordering.
+- **zollschraubendirekt.de** — the one EU imperial-fastener specialist that fetched successfully,
+  confirming the §5.1 screw in stock.
+- **Hornbach** — returned no relevant results for this class of hardware and was not pursued
+  further (general DIY store, not an imperial-fastener specialist).
+
+---
+
 ## Sources
 
 All URLs below were fetched or searched on **2026-09-07**.
@@ -287,3 +374,26 @@ All URLs below were fetched or searched on **2026-09-07**.
 - https://www.fibrestrap.com/zip-tie-sizes — search result; cable tie size ranges cross-check
 - https://www.3m.com/3M/en_US/p/d/b00034736/ — search result; 3M adhesive cable tie mounting base product family
 - https://www.amazon.com/Adhesive-Cable-Mounts-Holders-19-5mm/dp/B07F7Y9KGX — search result; example adhesive cable tie mount base (19.5x19.5mm)
+
+### Sources added 2026-09-09 for issue #28
+
+Domain-level URLs below — the research pass for issue #28 named these retailers/domains but its
+handoff did not include specific product-page URLs for most of them; where only a domain is cited,
+that domain's own storefront should be searched directly rather than treating the homepage as a
+citation for a specific figure. ASME B18.6.3 itself (the fillister-head dimensional standard cited
+in §5.1) is one such case: no source URL for the standard document was captured in the handoff, so
+those head-diameter/height figures are cited by standard number only, pending a formal citation.
+
+- https://www.zollschraubendirekt.de/ — fetched; confirmed slotted 1/4-20 × 3/4" UNC machine screw in stock (§5.1) — homepage cited, specific product-page URL not captured in the research handoff
+- https://www.reichelt.de/ — fetched; confirmed no imperial UNC hardware stocked (§5.6)
+- https://www.conrad.de/ — fetched; confirmed no imperial UNC hardware stocked (§5.6)
+- https://uk.rs-online.com/ — search result (fetch blocked, HTTP 403); DIN 6799 E-clip stock numbers 0289203 (steel) / 2096592 (A2 stainless) via search-index snippet only (§5.3, §5.6)
+- https://nl.rs-online.com/ — search result (fetch blocked, HTTP 403); same E-clip listing, NL storefront (§5.3, §5.6)
+- https://www.accu.co.uk/ — blocked (HTTP 403); captive/thumb socket-head screw candidate found via search-index only, rejected in §5.2 (hex drive, not slotted)
+- https://www.accu-components.com/ — blocked (HTTP 403); same candidate, alternate storefront
+- https://www.bossard.com/ — blocked (HTTP 403); general 1/4"-20 UNC sourcing lead, no specific figures retrieved
+- https://www.mcmaster.com/ — blocked (HTTP 403); general 1/4"-20 UNC sourcing lead, no specific figures retrieved
+- https://www.boltdepot.com/ — blocked (HTTP 403); general 1/4"-20 UNC sourcing lead, no specific figures retrieved
+- https://www.amazon.de/ — search result; generic self-adhesive EPDM/rubber washer assortment kits (§5.4)
+- https://www.amazon.nl/ — search result; same, NL storefront (§5.4)
+- https://www.hornbach.de/ — fetched; no relevant results for this hardware class, not pursued further (§5.6)
