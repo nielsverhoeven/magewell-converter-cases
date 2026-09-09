@@ -491,6 +491,7 @@ rather than duplicating §2's derivation.
    against, unlike the fan/splitter bays which are deliberately reserved even when disabled. Flag if
    the architect disagrees.
 6. **Pre-existing gap noticed, out of scope for this ticket:** `mcc_fan_envelope()` (`lib/mcc/fan.scad:39`)
+
    is defined but **never called** anywhere in `shell.scad` — the fan bay's *depth* reservation
    (`architecture.md` §6 "the reservation rule... even when fan=false") is not actually wired up today,
    only the fan's live cutout is. This plan's placement math in §2 does not depend on that reservation
@@ -498,3 +499,130 @@ rather than duplicating §2's derivation.
    fixing this — but it is worth a separate ticket since it means `fan=false` SKUs do not actually
    protect the fan bay's volume from future connector/cradle changes as the architecture doc claims
    they do.
+
+---
+
+## 9. Architect verdict (solution-architect, 2026-09-09)
+
+**Verdict: APPROVED WITH CHANGES — 8 blocking (B1–B8) + 1 blocking user decision (U).**
+Recorded as `.claude/knowledge/architecture.md` **rev 11** and
+`.claude/knowledge/layout-patch-wall.md` **rev 11 §5 / §9 / §10 D-18 / §18** (the full ruling, with
+the arithmetic, lives in **§18** there — this section is the developer-facing summary).
+
+The software shape of this plan is right and conforms to §3: a new L1 provider, a part record, a
+`layout.scad` position, one `shell.scad` call site, a `cfg` flag defaulting from `cfg["fan"]`. The
+mechanical half is what needs work: **the pocket does not meet the stated safety requirement, the
+placement formula does not check the constraint that actually binds, and the call site does not
+intersect the wall.**
+
+### 9.1 Blocking changes
+
+- **B1 — assert numbering.** `T1-38`/`T1-39` are **taken** (rev 9: rail-groove floor thickness, deck
+  ladder grid); rev 10 reached `T1-42c`. Use **T1-43** (band), **T1-44** (recess/panel),
+  **T1-45** (body depth). Definitions: `layout-patch-wall.md` §9.
+- **B2 — the call site cuts nothing.** §4.4 translates to `switch_pos[0] = L/2` and then
+  `rotate([0,90,0])`, mapping the module's local `Z ∈ [0, wall_t]` onto world `X ∈ [L/2, L/2+3]` —
+  outside the shell. Use `translate([L/2 − MCC_WALL, switch_y, switch_z])`, copying
+  `lib/mcc/vents.scad:146` exactly. **Convention:** `fan_pos`/`switch_pos` carry the wall's *outer*
+  face in X; the call site subtracts `MCC_WALL`. This failure is silent — watertight, `parts == 1`,
+  and a golden delta of **exactly zero**, which §4.7's "expect a small, real volume delta" invites
+  you to `--update` past. If your delta is zero, you have this bug.
+- **B3 — the recess must actually recess.** Replace the flat `recess_t = 1.0` with
+  `recess_t = actuator_proud_h + MCC_SWITCH_FLUSH_CLR`, and thicken the wall **inward** with a pad
+  (`pad_t = recess_t + panel_t`, `pad_t ≥ MCC_WALL`, 45° blend on all four sides so it prints in a
+  vertical wall). A 1 mm dish under a ~10 mm toggle lever does not satisfy "survives a 1 m drop, no
+  accidental switching on stage"; T1-25 already imposes exactly this rule on the side-bolt head. The
+  pad goes inward, never outward — the D-13 pattern — so **no envelope figure moves**.
+- **B4 — solve `switch_y`, do not offset it.** `fan_y − 27` makes the fan gap exactly `clr` by
+  construction (so the plan's own T1-38 can never fail) and leaves the binding constraint as prose.
+  The binding constraint is the `(+X, −Y)` **corner lid-fastener boss**, which obstructs at two
+  depths: its `MCC_WALL`-wide **gusset strip** near the wall (pad band) and its **⌀8.28 boss** at
+  `x ∈ L/2 − [14.14, 5.86]` (body band). Raw bands: **17.60 / 14.96 mm** compact, **20.85 /
+  18.21 mm** plus. Solve the feasible interval's midpoint and assert both ends (T1-43); formula in
+  `layout-patch-wall.md` §5. (§2.3's "clearance to gusset 6.65 mm" is not reproducible from its own
+  definition — the gusset near edge is 9.85 mm away and the boss is 7.96 mm. Do not carry that
+  number forward.)
+- **B5 — a table, not a struct, and a bigger keep-out.** `MCC_SWITCHES` + `MCC_SWITCH_DEFAULT`,
+  mirroring `MCC_FANS`/`MCC_SPLITTERS`; three candidate parts already exist in `switches.md` and
+  swapping must be a data edit. Fields: `hole_d`, `nut_d` (circumscribed), `keepout_d`, `pad_d`,
+  `body_d`, `depth`, `actuator_proud_h`, `panel_t_min`, `panel_t_max`, `clr`, `confidence`. Note
+  `keepout_d = 8.0` is under-sized: a 1/4-40 bushing nut is ~8 mm **across flats** ⇒ ~9.24 mm
+  circumscribed, and the pocket is round.
+- **B6 — compact family off, explicitly.** Set `["fan_switch", false]` in
+  `models/pro-convert-for-ndi-to-hdmi/case.scad`'s `base_fan` path (`case.scad:60-65`, alongside
+  `fan_effective`) and in `tests/test_shell.scad:24-27`'s `VARIANT_FAN`, each with a comment citing
+  `layout-patch-wall.md` §5. See U below for why.
+- **B7 — `layout.scad` must not open-code the fan table.** Move the pure `mcc_fan_spec()` from
+  `lib/mcc/fan.scad:23` down to `lib/mcc/constants.scad` (L0 — §3 bans a *module* there, not a
+  function) and add `MCC_FAN_DEFAULT = "NF-A4x10"`. Then `layout.scad` calls
+  `mcc_fan_spec(MCC_FAN_DEFAULT)` legally instead of `MCC_FANS[search(["NF-A4x10"], MCC_FANS)[0]][1]`
+  at L1, and the `"NF-A4x10"` string literals leave `vents.scad:148` and `shell.scad:375`. No
+  geometry change; **no golden may move from this step** — verify that separately before B3 lands.
+- **B8 — one owner for the keep-out.** Add `mcc_switch_keepout(spec)` as a **pure function** in
+  `switch.scad`, mirroring `mcc_side_bolt_keepout()` (`fasteners.scad:295`), and have `vents.scad`
+  consume it so no future +X slot lands on the switch. `layout.scad` must **not** call it (§3); its
+  asserts read the `MCC_SWITCHES` row directly.
+
+### 9.2 The user decision (U) — blocks the compact family only
+
+**A flush switch does not fit the compact family beside the fan, at any clearance.** With
+`pad_d = 14.0` / `body_d = 10.0`, compact gives `y_hi = −59.325` against `y_lo = −59.285`: **empty by
+0.04 mm**. Plus gives a 3.2 mm window and works. All three alternatives the teamlead raised are
+rejected — the flush **KCD11-101 rocker** (its snap-in bezel, not its cutout, sets the pocket: ≈14.6
+mm of pad against 17.60 mm on compact and a snap-fit panel range incompatible with a 2.0 mm
+residual), **shifting `fan_y`** (the `+Y` side is capped by the connector bay at `fan_y ≤ −25.7`,
+worth ≤ 5.1 mm where ≈10 mm is needed, and it re-opens R20), and a **printed guard** (any guard for a
+protruding actuator must itself protrude — reverses D-13 and moves §1's envelope table). Reasoning in
+`layout-patch-wall.md` §18.2. **Recorded default: plus family only.** The user decides whether that
+is permanent (`architecture.md` §12 Q19).
+
+### 9.3 Chosen part and placement
+
+**⌀6.4 mm SPST mini toggle (MTS-101 class), fully recessed in a locally thickened +X wall pad,
+band-solved in Y at `z = z_conn_c = 25.5`, on the three `plus` SKUs.** It is the only researched
+class that fits the body band at all; flushness is bought by geometry (B3), not by the part. Every
+figure is `assumed` until **M17** (buy one, measure actuator height, nut across-flats, body depth,
+clamp range) — the plus window is 3.2 mm wide, so this is not a figure set to carry through a print.
+`MCC_SWITCH_WELL_DEPTH_MAX` is the stop-and-report guard: if the measured lever forces a well deeper
+than a fingertip can reach, **stop and report** — the part is wrong; do not shave the recess.
+
+### 9.4 PLAN-ASSUMPTION verdicts
+
+1 **UPHELD** (MTS-101 over MTS-102) · 2 **UPHELD, escalated to M17** (extended to `actuator_proud_h`
+and `nut_d`) · 3 **UPHELD and strengthened** (a `fan_y` move is not a fallback either) ·
+4 **UPHELD as provisional** — wiring variant **(a) manual only** is the recorded default, has **no
+geometry impact**, and must **not** gate the branch; the BOM row reads "default pending user
+confirmation" · 5 **PARTLY OVERRULED** — no §6 bay reservation (agreed), but `mcc_switch_keepout()`
+is required (B8) · 6 **UPHELD** — `mcc_fan_envelope()` dead code is deviation **D23**, fix owner is a
+**separate ticket**, not this PR. (Nuance for the record: the bay's *depth* **is** reserved
+unconditionally by T1-18(c) at `shell.scad:376`; what is missing is a single definition of the 5 mm
+intake clearance — duplicated at `fan.scad:42` and `shell.scad:375` — and any Y/Z footprint check.)
+
+### 9.5 Corrections to §4.7 (goldens) and §7 (steps)
+
+- **Three** goldens move, not four: the 3 plus SKUs' `.base.json`.
+  **`pro-convert-for-ndi-to-hdmi.base_fan.json` must NOT move** — if it does, B6 is not wired.
+- **The delta may be positive** (pad added, hole and recess removed). Do not apply the plan's
+  "material-removing" sanity check. The invariants are **`bbox` unchanged** on all four SKUs and
+  `parts == 1`.
+- `tests/test_shell.scad` needs an explicit **plus-family** `fan_switch = true` branch: after B6 the
+  compact `VARIANT_FAN` no longer exercises the cutout, so without it `smoke` ships the feature
+  untested (D15's lesson).
+- Step 14's decision-log target does not exist — `.claude/knowledge/decision-log.md` is not in the
+  repo. The switch-selection rationale goes to `layout-patch-wall.md` §10 (**D-18**, already
+  written) and to the GitHub issue; do not create a new knowledge file for it.
+- Step 9's head-on +X elevation render is **mandatory, not "if time allows"**, on at least one plus
+  SKU: after D9/D11, the head-on view is this repo's only reliable check that a wall feature is where
+  the numbers say it is — and it is the one check that would catch B2 instantly.
+
+### 9.6 Dispatch
+
+**`feature/issue-32-fan-switch` may be dispatched now**, base `feature/plans-2026-09-09`, scope:
+`constants.scad` (`MCC_SWITCHES`, `MCC_SWITCH_DEFAULT`, `MCC_SWITCH_FLUSH_CLR`,
+`MCC_SWITCH_WELL_DEPTH_MAX`, `MCC_FAN_DEFAULT`, `mcc_fan_spec()` moved in) → new
+`lib/mcc/switch.scad` → `layout.scad` (band solve + T1-43/T1-45) → `shell.scad` (call site, B2) →
+`vents.scad`/`fan.scad` literal cleanup (B7/B8) → 8 × `case.scad` cfg docs + the 3 plus SKUs' flag →
+`tests/test_shell.scad` → 3 goldens → `BOM.md` → `knowledge/components/switches.md` + `fans.md`.
+**Land B7 as its own commit and prove no golden moves** before any geometry commit. Order the work so
+T1-43/T1-44 exist *before* the cutout is first rendered — they are the only thing that will tell a
+Sonnet-tier developer that the compact family does not fit.
