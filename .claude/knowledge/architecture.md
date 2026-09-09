@@ -1,6 +1,72 @@
 # Architecture — magewell-converter-cases
 
-Status: **revision 7, 2026-09-08.** Rev 7 is the **pre-implementation architecture gate for the seven
+Status: **revision 9, 2026-09-09.** Rev 9 is the architecture gate for four researcher plans:
+`docs/plans/2026-09-09-mount-rail-and-brackets.md` (#25/#26/#27), `…-cradle-deck.md` (#29),
+`…-lid-vents.md` (#24), and their cross-cutting merge order. Verdicts:
+
+| Plan | Issue | Verdict |
+|---|---|---|
+| Mount rail + brackets | #25 rail, #26 TV bracket | **APPROVED WITH CHANGES** (5 blocking) |
+| Truss bracket | #27 | **REJECTED for now — DEFERRED** pending measurement **M14** and a user safety sign-off (PLAN-ASSUMPTION 1) |
+| Cradle deck lattice | #29 | **APPROVED WITH CHANGES** (3 blocking) |
+| Lid vents | #24 | **APPROVED WITH CHANGES** (2 blocking) |
+
+New in rev 9: **`lib/mcc/rail.scad` at L1** (§3 — the plan's `bracket.scad` is renamed; a file named
+for its consumer invites bracket-plate geometry into L1); **decision D-15** (the rail replaces VESA
+75 × 75 as the case's floor mount, user decision); **D-16** (`cfg.tripod_insert` defaults **true** —
+teamlead decision 2026-09-09, the user asked to keep every mounting option and dropped only VESA);
+**D-17** (the deck is a ribbed lattice, not a solid slab). §6's floor rule is rewritten. Risks
+**R24–R27**, measurements **M14–M15**, deviations **D19–D22**, asserts **T1-36 … T1-41**
+(`layout-patch-wall.md` §9). Full rulings, including every `PLAN-ASSUMPTION` verdict and the ordered
+developer dispatch: **`layout-patch-wall.md` rev 9, §17.**
+
+**The five blocking corrections a developer must not skip** (details in §17):
+
+1. **`MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + MCC_FLOOR_T = 7.0`, not 6.0.** At 6.0 the 4 mm groove
+   leaves **2.0 mm** of ASA over it — below the uniform 3 mm shell spec (§9 "wall thickness ≥
+   `MCC_WALL`") on the one load path that carries the whole case when it is bracket-mounted.
+2. **`MCC_RAIL_Y = −20.0`, not +20.0.** Same keep-out arithmetic by symmetry, but it puts the rail
+   **under the device and the cradle deck** instead of free-standing in the connector bay, and it
+   puts the case's mass *below* the rail when the patch wall hangs down (#26's own orientation
+   requirement). See R24.
+3. **D16's pairwise floor assert must exempt the `case_tripod_insert` / `fishtail_reserve` pair.**
+   They are deliberately concentric at `(0,0)` (`layout.scad:271,276`); a naive pairwise check fails
+   on all 8 SKUs on the first render (deviation **D19**).
+4. **`vents.scad` must gain `use <ports.scad>`.** The lid-vent asserts call `mcc_dev_slug(dev)`,
+   which lives in `ports.scad`; OpenSCAD's `use` is not transitive, so every assert message would be
+   an undefined-function error (deviation **D20**).
+5. **`_mcc_deck_rib_blocked()` as specified deletes whole rib lines**, because it tests a rib's full
+   AABB against a keep-out. Drop the filter for v1 (recommended — `cradle.scad` is additive and
+   above the floor) or make it per-segment with a published allowlist (deviation **D21**).
+
+Rev 8 history follows. Rev 8 is the fit-check of the user's **fan-power decision**
+(2026-09-09, four parts: PoE-only on stage; NF-A4x10 5V *plain* in series with a KSD9700 45 °C NO
+bimetal switch on the device's metal top; **decoders** take 5 V from the device's **USB-A host**
+port and **encoders** from the **Mini-DIN-8 pin 8 VCC**, no PoE splitter by default; the decoders'
+now-unused host slot becomes a **`DBA-BL-B` blank that stays reusable**). Recorded as decision
+**D-14** (`layout-patch-wall.md` §10; consequences in §5, §6, §11, §12 here). Verdict:
+**APPROVED, with one blocking measurement on the two Plus encoders.**
+
+- **`DBA-BL-B` gets a real hole (§5, ruling A).** `hole_d 0 → 24.0` (etherCON class, the universal
+  D punch), `depth`/`plug_len`/`bend` untouched, so a blanked slot costs **no** bay depth, keeps
+  rank `[0,0]` (innermost), and moves **no** envelope figure on any SKU. This is what makes §9's
+  "every port with `panel != "none"` has a cutout" invariant *true* now that a blank is reachable.
+  It requires one library fix: `neutrik.scad:39` tests `kind == "blank"` while `shell.scad:181` and
+  `layout.scad:187` test `hole_d == 0` — the three must agree on `hole_d == 0`, or the wall window
+  opens and the plate under it stays solid (deviation **D18**).
+- **Decoders: no geometry change.** Blanking is a `panel` field edit in three device files.
+- **Encoders (HDMI Plus, SDI Plus): BLOCKED on measurement M12.** The Mini-DIN-8 is `panel:"none"`,
+  so `mcc_end_zone()` (`layout.scad:45`) and T1-18(c) (`shell.scad:373`) both filter it out — the
+  end-zone solver is blind to a port that stays internal but is now *internally cabled*. The plug
+  sits at `(y_dev_c, z = 19.5)`, dead inside the ⌀38 fan aperture, with **30.0 mm to the fan frame
+  and 25.0 mm to the reserved fan envelope**. The Magewell breakout plug's axial length is
+  `unknown` (**R23**, M12). **Do not let a developer type a guessed figure into
+  `MCC_PLUG_AXIAL`.**
+- **R6 (PoE budget) is largely retired for the default build**, **R21/R22/R23** are new, and the
+  measurement list gains **M8–M13**. Per-SKU consequences and the §2.5 blank ruling:
+  **`layout-patch-wall.md` rev 8, §2.5 + §16.6.**
+
+Rev 7 history follows. Rev 7 is the **pre-implementation architecture gate for the seven
 remaining SKUs** (GitHub issues #3–#9), which are to be built in parallel on seven branches. Verdict:
 **APPROVED WITH ONE BLOCKING LIBRARY CHANGE.** Six of the seven need no library edit at all — §4's
 acceptance test ("adding a device = one thin assembly + goldens + BOM, no library change") holds —
@@ -172,6 +238,10 @@ L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS 
                                           side-bolt/lid-fastener positions). Added rev 5.
     lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
     lib/mcc/fasteners.scad                heat-set bosses, captive thumbscrew, 1/4"-20 boss
+    lib/mcc/rail.scad                     mount-rail dovetail profile: male rail, female cut,
+                                          spring-lip latch. ONE source of truth shared by
+                                          mounts.scad (case floor) and models/brackets/*.scad
+                                          (rev 9, D-15). NOT named bracket.scad — see below
     lib/mcc/fan.scad                      fan bay envelope, grille, finger guard
     lib/mcc/poe_splitter.scad             splitter bay envelope + tie-down
     lib/mcc/ghost.scad                    device ghost + plug envelopes (visual only)
@@ -211,6 +281,25 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
   composition logic per SKU and is rejected.
 - **`shell.scad` must not `use <neutrik.scad>`.** If the shell ever needs a connector-shaped void it
   goes through `mcc_panel_cutout()` (§5 dispatcher rule). Today it needs neither.
+- **`rail.scad` (L1, added rev 9).** Owns the mount-rail dovetail cross-section and nothing else:
+  `mcc_rail_male()` (additive), `mcc_rail_female_cut()` (subtractive), `mcc_rail_sill_size()` (pure).
+  Both halves of a mating interface must come out of **one** file or they drift — the same reasoning
+  that moved `mcc_panel_fixing_pos()` into `layout.scad` (D6). Consumers: `mounts.scad` (L2, the
+  female groove in the case floor) and `models/brackets/*.scad` (the male rail). Three rules:
+  - **The file is `rail.scad`, not `bracket.scad`.** The name must describe the *interface*, not one
+    of its two consumers; `bracket.scad` invites bracket plate/hole/rib geometry — which is
+    per-bracket assembly work — into an L1 provider.
+  - **`layout.scad` must NOT `use <rail.scad>`.** §3 already forbids `layout.scad` from importing an
+    L1 geometry provider. `mcc_floor_keepout()`'s `"mount_rail"` row is built from the `MCC_RAIL_*`
+    **constants** (L0), never from `mcc_rail_sill_size()`.
+  - `shell.scad` reaches the rail only through `mounts.scad`, never by `use <rail.scad>` — the floor
+    rule (§6) has one owner.
+- **`models/brackets/*.scad` are assemblies, not cases.** They sit at the same level as
+  `models/<slug>/case.scad` and `models/coupons/*.scad`: they may import only the barrel
+  `<mcc/mcc.scad>`, own their own plate/holes/ribs, and must never re-derive the rail profile.
+  They carry **no device record and no `case.scad`**; `scripts/build.py` discovers them through a
+  separate `discover_brackets()` (mirroring `discover_coupons()`), and `discover_models()` must skip
+  the `brackets` directory explicitly, exactly as it already skips `coupons`.
 
 ### Naming (mandatory — OpenSCAD has one global namespace)
 
@@ -424,6 +513,50 @@ from referencing it (see §9, T1-05). Keeping the dispatcher genuinely single-pr
 simplification, not a loss — `neutrik.scad` remains behind `panel.scad` so the second provider can be
 added later without touching `models/**`.
 
+### The `DBA-BL-B` blank carries the full D hole (rev 8, 2026-09-09 — decision D-14, part 4)
+
+**Normative: `MCC_PANEL_PARTS["DBA-BL-B"].hole_d = 24.0`, not 0.** A blanked slot is a *reserved*
+slot, not a deleted one: the plate carries the full ⌀`24.0 + MCC_HOLE_COMP` = **⌀24.2** round
+cutout and its two ⌀3.4 M3 holes, the wall window carries its full truncated-teardrop body circle
+(`d_win = 24.8`) plus the two ⌀8.88 boss reliefs, and the purchased `DBA-BL-B` blanking plate
+(26 × 31 flange, R3.5, same M3 pattern — `knowledge/components/mini-din8-feedthrough.md:179`)
+simply covers it. **Any D-series connector can then be fitted later by swapping the blank for the
+connector — no reprint of the plate and no reprint of the shell.** That is exactly the user's
+requirement, and it is why 24.0 (the etherCON/universal-D class, `d-series-cutout.md:36`) is the
+right number and 23.6 is not: a ⌀23.8 hole takes HDMI/USB/BNC but **not** an `NE8FDP-B`.
+
+Everything else in the row is unchanged, and that is deliberate — **a blank must cost nothing**:
+
+| Field | Value | Consequence |
+|---|---|---|
+| `hole_d` | **24.0** (was 0) | `mcc_cutout_d` = 24.2, inside `neutrik.scad:48`'s 24-class band `[24.0, 24.6]` |
+| `depth` / `plug_len` | 3.2 / 0 (unchanged) | `mcc_bay_depth` = 3.2 → never the `max`, so `d_bay_free` and **`W` do not move** |
+| `bend` | 0 (unchanged) | T1-08 untouched; **rank `[0, 0]` stays the lowest in `MCC_PANEL_PARTS`, so a blank still sorts innermost** in its block (§14 slot rule) |
+| `max_panel_t` | 4.0 (unchanged) | ≥ the 2.0 mm plate seat |
+| `kind` | `"blank"` (unchanged) | stays the BOM/ghost discriminator; it is **no longer** the geometry discriminator |
+
+End zones and `L` are keyed by the port's **`kind`**, not by its `panel` part
+(`mcc_dev_side_allow()`, `layout.scad:46`), so blanking a slot moves no end zone either. **Net: the
+envelope of every affected SKU is unchanged to the last decimal; only the slot-3 plate cutout and
+its wall window change.**
+
+**This is also what repairs a §9 invariant.** §9's minimum set requires "every port with
+`panel != "none"` has a cutout, and vice versa". With `hole_d = 0` a reachable blank would be a
+`panel != "none"` port with **no** cutout — the invariant would have been violated the moment
+`DBA-BL-B` stopped being dead code (D12). At `hole_d = 24.0` it holds by construction.
+
+**The one library fix that must land with it (deviation D18).** The "is this a blank?" test is
+written three ways today: `neutrik.scad:39` uses `kind == "blank"`, while `shell.scad:181` and
+`layout.scad:187` use `mcc_panel_hole_d(part) == 0`. **Unify on `mcc_panel_hole_d(part) == 0`.** If
+`neutrik.scad` keeps the `kind` test, the shell opens a window and the plate behind it stays solid
+— the worst of both outcomes, and invisible to every assert. Once `hole_d = 24.0` those branches
+are dead on every current SKU; keep them (they are the guard for a future genuinely-solid blank)
+and say so in the comment.
+
+Accepted, recorded so it is not re-litigated: a blanked slot is now a real hole covered by a 3.2 mm
+PA6.6 plate on two M3 screws, 3.0 mm behind the sacrificial bezel — the same load path as any
+fitted connector. It is not an ingress or a drop regression.
+
 ---
 
 ## 6. Feature ownership rules
@@ -431,10 +564,28 @@ added later without touching `models/**`.
 Three rules exist because these features will otherwise collide silently:
 
 - **The floor rule.** `mounts.scad` is the **single owner** of every feature in the case floor: the
-  case's own 1/4"-20 insert (for mounting *the case* on a plate/tripod), the VESA 75 × 75 +
-  Magewell-Fishtail M4 pattern, the strap slots, the stacking profile and the splitter tie-downs. It
-  exposes `mcc_floor_keepout()` and asserts non-overlap between all of them. `cradle.scad` never cuts
-  the floor; if it ever needs a penetration it requests one *through* `mounts.scad`.
+  **mount-rail dovetail groove and its sill** (D-15, rev 9 — replaces VESA), the
+  Magewell-Fishtail M4 reservation, the strap slots, the stacking profile and the splitter
+  tie-downs. It exposes `mcc_floor_keepout()` and asserts non-overlap between all of them.
+  `cradle.scad` never cuts the floor; if it ever needs a penetration it requests one *through*
+  `mounts.scad`. The two sanctioned exceptions stay in `cradle.scad` because they are installed from
+  the underside *into the deck hollow*: the case's own 1/4"-20 insert boss (T1-32) and the
+  compliant-pad pocket.
+  **VESA 75 × 75 is removed entirely (D-15, user decision 2026-09-09).** `_mcc_vesa_positions()`,
+  `MCC_VESA75_PITCH`, `MCC_VESA_HOLE_D`, the four `vesa_*` keep-out rows and the `"vesa"` cfg key all
+  go; `mcc_floor_bore_cut()` is **retired**, not left as an empty module, and its `shell.scad` call
+  site becomes `mcc_rail_features_cut(dev, cfg)`. `layout.scad`'s local `vesa_pos` is renamed
+  **`floor_center`** (it still anchors `case_tripod_insert` and `fishtail_reserve`). It is removed,
+  **not deprecated-and-kept-optional**: there is no code path that reinstates it. If VESA is ever
+  wanted back as a *third* option alongside the rail, that is new scope and a new user decision.
+  **The rail is the case's primary mount.** It is the **female** half (a groove recessed up into the
+  floor slab, plus a local sill that thickens the floor to `MCC_RAIL_DEPTH + MCC_FLOOR_T`); the
+  **male** half lives on the printable bracket. This is forced, not preferred: the exterior floor
+  face is the bed-contact face on every SKU, so a downward-protruding feature is unprintable without
+  flipping the base; and D-13 already commits this repo to "nothing protrudes from any wall/face".
+  **The floor's residual material over the groove is never less than `MCC_FLOOR_T` (3.0 mm)** — that
+  is the §9 uniform-shell assert applied to the one surface that carries the whole case's weight
+  when it is bracket-mounted (T1-38).
   **The device-retention through-bolt is withdrawn from the floor (user decision 2026-09-08, D-09):**
   the floor now carries exactly one 1/4"-20 feature, going *down* into a tripod/cheeseplate. Nothing
   in the floor goes up into the device any more, so the old "two 1/4"-20 features must not coincide"
@@ -463,6 +614,39 @@ Three rules exist because these features will otherwise collide silently:
   `ez_neg = max(mcc_dev_side_allow(kind) over −X ports) + (splitter reserved ? splitter_x : 0)`
   `= 27 + 20 = 47`. Treating a reservation as free because "the splitter isn't fitted yet" is exactly
   the retrofit failure this rule exists to prevent.
+  **D-14 (2026-09-09) does not touch this rule.** The user's fan-power decision takes the fan's 5 V
+  from the *device*, so **no PoE splitter is fitted by default on any SKU** — but the splitter bay
+  stays reserved exactly as before, `ez_neg` stays 47, and `MCC_END_ZONE_NEG_EXTRA_SPLITTER` is
+  unchanged. Nobody may "reclaim" the 20 mm because the splitter is now less likely to be fitted;
+  that is the same argument the rule already rejects, and the splitter is the named fallback if
+  M9/M10 show the device's own ports cannot carry the fan (§11 R21/R22).
+
+### Fan power is device-sourced (D-14, user decision 2026-09-09)
+
+The fan is `NF-A4x10 **5V plain**` — 0.044 A typ / **0.05 A max**, 0.22 / 0.25 W
+(`knowledge/components/fans.md:22`) — in series with a **KSD9700 45 °C normally-open bimetal
+switch** bonded to the device's metal top, so the fan only runs when the device is actually hot.
+There is no PWM and no speed control: once the switch closes the fan runs at full 4500 rpm.
+
+| Family | 5 V source | Rating of that source | Headroom |
+|---|---|---|---|
+| **Decoders** (NDI to HDMI, NDI to SDI, NDI to HDMI 4K) | device's **USB-A host** port | **not stated by Magewell anywhere** (`fan-power-sources.md:21,39-46`); the 900 mA USB-3.0 baseline is a generic USB-IF figure, not a Magewell one | `unknown` — **R21**, M9 |
+| **Encoders** (HDMI Plus, SDI Plus; TX if a fan is ever fitted) | **Mini-DIN-8 pin 8 (VCC)**, GND on pin 4 | **5 V, 100 mA max — Magewell-documented** (`fan-power-sources.md:80`; `mini-din8-feedthrough.md:38`) | 50 mA, i.e. **50 % of the budget on steady state alone**, before inrush — **R22**, M10 |
+| **NDI to AIO** | **none** — the model has no USB-A host port and no Mini-DIN-8 (`fan-power-sources.md:37-38,186`) | — | stays **passive**, `fan = false` |
+
+Three architectural consequences, all recorded so they are not rediscovered:
+
+1. **The USB-B port is not, and never was, a 5 V source.** It is a power *input* only
+   (`fan-power-sources.md:23,115-131`), and under PoE it carries no 5 V at all. `BOM.md:194`
+   currently tells the builder to Y-splice the HDMI Plus fan onto "the `usb_b` power feed inside
+   the case" — that is unbuildable on a PoE-powered device (deviation **D17**).
+2. **Tally is excluded on the encoders.** Pin 8's 100 mA is shared with the Magewell Tally Light
+   #99090 and the LED matrix, whose draw is `unknown` (`fan-power-sources.md:99-106`). The user's
+   decision 1 ("PTZ/Tally is not used") is what makes the fan's 50 mA acceptable — **it is a
+   precondition, not a coincidence.** If a Tally Light is ever wired, the fan must move off pin 8.
+3. **The Mini-DIN-8 stays `panel:"none"`.** D-01 is untouched: the port is now *internally* cabled
+   to the fan, not brought out. That is precisely what makes it invisible to the end-zone solver —
+   see **R23**.
 
 ---
 
@@ -546,7 +730,7 @@ Field contract:
 | `pos` | `[u, v]` mm | position on that face, from the face centre |
 | `kind` | enum string | physical port type; drives the ghost geometry and plug envelope |
 | `dir` | `in`/`out`/`bidir`/`power`/`none` | informational; drives labels and BOM |
-| `panel` | part number or `"none"` | which panel connector this port is brought out to; `"none"` = stays internal (SD slot, LEDs), `"blank"` = DBA-BL |
+| `panel` | a **key of `MCC_PANEL_PARTS`** or `"none"` | which panel **slot** this port occupies, and with what part. `"none"` = the port occupies no slot and stays internal (SD slot, LEDs, PTZ/Tally). **`"DBA-BL-B"` = the port occupies a slot that is blanked off** — the slot, its plate cutout, its wall window and its two M3 bosses are all built, and a `DBA-BL-B` blanking plate covers them, so the slot stays reusable (§5, D-14). **Corrected rev 8:** rev 1–7 wrote the blank value as `"blank"`; that is the row's `kind`, not its key, and `mcc_panel_cutout()` would assert on it |
 | `confidence` | `measured`/`drawing`/`manual`/`photo`/`assumed` | **required** |
 
 **`confidence` is not decoration.** `knowledge/magewell/housing-families.md:8-10` states plainly that
@@ -732,12 +916,29 @@ optional for the 10 W Plus models** — but the margin improved by roughly 25 % 
 box. Passive-first stays the intent; §6's reservation rule keeps vent and fan geometry in every
 variant from v1. The 16 mm far-wall duct (D-13) is the other thermal gain — see R20 for what it does
 *not* fix.
+**Resolution path closed on the mechanical side, 2026-09-09 (D-14).** The Plus family ships with
+the fan fitted (`fan = true`) *and now has a named 5 V source and a thermostatic control element*
+(§6, "Fan power is device-sourced"). What R5 still carries is **electrical, not thermal**: the
+source ratings are unverified on both families (R21, R22) and the switch's trip point is not
+confirmed against this case's real internal temperature (M13). If any of those fails, the fallback
+is the reserved splitter bay — which is why §6's reservation rule must not be relaxed. Note also
+that the switch introduces a new failure mode the old always-on assumption did not have: a fan that
+**never starts** because the switch never closes is indistinguishable, from outside, from a fan
+that has failed. Record it on the build sheet as a commissioning check.
 
-**R6 — PoE power budget.** 802.3af delivers 12.95 W at the PD. A 10 W Plus device + splitter
-conversion loss (1–2 W) + fan (0.25–1.3 W) is at or over budget, and the splitter's own heat lands
-*inside* the case. Design constraints: put the splitter bay in the **intake** airflow, not against
-the device; confirm the chosen splitter's rated continuous output against the worst-case model.
-Pending research in `knowledge/components/poe-splitters.md`. **Escalate once that lands.**
+**R6 — PoE power budget. LARGELY RETIRED 2026-09-09 by D-14; kept as the fallback's risk.**
+Original: 802.3af delivers 12.95 W at the PD; a 10 W Plus device + splitter conversion loss (1–2 W)
++ fan (0.25–1.3 W) is at or over budget, and the splitter's own heat lands *inside* the case.
+**What D-14 changes:** with no splitter fitted, **the Magewell device is itself the PD**, the link
+is **802.3at (25.5 W guaranteed at the PD** — `knowledge/components/poe-splitter-verification.md:31-33`),
+and the fan's **0.25 W max** comes off the device's own internal 5 V rail. Both terms that made R6
+tight — the DC-DC conversion loss and the splitter's dissipation *inside the sealed case* — are
+gone from the default build, and so is the "does the splitter pass gigabit?" data risk
+(`poe-splitter-verification.md:72-73`, `unknown` for every candidate). R6 therefore applies only to
+the **fallback** configuration and is no longer a design blocker. It is replaced, for the default
+build, by two much smaller and much more specific risks: **R21** (decoder host-port rating) and
+**R22** (encoder VCC 100 mA ceiling + the thermoswitch). Do not delete R6 — it is the analysis the
+fallback would have to re-inherit.
 
 **R7 — lid fastener count. RESOLVED; D-04 ACCEPTED by the user 2026-09-08. Outcome revised by D-12.**
 Baseline stays the user's 4 captive M3 thumbscrews; **6 for any lid over 180 mm span** (D-04).
@@ -962,6 +1163,98 @@ circle overlaps the duct (a genuine through-duct flow path). **Architectural hed
 make the fan's Y position a shell parameter `fan_y`, defaulting to `y_dev_c` (today's behaviour), and
 settle it with a thermal measurement rather than by argument. Escalate to the user only if they want
 to pre-commit.
+**Second driver added 2026-09-09 (D-14):** on the two Plus encoders `fan_y` is no longer only a
+thermal question — it is also the only available escape from R23's Mini-DIN-8 plug collision. The
+two drivers happen to point the same way (−Y, onto the duct), which is convenient but must not be
+mistaken for a decision: the thermal question is still settled by measurement.
+
+**R21 — the decoders' USB-A host port is an unverified 5 V source. NEW 2026-09-09 (D-14).**
+Magewell's 94-page decoder manual states the port's *purpose* (keyboard/mouse) and **no electrical
+rating whatsoever** (`knowledge/components/fan-power-sources.md:39-46,201-205`), and never says
+whether the port stays live when the unit is PoE-powered rather than USB-B-powered — that is an
+inference from the manual's power architecture, not a stated fact (`:47-54`). The 900 mA USB-3.0
+SuperSpeed baseline quoted in that file is generic USB-IF knowledge, explicitly *not* a
+Magewell-confirmed figure for this implementation (`:55-59`). The fan needs 50 mA max, so the
+*likely* headroom is large — but "likely" is not this repo's standard. **Consequences if it is
+wrong are contained:** the three decoder cases still work, passively, exactly as
+`pro-convert-for-ndi-to-hdmi` and `-to-sdi` already do at `fan = false`; only
+`pro-convert-for-ndi-to-hdmi-4k` (Plus chassis, `fan = true`) loses its cooling and would fall back
+to the splitter. **No geometry depends on this** — measure it (M9) before the first Plus-chassis
+decoder is trusted on stage, not before anything is printed.
+
+**R22 — the KSD9700 thermoswitch is unverified in four independent ways, and one of them is an
+electrical single point of failure. NEW 2026-09-09 (D-14).** Every finding below is from
+`knowledge/components/poe-splitter-verification.md` §4, which is explicit that this part could not
+be sourced from any mainstream distributor (**DigiKey returns zero results**, `:154-156`) and that
+what is known comes from a Chinese B2B marketplace aggregator, not a datasheet:
+
+- **No DC rating exists at all.** Every published rating is **250 V AC / 5–16 A** (`:170`) — an
+  appliance-motor regime. The fan is 5 V / 0.05 A, four orders of magnitude below it. The
+  dry-circuit concern (contacts rated for high AC current rely on that current to burn through
+  surface oxide; a 50 mA DC signal does not) is switch-design lore, **not** a confirmed defect of
+  this part (`:188-196`). It is a reason to bench-test (**M8**), not to reject — but if it fails,
+  the fan silently never runs and nothing in the case reports it.
+- **Package and mounting are `unknown`** (`:172`). The budget is hard: the plenum above the device
+  top is `H_int − deck − dev_h` = **10.8 mm** (plus) / **10.85 mm** (compact), and `MCC_LID_CLEAR`
+  is 2.0, so **the switch body plus its thermal pad must be ≤ 8.8 mm tall** (**M11**). This is a
+  *sourcing constraint derived from geometry*, and it is the correct way to state it — do not
+  invent a body height for `constants.scad`.
+- **No hysteresis / reset differential is published** (`:171`). An auto-reset switch with an
+  unknown differential, driving a fan whose airflow directly cools the sensed surface, is a
+  textbook hunting loop: fan on → top cools below trip → fan off → heats → on. Cosmetically noisy
+  on stage; not damaging. Accept, observe, and if it hunts the answer is a higher trip point or a
+  latching/hysteretic controller, not a bigger fan.
+- **45 °C is the ticket's target, not a sourced conclusion** (`:234-238`). Nothing confirms it is
+  the right trip point for *this* case around *this* device (**M13**).
+
+**One further electrical unknown, on the encoders only, that R22 must carry:** the NF-A4x10's
+**inrush** current is not published anywhere — Noctua give steady-state only
+(`knowledge/components/fans.md:22`). A DC motor's start transient is routinely several times its
+running current, and the Mini-DIN-8 VCC pin is hard-limited to **100 mA** with 50 mA already spent.
+The switch closes abruptly (a snap-disc, not a ramp), so the fan sees a step. **This is the single
+sharpest risk in D-14** and it cannot be reasoned away from datasheets — it is M10's whole point.
+If it trips the port's limiter, the mitigation is a series resistor or a small electrolytic across
+the fan, i.e. a wiring change, not a case change.
+
+**R23 — an internally-cabled port is invisible to the end-zone solver, and on the encoders it
+points straight at the fan. NEW 2026-09-09 (D-14). BLOCKING for HDMI Plus / SDI Plus.**
+`mcc_end_zone()` (`lib/mcc/layout.scad:45`) and T1-18(c) (`lib/mcc/shell.scad:373`) both filter to
+`mcc_ports_external(dev)`, i.e. `panel != "none"`. That was exactly right while `panel:"none"`
+meant "not cabled" (`MCC_DEV_SIDE_ALLOW["minidin8"] = 0`, `constants.scad:380`, comment "internal,
+not cabled (D-01)"). **D-14 breaks that equivalence:** the Mini-DIN-8 is still not brought out, but
+it now carries a plug and a cable. Geometry, worked at HDMI Plus (`L = 210.5`, `ez_pos = 40`):
+
+| Feature | Position | Note |
+|---|---|---|
+| Device +X face | `x = 62.25` | `x_dev_lo = −55.25`, `dev_l = 117.5` |
+| Mini-DIN-8 axis | `y = y_dev_c`, `z = z_conn_c − 6 = 19.5` | `pro-convert-hdmi-plus.scad:34`, `pos [0, −6]` |
+| Fan frame inner face | `x = 92.25` | `L/2 − MCC_WALL − frame_z` = `105.25 − 3 − 10` |
+| Fan reserved envelope inner face | `x = 87.25` | `+ 5 mm` intake clearance (`fan.scad:42`) |
+| **Free axial space for the plug** | **30.0 mm to the frame, 25.0 mm to the reservation** | |
+| Fan aperture ⌀38 centred at `(y_dev_c, 25.5)` | — | the plug axis is at Δy = 0, Δz = −6: **dead inside it** |
+
+The Magewell breakout cable's plug length is **`unknown`** — `mini-din8-feedthrough.md:66-68` gives
+only a ~13.2 mm shell OD as an explicitly unsourced "sizing baseline", and its own open-questions
+list (`:275-277`) records the cable OD as unverified too. So the fit is **undetermined, not
+failing**: ≤ 25 mm is clean, 25–30 mm eats the fan's intake clearance, > 30 mm fouls the frame.
+Moulded mini-DIN plugs with strain relief are commonly in the upper part of that range, which is
+why this is called out rather than waved through.
+
+**`fan_y` is the escape, and it is marginal.** To pull the ⌀38 aperture off the plug entirely needs
+`|fan_y − y_dev_c| ≥ 20 + shell_r + clearance ≈ 27`. Toward −Y (R20's preferred direction, onto the
+duct) the travel available before the aperture crowds the far wall is
+`y_dev_c − (−W/2 + MCC_WALL + 19 + 3)` = **27.35 mm** on the plus family — it clears by well under a
+millimetre, on a number (`shell_r`) that is itself unsourced. Toward +Y there is plenty of travel
+but it puts the fan into the +X end zone exactly where the slot-3/slot-4 patch cables turn toward
+the patch wall, which §5's "exhaust away from the patch wall" rule exists to prevent.
+
+**Ruling: do not guess.** Take **M12** (measure the plug), then either (a) confirm ≤ 25 mm and
+change nothing, (b) set `fan_y` in those two `case.scad` files, (c) put a right-angle or slim-boot
+Mini-DIN-8 plug in the encoder BOM — note this is the *opposite* call to D-08's right-angle veto,
+and defensibly so: that was a user-facing HDMI cable, this is an internal lead that is plugged in
+once at build time — or (d) fall back to the reserved splitter on those two SKUs. **A developer
+must not add a `minidin8` row to `MCC_PLUG_AXIAL` with an invented number**: too small and the
+assert lies, too large and it fails two SKUs' builds for a figure nobody measured.
 
 ---
 
@@ -1011,7 +1304,19 @@ to pre-commit.
     D-13 (flush boss, `MCC_GAP_FAR = 16`, `MCC_SIDE_BOLT_PROUD = 0`).** See §1 and §11.
 16. **Fan Y position vs. the 16 mm duct (R20) — new, non-blocking.** Keep the fan on the device
     centreline or shift it onto the duct? Parameterise (`fan_y`, default `y_dev_c`) and settle it by
-    measurement, not argument.
+    measurement, not argument. **Rev 8:** on the two Plus encoders it may be forced by R23 before
+    the thermal question is settled — if so, record which driver actually moved it.
+17. ~~**Where does the fan's 5 V come from on a PoE-only stage rig?**~~ **RESOLVED 2026-09-09,
+    D-14:** decoders from the USB-A host port, encoders from Mini-DIN-8 pin 8 VCC, AIO stays
+    passive, no splitter by default. Both source ratings remain unverified — that residue is
+    R21/R22, M9/M10, not this question.
+18. **Is the `external_ports` variant key implemented or dropped (D12)?** Still open, and D-14
+    leans on the answer: blanking the decoders' host slot is done by editing the **device file**
+    (`panel: "DBA-BL-B"`), which encodes a *variant* decision in *device* data. That is acceptable
+    today — there is exactly one variant per SKU, `case.scad`'s own doc comment already names the
+    device file as the mechanism, and the alternative key is inert — but it is a knowing
+    compromise, not the end state. When D12 is settled, the blanking moves to the variant config
+    and the device files revert to describing the device.
 
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
@@ -1024,6 +1329,15 @@ to pre-commit.
 | M5 | Slotted 1/4"-20 screw head ⌀ and head height for the part actually bought | Sets the head recess ⌀/depth → `boss_len` → **`MCC_GAP_FAR` → `W`** since D-13 (it no longer sets a lug height). +1.5 mm of head height = +1.5 mm on every case's width; T1-26 fails loudly if it is not propagated (R18) | Same |
 | M6 | Straight HDMI plug axial length; etherCON/USB/BNC plug lengths | `depth-mockup` coupon — replaces every `assumed` bay depth and end zone (R2, R13) | Print the coupon |
 | M7 | Magewell Fishtail M4 hole pitch | Floor pattern; derive from `knowledge/magewell/assets/magewell-fishtail-bracket.stl` | Anyone |
+| **M8** | **KSD9700 bench test: does it reliably make/break a 5 V / 0.05 A DC load, cold and after 50 cycles?** Also record its actual trip and reset temperatures | R22. Every published rating is 250 V AC / 5–16 A; **no DC rating exists** (`poe-splitter-verification.md:170,176-196`). If it fails dry-circuit, the fan silently never runs. At $0.07–0.20/unit a bench test is far cheaper than the design commitment (`:229-233`) | User, with a bench PSU and the fan |
+| **M9** | **Decoder USB-A host port, device on PoE only (no USB-B adapter): (a) is it live at all? (b) does it hold 5 V under the fan's 50 mA? (c) does any current limiter trip?** | R21 — Magewell publish **no** rating and never state the port's behaviour under PoE (`fan-power-sources.md:39-59,185,201-205`). Gates the fan on `pro-convert-for-ndi-to-hdmi-4k`; the other two decoders are passive anyway | User, USB power meter |
+| **M10** | **Encoder Mini-DIN-8 pin 8 (VCC) / pin 4 (GND) under PoE: rail voltage with the fan running, and the fan's INRUSH at switch-on** | **R22, the sharpest risk in D-14.** The pin is hard-limited to 100 mA and the fan's 50 mA is half of it; the NF-A4x10's inrush is not published by Noctua at all (`fans.md:22`), and the snap-disc closes as a step. Also measure with the Tally Light connected to get its `unknown` draw (`fan-power-sources.md:99-106,187`) | User, multimeter + scope or current probe |
+| **M11** | **KSD9700 body height including its thermal pad/adhesive** | R22 — package dims are `unknown` (`poe-splitter-verification.md:172`). **Hard ceiling 8.8 mm** (`plenum 10.8 − MCC_LID_CLEAR 2.0`); over that it fouls the lid. A *sourcing* constraint: buy to it, do not model it | Whoever orders the switch |
+| **M12** | **Magewell Mini-DIN-8 breakout cable: plug body + strain-relief axial length, and cable OD** | **R23 — BLOCKING for `pro-convert-hdmi-plus` and `pro-convert-sdi-plus`.** Free space is 30.0 mm to the fan frame, 25.0 mm to the reservation; the figure is `unknown` (`mini-din8-feedthrough.md:66-68,275-277`). Decides between "change nothing", `fan_y`, a right-angle plug, or the splitter fallback | User, with the OEM breakout cable in hand |
+| **M13** | **Temperature of the device's metal top under sustained load in the closed case, ambient ~25 °C and ~35 °C** | R22 — nothing confirms 45 °C is the right trip point for this case/device pair (`poe-splitter-verification.md:234-238`). If the top never reaches 45 °C the fan never runs; if it sits at 45 °C the fan hunts | User, after the first full-size print |
+
+> **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
+> taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
 
 ---
 
@@ -1049,6 +1363,8 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D14** | 2026-09-08 | §5 rev 7 frame rule: patch-wall positions are in case coordinates; the placed plate's rear bosses are at `(−9.5, −12)` / `(+9.5, +12)` | `lib/mcc/layout.scad:388-391` builds T1-34d's relief pair from `(slot_x − 9.5, z + 12)` / `(slot_x + 9.5, z − 12)` — the **mirrored** (rev-6 doc) diagonal — while `lib/mcc/shell.scad:210-211` correctly draws `(−sx, −sz)` / `(+sx, +sz)` | Numerically invariant today, because `mcc_panel_fixing_pos()` is symmetric about `z = z_conn_c`, so T1-34d's clearance multiset is identical either way (3.18 mm). Latent: the moment a fixing position becomes asymmetric, T1-34d silently checks the wrong pattern | **Open — low priority, library change.** Publish the relief pair once as a pure function in `layout.scad` and call it from both files. Do **not** fix inside a variant branch |
 | **D15** | 2026-09-08 | §9 Tier 1: contract asserts live *in the model* and fire on every render | T1-30 (intake vent free area ≥ the fan aperture's area) exists only as `tests/test_shell.scad:53`, hard-wired to `MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI`. `mcc_vent_intake_area()` (`vents.scad:174`) is never called from `mcc_shell_base()` | Seven of the eight SKUs will render, pass, and be printed with **no** intake-area check at all — and the margin is genuinely thin: hand-evaluated, `pro-convert-sdi-tx` and `pro-convert-for-ndi-to-sdi` land at ≈1153 mm² against the 1134 mm² threshold (1.6 %), because their `W = 158.80` loses one whole slot off the −X end wall's run | **Open — recommended on the pre-flight branch, not blocking.** Call `mcc_vent_intake_area()` from `mcc_shell_base()` and assert T1-30 there, **after** a render confirms all eight devices pass. If a BNC compact SKU actually fails, that is a real thermal finding — escalate, do not relax `MCC_VENT_AREA_RATIO` |
 | **D16** | 2026-09-08 | §6 floor rule: `mounts.scad` "exposes `mcc_floor_keepout()` and **asserts non-overlap** between all of them"; `layout.scad:240-243` repeats the promise | `lib/mcc/mounts.scad` asserts only VESA-boss-vs-splitter-bay (`:89-92`). There is no pairwise non-overlap check over `mcc_floor_keepout()`'s list, and `MCC_FLOOR_FEATURE_MIN_SEP` (`constants.scad:448`) is referenced by nothing | The floor is the one place §6 predicts silent collisions, and the guard that was supposed to catch them is absent. The `−X` strap slot is already positioned by a *displacement* rule whose only validation would have been this assert | **Open — library change, later single branch.** Add the pairwise `max(MCC_FLOOR_FEATURE_MIN_SEP, r1+r2+2.0)` assert over `mcc_floor_keepout(dev,cfg)` in `mounts.scad`. Not work for the seven |
+| **D17** | 2026-09-09 | A BOM row must describe a wiring path that physically exists | `BOM.md:194` (pro-convert-hdmi-plus) instructs the builder to power the fan from a "USB-A to 2/3-pin fan power lead … **Y-spliced onto the `usb_b` power feed inside the case**", "5 V/GND tapped from the incoming `NAUSB-W-B` power line upstream of the device". `BOM.md:256` (ndi-to-hdmi-4k) has the same defect in milder form, offering "or splice onto the device's own USB-B +5V feed" as an alternative. `pro-convert-sdi-plus` has a fan row (`:216`) and **no** power row at all | **The device's USB-B port is a power *input* only** (`knowledge/components/fan-power-sources.md:23,115-131`; `poe-splitter-verification.md:56-66`, quoting both manuals). On a PoE-powered device there is **no 5 V present on that line to tap** — the case ships with the fan fitted (`fan = true`) and a wiring instruction that cannot work on the user's actual stage setup. It would only ever have worked on a bench with the USB-B adapter plugged in | **Open — developer task, part of the D-14 change list.** Replace with the Mini-DIN-8 pin 8 / pin 4 row on the two Plus encoders and the USB-A host row on the Plus decoder, both via the KSD9700. Add the missing row to `pro-convert-sdi-plus`. Found while gating D-14; it is not *caused* by D-14 |
+| **D18** | 2026-09-09 | One geometric predicate, one definition (§3 "no magic numbers", §5 rev-8 blank ruling) | "Is this part a blank?" is written two different ways: `lib/mcc/neutrik.scad:39` `is_blank = (kind == "blank")`, versus `lib/mcc/shell.scad:181` and `lib/mcc/layout.scad:187` `is_blank = mcc_panel_hole_d(part) == 0` | Harmless while `DBA-BL-B` is both `kind=="blank"` **and** `hole_d==0` and is unreachable dead code (D12). **The moment `hole_d` becomes 24.0 (D-14) the two disagree**: the shell would cut the full window and the plate behind it would stay solid — a slot that looks open from outside and is blind 3 mm in. No assert catches it; it is only visible in the head-on patch-wall elevation (D11) | **Open — must land in the same commit as the `hole_d` change.** Unify on `mcc_panel_hole_d(part) == 0` in `neutrik.scad`. Note `is_24_class` at `:40` already reads `hole_d`, so the file is half-converted already |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
@@ -1112,6 +1428,44 @@ free area — not duct depth — is the flow bottleneck; size the intake slots a
 **Floor.** VESA 75×75 and the case's own 1/4"-20 insert default to the case plan centre; `vesa_pos`
 is a shell parameter so a colliding SKU can shift it; `mcc_floor_keepout()` asserts non-overlap. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
+
+**Architect verdict, 2026-09-09 (rev 8): the fan-power decision (D-14) is APPROVED. The
+`DBA-BL-B` blank gets a real ⌀24.0 hole. The decoders need no geometry change; the two Plus
+encoders are BLOCKED on measurement M12.**
+
+- **Adopted, part A.** `MCC_PANEL_PARTS["DBA-BL-B"].hole_d = 0 → 24.0`, everything else in the row
+  unchanged. A blanked slot then costs **no** bay depth, **no** end zone, **no** `L`/`W`/`H`, and
+  keeps rank `[0, 0]` so it still sorts innermost — while remaining fully convertible to any D
+  connector later. It also makes §9's "every `panel != "none"` port has a cutout" invariant true for
+  the first time. Full ruling and the table of consequences: **§5, "The `DBA-BL-B` blank carries the
+  full D hole"**; per-SKU: `layout-patch-wall.md` §16.6.
+- **Adopted, part B (decoders).** The three decoders' slot 3 becomes `DBA-BL-B` by editing the
+  `panel` field in three device files. **Slot order is unchanged on all three** (the blank's rank is
+  the lowest, and it was already the innermost of block B), and every envelope figure is unchanged.
+- **Blocking, part B (encoders).** **R23**: the Mini-DIN-8 is `panel:"none"`, so both
+  `mcc_end_zone()` and T1-18(c) filter it out — the solver cannot see a port that stays internal but
+  is now internally cabled. The plug sits dead inside the ⌀38 fan aperture with 30.0 mm to the fan
+  frame / 25.0 mm to the reservation, and its length is `unknown`. **Take M12 before touching
+  `pro-convert-hdmi-plus` or `pro-convert-sdi-plus`.** `fan_y` is the escape and it is marginal
+  (27.35 mm of travel against ~27 mm needed).
+- **No new printed geometry for cable management.** No zip-tie anchor, no clip, no channel, no
+  thermoswitch pocket. The fan lead, the switch lead and the plug all live in free end-zone volume
+  that is already reserved, and the existing answer to cable dressing is an adhesive tie base
+  (`BOM.md:67`). Adding a printed floor anchor now would put a new feature into `mounts.scad` —
+  positioned from unmeasured cable geometry, and guarded by a `mcc_floor_keepout()` pairwise assert
+  that **does not yet exist** (D16, still open). **Deferred with an explicit trigger:** if the first
+  physical build shows a lead that can reach the fan aperture, add the anchor via `mounts.scad`
+  only, never in `shell.scad`, and only after D16 lands.
+- **The thermoswitch is a sourcing constraint, not a modelled part.** The plenum gives
+  `10.8 − MCC_LID_CLEAR 2.0` = **≤ 8.8 mm** for body + thermal pad. Publish it, buy to it, do not
+  invent a body height for `constants.scad` (M11).
+- **R6 is largely retired** for the default build (no splitter ⇒ the device is the PD on an 802.3at
+  link, 25.5 W, and the conversion loss and in-case splitter heat both vanish). **R21, R22, R23 are
+  new**; **M8–M13** added. §6's splitter reservation rule is **unchanged** — the splitter is now the
+  named fallback, which is exactly why its 20 mm may not be reclaimed.
+- **Two deviations found while gating: D17** (`BOM.md:194` tells the builder to tap 5 V from the
+  USB-B *input*, which carries none under PoE) and **D18** (the three-way disagreement on how
+  "is this a blank?" is tested, which becomes a real defect the moment `hole_d` changes).
 
 **Architect verdict, 2026-09-08 (rev 7): the seven remaining SKUs (issues #3–#9) are APPROVED WITH
 ONE BLOCKING LIBRARY CHANGE.** Full per-SKU fit-check table, ruling and parallel-work rules:

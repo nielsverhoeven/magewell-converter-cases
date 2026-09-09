@@ -47,7 +47,12 @@ Two knowledge trees, do not merge them:
   bay (802.3af→5 V USB, gigabit) with a **dongle-class default envelope 75×40×20 mm** (`assumed`,
   e.g. UCTRONICS U6114/U6115 — buy one and measure; the GAT-USBC 114×51×25 does not fit, see
   architecture.md §11 R11). Both bays are reserved in every variant even when unused (§6 rule);
-  the splitter reservation adds 20 mm to the −X end zone on every variant (D-12).
+  the splitter reservation adds 20 mm to the −X end zone on every variant (D-12). **Fan power is
+  device-sourced, not splitter-sourced** (D-14, user decision 2026-09-09): decoders draw 5 V from
+  their own USB-A host port (slot blanked with `DBA-BL-B`, which now carries a full D hole so it
+  stays convertible — architecture.md §5 rev 8), encoders from Mini-DIN-8 pin 8 VCC / pin 4 GND
+  (port stays `panel:"none"`), each in series with a KSD9700 45 °C normally-open thermoswitch; no
+  PoE splitter is fitted by default on any SKU (architecture.md §5 §6, §11 R21–R23).
 - **Closure**: tongue-and-groove lid, 6 captive M3 knurled thumbscrews into M3 heat-set inserts
   (rule: 6 above 180 mm lid span; both families are above it). **Retention: captive 1/4"-20
   SLOTTED bolt + DIN 6799 E-clip through the far (non-patch) long wall into the device's side

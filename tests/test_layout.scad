@@ -47,7 +47,7 @@ assert(_mcc_near(slot_x[0], -62.95, 1e-3), str("slot_x[0]=", slot_x[0]));
 assert(_mcc_near(slot_x[3], 62.95, 1e-3), str("slot_x[3]=", slot_x[3]));
 
 // Slot order (rev-5, layout-patch-wall.md §15 ruling 8 -- the ALGORITHM's output, not the
-// (superseded) worked-results table): 1=rj45, 2=usb_b, 3=usb_host, 4=hdmi_out.
+// (superseded) worked-results table): 1=rj45, 2=usb_b, 3=usb_host (DBA-BL-B blank since #23), 4=hdmi_out.
 assert(mcc_slot_for_port(DEV, "rj45") == 1, "slot(rj45) != 1");
 assert(mcc_slot_for_port(DEV, "usb_b") == 2, "slot(usb_b) != 2");
 assert(mcc_slot_for_port(DEV, "usb_host") == 3, "slot(usb_host) != 3");
@@ -55,7 +55,7 @@ assert(mcc_slot_for_port(DEV, "hdmi_out") == 4, "slot(hdmi_out) != 4");
 slots = mcc_slot_assignment(DEV);
 assert(struct_val(slots[0], "part") == "NE8FDP-B", "slot 1 part");
 assert(struct_val(slots[1], "part") == "NAUSB-W-B", "slot 2 part");
-assert(struct_val(slots[2], "part") == "NAUSB-W-B", "slot 3 part");
+assert(struct_val(slots[2], "part") == "DBA-BL-B", "slot 3 part");
 assert(struct_val(slots[3], "part") == "NAHDMI-W-B", "slot 4 part");
 
 // --- Fan / splitter bay / side-bolt (plan §2.4) ---
@@ -178,11 +178,11 @@ _t16_check(MCC_DEV_PRO_CONVERT_SDI_PLUS, CFG8, 900,
     211.5, 165.30, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NBB75DFGB", "NBB75DFGB"], 47, 41);
 // #7 -- HDMI-ended, plus, 4 slots (usb_host + hdmi_out share the +X end; HDMI's axial term governs).
 _t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K, CFG8, 1200,
-    210.5, 166.35, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NAHDMI-W-B"], 47, 40);
+    210.5, 166.35, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "DBA-BL-B", "NAHDMI-W-B"], 47, 40);
 // #8 -- BNC-ended (sdi_out + usb_host share the +X end), compact, 4 slots. T1-18(c) FAILED here
 // before the fix.
 _t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_SDI, CFG8, 1500,
-    194.9, 158.80, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NBB75DFGB"], 47, 41);
+    194.9, 158.80, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "DBA-BL-B", "NBB75DFGB"], 47, 41);
 // #9 -- mixed HDMI+BNC on the +X end (governs W via HDMI's deeper bay, L via BNC's wider ez_pos),
 // compact, 4 slots. T1-18(c) FAILED here before the fix.
 _t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_AIO, CFG8, 1800,
@@ -190,7 +190,7 @@ _t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_AIO, CFG8, 1800,
 // (8th device) pro-convert-for-ndi-to-hdmi -- the already-shipped SKU, re-checked here too so all
 // 8 device files are covered by one loop-free, deterministic list in a single place.
 _t16_check(MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI, CFG8, 2100,
-    193.9, 159.85, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "NAUSB-W-B", "NAHDMI-W-B"], 47, 40);
+    193.9, 159.85, 51.0, 4, ["NE8FDP-B", "NAUSB-W-B", "DBA-BL-B", "NAHDMI-W-B"], 47, 40);
 
 echo("mcc test_layout §16 pre-flight (8/8 devices): OK");
 

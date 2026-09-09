@@ -21,7 +21,10 @@ MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K = [
     ["ports", [
         // Face A (knowledge/magewell/models/pro-convert-for-ndi-to-hdmi-4k.md:25): USB HOST -> MENU toggle -> HDMI OUT
         [["id", "usb_host"],  ["face", [ 1, 0, 0]], ["pos", [-20, 0]], ["kind", "usb_a"],
-         ["dir", "bidir"],    ["panel", "NAUSB-W-B"],  ["confidence", "photo"]],
+         // panel DBA-BL-B, not NAUSB-W-B (user decision 2026-09-09, D-14): host port never used by
+         // the build; slot stays built and reusable behind a blank (architecture.md §5 rev 8) — on
+         // the 4k the port is internally cabled to the fan (D-14, §5 "Fan power is device-sourced").
+         ["dir", "bidir"],    ["panel", "DBA-BL-B"],  ["confidence", "photo"]],
         [["id", "menu"],      ["face", [ 1, 0, 0]], ["pos", [  0, 0]], ["kind", "button"],
          ["dir", "none"],     ["panel", "none"],       ["confidence", "photo"]],
         [["id", "hdmi_out"],  ["face", [ 1, 0, 0]], ["pos", [ 20, 0]], ["kind", "hdmi_a"],

@@ -435,6 +435,10 @@ MCC_PLUG_AXIAL = [
     ["rj45",   21.5], // cables.md:119, verified (TIA-568.2-D max plug length)
     ["usb_a",  12.0], // cables.md:125, verified
     ["usb_b",  12.0], // assumed equal to usb_a — no USB-B-specific figure sourced
+    ["blank",  0],    // defensive: DBA-BL-B (kind "blank") now carries a real hole (rev 8, D-14
+                       // part 4), so mcc_plug_axial() can resolve "DBA-BL-B" -> "blank" via
+                       // mcc_panel_kind() same as any other part; without this row that lookup
+                       // would assert out. Nothing plugs into a blank, so 0.
 ];
 
 // Function: mcc_plug_axial()
@@ -653,12 +657,18 @@ MCC_END_ZONE_NEG_EXTRA_SPLITTER =
 //              knowledge/components/cables.md:63)"; bend — same 40.6 mm figure re-used for the lateral
 //              term per architecture.md:296-297 ("for BNC it is the dominant term"), i.e. for BNC the
 //              bend radius genuinely governs both axial and lateral clearance simultaneously.
-//   DBA-BL-B   (D blank plate):   hole_d 0 (no cutout — a solid blank per architecture.md's
-//              panel-part table spec "blank plate, hole_d 0"); depth
-//              knowledge/neutrik/placement-and-depth.md:21 "DBA-BL | 3.2 mm (flat cover, not a
-//              feedthrough)"; max_panel_t assumed 4.0 (not a feedthrough, no seat constraint — reuses
-//              the etherCON ceiling as a generous, non-binding default); plug_len 0, bend 0 (nothing
-//              plugs into a blank).
+//   DBA-BL-B   (D blank plate):   hole_d 24.0 (rev 8, 2026-09-09, D-14 part 4 — was 0). A blanked
+//              slot is a RESERVED slot, not a deleted one: the plate carries the full ⌀24.0 D-class
+//              hole (etherCON/universal-D class, knowledge/neutrik/d-series-cutout.md:36 "≥ 24.0 mm
+//              (etherCON NE8FDP, XLR NC3xD)") so any D-series connector can be fitted later by
+//              swapping the purchased DBA-BL-B blanking plate for the connector — no reprint of the
+//              panel plate or the shell. See architecture.md §5 "The DBA-BL-B blank carries the full
+//              D hole (rev 8)" for the full derivation (why 24.0 and not 23.6) and D18 (the
+//              is_blank test in neutrik.scad must move off `kind == "blank"` onto this field, see
+//              neutrik.scad:39). depth knowledge/neutrik/placement-and-depth.md:21 "DBA-BL | 3.2 mm
+//              (flat cover, not a feedthrough)"; max_panel_t assumed 4.0 (not a feedthrough, no seat
+//              constraint — reuses the etherCON ceiling as a generous, non-binding default); plug_len
+//              0, bend 0 (nothing plugs into a blank — unchanged by rev 8, architecture.md §5 table).
 // The Mini-DIN-8 PTZ/Tally port stays internal on every current SKU (panel:"none", user decision
 // 2026-09-07) — it is not dispatchable, so it is intentionally NOT a row in MCC_PANEL_PARTS.
 // architecture.md §5 "the Mini-DIN-8 PTZ/Tally port stays internal ... on every current variant ...
@@ -670,7 +680,7 @@ MCC_PANEL_PARTS = [
     ["NAHDMI-W-B",[["hole_d", 23.6], ["depth", 40.65], ["max_panel_t", 2.0], ["plug_len", 35],   ["bend", 15],   ["kind", "hdmi_a"],   ["confidence", "drawing"]]],
     ["NAUSB-W-B", [["hole_d", 23.6], ["depth", 40.55], ["max_panel_t", 2.0], ["plug_len", 20],   ["bend", 8],    ["kind", "usb_b"],    ["confidence", "drawing"]]],
     ["NBB75DFGB", [["hole_d", 23.6], ["depth", 34.0],  ["max_panel_t", 2.0], ["plug_len", 40.6], ["bend", 40.6], ["kind", "bnc"],      ["confidence", "drawing"]]],
-    ["DBA-BL-B",  [["hole_d", 0],    ["depth", 3.2],   ["max_panel_t", 4.0], ["plug_len", 0],    ["bend", 0],    ["kind", "blank"],    ["confidence", "drawing"]]],
+    ["DBA-BL-B",  [["hole_d", 24.0], ["depth", 3.2],   ["max_panel_t", 4.0], ["plug_len", 0],    ["bend", 0],    ["kind", "blank"],    ["confidence", "drawing"]]],
 ];
 
 // -----------------------------------------------------------------------------------------

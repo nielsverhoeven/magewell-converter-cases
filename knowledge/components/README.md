@@ -14,5 +14,13 @@ Off-the-shelf hardware reference for the 3D-printed Magewell Pro Convert case. F
   several connector types remain `unknown` pending physical measurement.
 - **`sources.md`** — every URL cited across all five knowledge files, grouped by source document,
   with fetch date and blocked/unparseable sources flagged.
+- **`fan-power-sources.md`** (fetched 2026-09-09) — candidate on-device 5 V sources for powering the
+  case fan while the device runs on PoE (no external 5 V rail in the case). Headline: **decoder USB
+  HOST port** is the lower-risk candidate (no documented competing load, larger assumed current
+  budget, but no Magewell-stated current rating either); **encoder Mini-DIN-8 VCC pin (5 V, 100 mA
+  max)** is tighter and shared with the stock Tally Light — both need physical measurement before
+  committing a case design. Confirms the USB Type-B "+5V" port is input-only, and that a fan cannot
+  be powered by tapping the PoE cable in parallel with the device's own PD (see file for the
+  802.3af/at/bt reasoning); the PoE-splitter route in `poe-splitters.md` remains the fallback.
 
 See `../design/README.md` for the design-guideline files, including known numeric conflicts.

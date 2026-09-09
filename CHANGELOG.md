@@ -43,6 +43,10 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
   and `release.yml` install the pinned OpenSCAD nightly identically.
 - `render.yml` also runs `build.py step --all` on every PR, so a broken STEP conversion fails the
   PR; the tag-triggered release step moved out of `render.yml` into `release.yml`.
+- Fan power scheme (D-14): the case fan is powered from the device itself, not a PoE splitter —
+  decoders draw 5 V from their own USB-A host port (now blanked with `DBA-BL-B`, which carries a
+  full D hole so the slot stays convertible), encoders from Mini-DIN-8 pin 8 VCC / pin 4 GND, each
+  in series with a KSD9700 45 °C thermoswitch, with no splitter fitted by default on any SKU.
 
 <!-- No Changed / Deprecated / Removed / Fixed / Security entries yet. Keep a Changelog convention:
      add a subsection only once it has an entry; don't carry empty headings forward release to
