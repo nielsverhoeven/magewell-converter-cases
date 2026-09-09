@@ -451,6 +451,31 @@ function mcc_case_layout(dev, cfg) =
             (!is_undef(x_far_mid)) ? [[x_far_mid, -(W / 2 - e)]] : []
         ),
 
+        // Fan switch (rev 11, #32, D-18): band-solved between the fan reservation and the
+        // (+X,-Y) corner lid-fastener's two obstructions -- its gusset strip near the wall (the
+        // "pad" band) and its boss deeper in (the "body" band) -- layout-patch-wall.md §5 "Fan
+        // switch". Reads MCC_SWITCHES/mcc_fan_spec() directly, NEVER switch.scad (this file may
+        // not import an L1 geometry provider, architecture.md §3) -- mirrors how
+        // mcc_floor_keepout()'s "mount_rail" row is built from MCC_RAIL_* constants rather than
+        // mcc_rail_sill_size() (rev 9 precedent).
+        // "fan_switch" enablement, duplicated inline (NOT via switch.scad's mcc_fan_switch_enabled
+        // -- same §3 ban) so compact SKUs that set ["fan_switch",false] never trip T1-43 below.
+        sw_enabled = let(v = struct_val(cfg, "fan_switch")) is_undef(v) ? struct_val(cfg, "fan") : v,
+        sw_spec = mcc_switch_spec(MCC_SWITCH_DEFAULT),
+        sw_clr = struct_val(sw_spec, "clr"),
+        sw_pad_d = struct_val(sw_spec, "pad_d"),
+        sw_body_d = struct_val(sw_spec, "body_d"),
+        fan_frame_sw = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame"),
+        // (+X,-Y) corner lid-fastener boss/gusset centre Y -- same corner `corners[1]` above.
+        corner_y = -(W / 2 - e),
+        gusset_edge = corner_y + MCC_WALL / 2,  // gusset strip's near (toward-fan) edge
+        boss_edge   = corner_y + boss_od_lid / 2, // corner boss's near (toward-fan) edge
+        switch_y_hi = fan_y - fan_frame_sw[1] / 2 - sw_clr - sw_pad_d / 2,          // fan side
+        switch_y_lo = max(gusset_edge + sw_clr + sw_pad_d / 2,                     // pad vs gusset
+                          boss_edge   + sw_clr + sw_body_d / 2),                   // body vs boss
+        switch_y = (switch_y_lo + switch_y_hi) / 2,
+        switch_pos = [L / 2, switch_y, z_conn_c], // X = the wall's OUTER face, matches fan_pos
+
         vent_intake_z = [5, 5 + MCC_VENT_INTAKE_BAND_H],
         vent_exhaust_z = MCC_VENT_EXHAUST_Z
     )
@@ -478,6 +503,14 @@ function mcc_case_layout(dev, cfg) =
     assert(splitter_bay_x[1] <= x_dev_lo + MCC_EPS,
         str("mcc: T1-28 splitter bay ", splitter_bay_x, " intrudes into the device's own -X cable envelope on \"",
             mcc_dev_slug(dev), "\""))
+    // T1-43 (layout-patch-wall.md §9/§18, rev 11, #32): the fan switch has somewhere to go. Only
+    // evaluated when the switch is actually enabled for this cfg -- the compact family's feasible
+    // interval is empty by construction (D-18), and every compact SKU is required to set
+    // ["fan_switch", false] explicitly (verdict B6) rather than trip this assert.
+    assert(!sw_enabled || switch_y_hi >= switch_y_lo - MCC_EPS,
+        str("mcc: T1-43 fan switch has nowhere to go on \"", mcc_dev_slug(dev), "\" (switch_y_hi=",
+            switch_y_hi, " < switch_y_lo=", switch_y_lo, ") -- set [\"fan_switch\", false] for this SKU ",
+            "(layout-patch-wall.md §5, D-18)"))
     [
         ["L", L], ["W", W], ["H", H], ["H_int", H_int],
         ["ez_neg", ez_neg], ["ez_pos", ez_pos],
@@ -488,6 +521,7 @@ function mcc_case_layout(dev, cfg) =
         ["n_slots", n_slots], ["pitch", pitch], ["slot_x", slot_x],
         ["d_bay_free", d_bay_free],
         ["fan_pos", fan_pos], ["fan_y", fan_y],
+        ["switch_pos", switch_pos],
         ["splitter_bay_x", splitter_bay_x], ["splitter_bay_y", splitter_bay_y], ["splitter_bay_z", splitter_bay_z],
         ["side_bolt_x", side_bolt_x], ["side_bolt_z", side_bolt_z],
         ["lid_n_fast", n_fast], ["lid_fastener_pos", lid_fastener_pos],

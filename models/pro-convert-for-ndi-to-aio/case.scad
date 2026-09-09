@@ -47,6 +47,9 @@ explode = 0;
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
+//   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
+//               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
+//               #32, D-18). This SKU is fan=false by default, so fan_switch defaults to false too.
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
 

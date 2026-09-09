@@ -50,6 +50,12 @@ explode = 0;
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
+//   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
+//               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
+//               #32, D-18). This is one of the 3 Plus-family SKUs the switch ships on (the compact
+//               family's feasible switch_y interval is empty, layout-patch-wall.md §18.2) -- set
+//               explicitly (tied to `fan`) for the same BOM/documentation-parity reason "fan" is
+//               explicit here, rather than left to the default.
 fan      = true;  // Plus-family default: fan FITTED (user decision 2026-09-08, R5 -- the Plus
                    // chassis' ~10 W thermal budget makes the fan non-optional here, unlike the
                    // compact-family template this file was copied from, which defaults to false).
@@ -57,8 +63,9 @@ fan      = true;  // Plus-family default: fan FITTED (user decision 2026-09-08, 
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
 
 variant = [
-    ["fan",       fan],
-    ["splitter",  splitter],
+    ["fan",         fan],
+    ["splitter",    splitter],
+    ["fan_switch",  fan],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_SDI_PLUS;

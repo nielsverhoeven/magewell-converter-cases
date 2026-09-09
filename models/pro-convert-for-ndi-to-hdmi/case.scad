@@ -50,6 +50,10 @@ explode = 0;
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
 //               the fan aperture's Y position (layout-patch-wall.md §5).
+//   "fan_switch" (bool, optional, default = cfg's own "fan" value) -- draws the recessed manual
+//               fan-switch cutout+pad on the +X wall, beside the fan aperture, when true (rev 11,
+//               #32, D-18). Independent flag so a future variant could ship the fan without the
+//               switch, or vice versa, without a library change.
 fan      = false; // -D fan=true      renders the live fan cutout -- quick go/no-go check
 splitter = false; // -D splitter=true (reserved key; no live cutout exists yet either way)
 
@@ -62,6 +66,11 @@ fan_effective = (part == "base_fan") ? true : fan;
 variant = [
     ["fan",       fan_effective],
     ["splitter",  splitter],
+    // The compact family's feasible fan-switch switch_y interval is EMPTY (D-18,
+    // layout-patch-wall.md §5/§18.2) -- explicit so the base_fan golden (which forces fan=true)
+    // never trips T1-43. Compact is fan=false by default anyway, so no user-facing feature is
+    // lost by this.
+    ["fan_switch", false],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI;
