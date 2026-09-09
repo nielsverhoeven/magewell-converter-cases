@@ -85,8 +85,8 @@ module mcc_cradle(dev, cfg) {
 
     LIP = MCC_WALL; // deck footprint margin beyond the device's own XY extent, mm — a small
                      // locating lip (this file's module contract), also wide enough that the
-                     // vesa_pos-default (0,0) case tripod insert boss below lands inside the deck's
-                     // hollow on every priority SKU (T1-32).
+                     // floor_center-default (0,0) case tripod insert boss below lands inside the
+                     // deck's hollow on every priority SKU (T1-32).
     deck_x = [x_dev_lo - LIP, x_dev_hi + LIP];
     deck_y = [y_dev_lo - LIP, y_dev_hi + LIP];
 

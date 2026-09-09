@@ -19,6 +19,7 @@ use <ports.scad>
 use <layout.scad>
 use <neutrik.scad>
 use <fasteners.scad>
+use <rail.scad>
 use <fan.scad>
 use <poe_splitter.scad>
 use <ghost.scad>

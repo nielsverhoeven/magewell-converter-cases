@@ -2,12 +2,13 @@
 // LibFile: mcc/mounts.scad
 //   L2. Every case-floor feature except the case's own 1/4"-20 insert boss and the compliant-pad
 //   pocket (those two live in cradle.scad, T1-32/§7 — installed from the underside, unioned into
-//   the deck hollow). Owns: VESA 75x75 blind M4 heat-set-insert bosses (layout-patch-wall.md §15
-//   ruling H — architect ruling, blind bosses not through-holes, because the compact family's VESA
-//   pattern lands under the device), the Fishtail M4 reservation (reserve-only, pitch unknown —
-//   M7), strap slots (displaced off the reserved splitter bay per §7.1 correction 1), the splitter
-//   tie-down (mcc_splitter_tiedown(orient="edge")), and a minimal stacking-profile recess.
-//   Positions come from mcc_floor_keepout() (layout.scad) so this file never re-derives them.
+//   the deck hollow). Owns: the tool-less dovetail mount rail (D-15, rev 9, issue #25 — replaces
+//   VESA), the Fishtail M4 reservation (reserve-only, pitch unknown — M7), strap slots (displaced
+//   off the reserved splitter bay per §7.1 correction 1), the splitter tie-down
+//   (mcc_splitter_tiedown(orient="edge")), and a minimal stacking-profile recess.
+//   Positions come from mcc_floor_keepout() (layout.scad) so this file never re-derives them; this
+//   file also owns the D16 pairwise non-overlap assert over that same list (architecture.md §6,
+//   §13 D16 — exempting the concentric "case_tripod_insert"/"fishtail_reserve" pair, D19).
 //   `use`d only by lib/mcc/shell.scad (the L2 composition root) — never by cradle.scad/panel.scad/
 //   vents.scad, which must not `use` each other.
 // Includes:
@@ -19,103 +20,130 @@ include <constants.scad>
 use <util.scad>
 use <ports.scad>        // mcc_dev_slug() (assert messages)
 use <layout.scad>
-use <fasteners.scad>   // mcc_heat_set_boss(), mcc_m4_hole()
 use <poe_splitter.scad> // mcc_splitter_tiedown()
+use <rail.scad>         // mcc_rail_female_cut() -- D-15, rev 9, issue #25
 
-// Module: _mcc_floor_boss_from_below()
-// Description:
-//   Private. A PLAIN solid boss (no internal bore — see _mcc_floor_bore_from_below() below), base
-//   at world Z=0 (the case's exterior floor face) rising to world Z=h. Deliberately not built from
-//   mcc_heat_set_boss()'s combo (boss+internal bore): this boss's bottom cap is coplanar with the
-//   (already-solid) floor slab's own bottom face over its whole footprint, and a bore differenced
-//   only against the boss's own local geometry leaves the floor slab's un-bored material filling
-//   back in across that overlap, so the bore silently stops short of the exterior face instead of
-//   reaching it (same failure mode as cradle.scad's tripod boss — see its own comment). The
-//   matching bore is cut separately, in shell.scad's OUTER difference(), by
-//   _mcc_floor_bore_from_below() below via mcc_floor_bore_cut().
-// Arguments:
-//   od = boss outer diameter, mm.
-//   h  = boss height, mm.
-module _mcc_floor_boss_from_below(od, h) {
-    cyl(h = h, d = od, circum = true, anchor = BOTTOM, $fn = 64);
-}
-
-// Module: _mcc_floor_bore_from_below()
-// Description:
-//   Private. The bore counterpart to _mcc_floor_boss_from_below(): opens at world Z=0 (the
-//   exterior floor face) and reaches up into the boss by the insert's own bore depth.
-//   mcc_heat_set_bore()'s own convention opens its bore at LOCAL Z=0 extending into -Z, so a
-//   180 deg flip about X lands that open face at world Z=0 and the blind end at world Z=+depth.
-// Arguments:
-//   insert = insert record (constants.scad shape).
-module _mcc_floor_bore_from_below(insert) {
-    translate([0, 0, MCC_EPS])
-        rotate([180, 0, 0])
-            mcc_heat_set_bore(insert);
-}
-
-// Function: _mcc_vesa_positions()
-// Description:
-//   Private. The 4 VESA 75x75 hole centres, `vesa_pos` (default (0,0)) +- MCC_VESA75_PITCH/2.
-function _mcc_vesa_positions(vesa_pos = [0, 0]) =
-    [for (sx = [-1, 1]) for (sy = [-1, 1])
-        [vesa_pos[0] + sx * MCC_VESA75_PITCH / 2, vesa_pos[1] + sy * MCC_VESA75_PITCH / 2]];
+// Non-manifold-avoidance pattern this file follows for every additive floor feature: a plain solid
+// block/boss (base at world Z=0, the case's exterior floor face, rising to world Z=h) is unioned in
+// first, and its matching cut is applied SEPARATELY, in shell.scad's OUTER difference() — never a
+// bore/cut differenced only against the feature's own local geometry, which would be silently
+// backfilled by the overlapping, un-cut floor slab and stop short of the exterior face (same
+// failure mode as cradle.scad's tripod boss — see its own comment). mcc_rail_features_cut() below
+// is the current example (it replaces the retired mcc_floor_bore_cut(), architecture.md §6 rev 9).
 
 // Module: mcc_floor_features_add()
 // Usage:
 //   mcc_floor_features_add(dev, cfg);
 // Description:
-//   ADDITIVE floor features: the 4 VESA 75x75 blind M4 heat-set-insert bosses (skipped entirely
-//   when `cfg`'s "vesa" key is explicitly false — default true, layout-patch-wall.md §15 ruling H).
-//   A uniform boss height (M4 insert depth + margin) is used at all 4 points rather than a
-//   per-point height keyed to whether that point happens to land under the cradle deck on this
-//   particular SKU (2 of the 4 do, 2 don't, per §7.1 rev-5 correction 4) — where the deck already
-//   fills the same volume the boss simply embeds in it (redundant, harmless material); where it
-//   doesn't, the boss stands as a small free-standing post rising from the floor.
+//   ADDITIVE floor features: the mount-rail sill (D-15, rev 9, issue #25 — replaces VESA), a plain
+//   MCC_RAIL_LEN x MCC_RAIL_ROOT_W x MCC_RAIL_SILL_H solid block at (0, MCC_RAIL_Y), skipped
+//   entirely when `cfg`'s "rail" key is explicitly false (default true, mirroring the old "vesa"
+//   flag's off-switch convenience). Split into an ADD (here) + a separate CUT
+//   (mcc_rail_features_cut(), below) for the same non-manifold reason documented at the top of this
+//   file.
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "vesa" (default true).
+//   cfg = variant-config assoc-list. Optional key "rail" (default true).
 module mcc_floor_features_add(dev, cfg) {
-    vesa_flag = struct_val(cfg, "vesa");
-    vesa_on = is_undef(vesa_flag) ? true : vesa_flag;
+    rail_flag = struct_val(cfg, "rail");
+    rail_on = is_undef(rail_flag) ? true : rail_flag;
 
-    if (vesa_on) {
-        h = struct_val(MCC_INSERT_M4, "len") + 1 + 2; // bore depth (len+1) + 2 mm margin, mm.
+    if (rail_on) {
+        // Rail-in-floor assert (docs/plans/2026-09-09-mount-rail-and-brackets.md §1.5): MCC_RAIL_LEN
+        // must fit within the usable floor X-span for this dev/cfg -- reuses the panel-frame-band
+        // figure as the conservative bound (already L's tightest documented interior margin) --
+        // fails loudly if a future SKU is smaller than the compact family.
         l = mcc_case_layout(dev, cfg);
-        bay_x = struct_val(l, "splitter_bay_x"); bay_y = struct_val(l, "splitter_bay_y");
-        boss_r = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M4, "od") / 2;
-        for (p = _mcc_vesa_positions()) {
-            // T1-17-style: a VESA boss must not intrude into the reserved splitter bay footprint.
-            assert(p[0] + boss_r <= bay_x[0] || p[0] - boss_r >= bay_x[1]
-                || p[1] + boss_r <= bay_y[0] || p[1] - boss_r >= bay_y[1],
-                str("mcc: VESA boss at ", p, " intrudes into the reserved splitter bay ", bay_x, "x", bay_y,
-                    " on \"", mcc_dev_slug(dev), "\""));
-            translate([p[0], p[1], 0])
-                _mcc_floor_boss_from_below(boss_r * 2, h);
-        }
+        L = struct_val(l, "L");
+        assert(MCC_RAIL_LEN <= L - 2 * MCC_WALL - 2 * MCC_PANEL_FRAME_MIN,
+            str("mcc: MCC_RAIL_LEN=", MCC_RAIL_LEN, " does not fit the usable floor span on \"",
+                mcc_dev_slug(dev), "\" (L=", L, ")"));
+
+        translate([0, MCC_RAIL_Y, 0])
+            _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN, MCC_RAIL_ROOT_W], MCC_RAIL_SILL_H);
     }
 }
 
-// Module: mcc_floor_bore_cut()
-// Usage:
-//   mcc_floor_bore_cut(dev, cfg);
+// Module: _mcc_floor_boss_from_below_rect()
 // Description:
-//   SUBTRACTIVE counterpart to mcc_floor_features_add()'s VESA bosses (mirrors the "vesa" flag).
-//   Called by shell.scad in its OUTER difference() — after the floor slab and the bosses are
-//   already unioned together — so each bore genuinely punches through both (see
-//   _mcc_floor_boss_from_below()'s own comment for why cutting it only inside the boss's local
-//   geometry would leave it a few mm short).
+//   Private. A plain solid block (no internal cut), base at world Z=0 rising to world Z=h, centred
+//   in X/Y on the caller's own translate() — the rectangular counterpart to the non-manifold-
+//   avoidance pattern documented at the top of this file. The matching cut is applied separately,
+//   in shell.scad's OUTER difference(), via mcc_rail_features_cut() below.
+// Arguments:
+//   size = [x, y] footprint, mm.
+//   h    = block height, mm.
+module _mcc_floor_boss_from_below_rect(size, h) {
+    cuboid([size[0], size[1], h], anchor = BOTTOM);
+}
+
+// Module: mcc_rail_features_cut()
+// Usage:
+//   mcc_rail_features_cut(dev, cfg);
+// Description:
+//   SUBTRACTIVE counterpart to mcc_floor_features_add()'s rail sill (mirrors the "rail" flag).
+//   Called by shell.scad in its OUTER difference() — after the floor slab and the sill are already
+//   unioned together — immediately after (replaces) the old mcc_floor_bore_cut() call site, for the
+//   identical non-manifold reason documented at the top of this file. Retires mcc_floor_bore_cut()
+//   entirely (architecture.md §6 rev 9, R5) — not left behind as an empty module.
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "vesa" (default true).
-module mcc_floor_bore_cut(dev, cfg) {
-    vesa_flag = struct_val(cfg, "vesa");
-    vesa_on = is_undef(vesa_flag) ? true : vesa_flag;
-    if (vesa_on) {
-        for (p = _mcc_vesa_positions())
-            translate([p[0], p[1], 0])
-                _mcc_floor_bore_from_below(MCC_INSERT_M4);
+//   cfg = variant-config assoc-list. Optional key "rail" (default true).
+module mcc_rail_features_cut(dev, cfg) {
+    rail_flag = struct_val(cfg, "rail");
+    rail_on = is_undef(rail_flag) ? true : rail_flag;
+    if (rail_on) {
+        translate([0, MCC_RAIL_Y, 0])
+            mcc_rail_female_cut(len = MCC_RAIL_LEN);
     }
+}
+
+// Function: _mcc_floor_feature_overlap()
+// Description:
+//   Private, pure. True if two mcc_floor_keepout() rows (each [cx, cy, "circle"|"rect", size_or_d,
+//   label]) overlap, using the repo's own separation rule (layout-patch-wall.md §7.1: "15 mm
+//   centre-to-centre, or r1+r2+2.0 where larger" for two circles; a plain inflated-AABB test
+//   otherwise, since rect-vs-rect/circle-vs-rect have no simpler exact form and every rect feature
+//   here is axis-aligned).
+function _mcc_floor_feature_overlap(a, b) =
+    let(
+        ax = a[0], ay = a[1], bx = b[0], by = b[1],
+        // Half-extent in X/Y for each feature -- a circle's half-extent is its radius in both axes;
+        // a rect's is half its own [x,y] size.
+        a_hx = a[2] == "circle" ? a[3] / 2 : a[3][0] / 2,
+        a_hy = a[2] == "circle" ? a[3] / 2 : a[3][1] / 2,
+        b_hx = b[2] == "circle" ? b[3] / 2 : b[3][0] / 2,
+        b_hy = b[2] == "circle" ? b[3] / 2 : b[3][1] / 2,
+        sep  = (a[2] == "circle" && b[2] == "circle")
+            ? max(MCC_FLOOR_FEATURE_MIN_SEP, a_hx + b_hx + 2.0)
+            : MCC_FLOOR_FEATURE_EDGE_MIN
+    )
+    (abs(ax - bx) < a_hx + b_hx + sep) && (abs(ay - by) < a_hy + b_hy + sep);
+
+// Module: mcc_assert_floor_keepout_no_overlap()
+// Usage:
+//   mcc_assert_floor_keepout_no_overlap(dev, cfg);
+// Description:
+//   D16 (architecture.md §13, fixed by issue #25): asserts every pairwise combination of
+//   mcc_floor_keepout(dev, cfg)'s own rows does not overlap (per _mcc_floor_feature_overlap()
+//   above), EXCEPT the "case_tripod_insert"/"fishtail_reserve" pair, which is deliberately
+//   concentric at floor_center (D19, architecture.md §13, layout-patch-wall.md §17.2 R3) -- a
+//   reserve-only band may coincide with the feature it is anchored on; two features that BOTH cut
+//   real geometry may not. Called once from mcc_shell_base() alongside the rest of this file's
+//   floor-feature calls.
+// Arguments:
+//   dev = device record.
+//   cfg = variant-config assoc-list.
+module mcc_assert_floor_keepout_no_overlap(dev, cfg) {
+    rows = mcc_floor_keepout(dev, cfg);
+    n = len(rows);
+    for (i = [0:1:n - 2])
+        for (j = [i + 1:1:n - 1])
+            if (!((rows[i][4] == "case_tripod_insert" && rows[j][4] == "fishtail_reserve")
+               || (rows[i][4] == "fishtail_reserve" && rows[j][4] == "case_tripod_insert")))
+                assert(!_mcc_floor_feature_overlap(rows[i], rows[j]),
+                    str("mcc: floor features \"", rows[i][4], "\" and \"", rows[j][4],
+                        "\" overlap on \"", mcc_dev_slug(dev), "\" (D16)"));
 }
 
 // Module: mcc_floor_features_cut()
