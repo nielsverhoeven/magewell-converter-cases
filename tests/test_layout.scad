@@ -60,6 +60,11 @@ assert(struct_val(slots[3], "part") == "NAHDMI-W-B", "slot 4 part");
 
 // --- Fan / splitter bay / side-bolt (plan §2.4) ---
 assert(_mcc_near(struct_val(l, "fan_pos")[0], 96.95, 1e-3), str("fan_pos.x=", struct_val(l, "fan_pos")[0]));
+// Fan bay reserved AABB (D23, issue #36) -- the reservation of record, published even with fan=false.
+fbx = struct_val(l, "fan_bay_x"); fby = struct_val(l, "fan_bay_y"); fbz = struct_val(l, "fan_bay_z");
+assert(_mcc_near(fbx[0], 78.95, 1e-3) && _mcc_near(fbx[1], 93.95, 1e-3), str("fan_bay_x=", fbx));
+assert(_mcc_near(fby[0], -50.825, 1e-3) && _mcc_near(fby[1], -10.825, 1e-3), str("fan_bay_y=", fby));
+assert(fbz == [5.5, 45.5], str("fan_bay_z=", fbz));
 sbx = struct_val(l, "splitter_bay_x"); sby = struct_val(l, "splitter_bay_y"); sbz = struct_val(l, "splitter_bay_z");
 assert(_mcc_near(sbx[0], -93.95, 1e-3) && _mcc_near(sbx[1], -73.95, 1e-3), str("splitter_bay_x=", sbx));
 assert(_mcc_near(sby[0], -76.925, 1e-3) && _mcc_near(sby[1], -1.925, 1e-3), str("splitter_bay_y=", sby));

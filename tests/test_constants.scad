@@ -53,10 +53,29 @@ assert(MCC_END_ZONE_NEG_EXTRA_SPLITTER == 20.0,
     str("mcc test_constants: MCC_END_ZONE_NEG_EXTRA_SPLITTER = ", MCC_END_ZONE_NEG_EXTRA_SPLITTER,
         ", expected 20.0 (", MCC_SPLITTER_DEFAULT, " default)"));
 
+// Fans (architecture.md §13 D23, issue #36): MCC_FAN_DEFAULT/MCC_FAN_INTAKE_CLR/MCC_FAN_BAY_CLR are
+// read by both fan.scad and layout.scad -- pin them, and pin mcc_fan_spec()'s lookup for both
+// MCC_FANS rows.
+assert(MCC_FAN_DEFAULT == "NF-A4x10",
+    str("mcc test_constants: MCC_FAN_DEFAULT = ", MCC_FAN_DEFAULT, ", expected \"NF-A4x10\""));
+assert(MCC_FAN_INTAKE_CLR == 5.0,
+    str("mcc test_constants: MCC_FAN_INTAKE_CLR = ", MCC_FAN_INTAKE_CLR, ", expected 5.0"));
+assert(MCC_FAN_BAY_CLR == 2.0,
+    str("mcc test_constants: MCC_FAN_BAY_CLR = ", MCC_FAN_BAY_CLR, ", expected 2.0"));
+assert(struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame") == [40, 40, 10],
+    str("mcc test_constants: mcc_fan_spec(MCC_FAN_DEFAULT) frame = ",
+        struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame"), ", expected [40,40,10]"));
+assert(struct_val(mcc_fan_spec("NF-A6x25"), "frame") == [60, 60, 25],
+    str("mcc test_constants: mcc_fan_spec(\"NF-A6x25\") frame = ",
+        struct_val(mcc_fan_spec("NF-A6x25"), "frame"), ", expected [60,60,25]"));
+
 echo(str("mcc test_constants: MCC_GAP_FAR=", MCC_GAP_FAR,
     " MCC_SIDE_BOLT_PROUD=", MCC_SIDE_BOLT_PROUD,
     " MCC_END_ZONE_NEG_EXTRA_SPLITTER=", MCC_END_ZONE_NEG_EXTRA_SPLITTER,
-    " MCC_SPLITTER_DEFAULT=", MCC_SPLITTER_DEFAULT));
+    " MCC_SPLITTER_DEFAULT=", MCC_SPLITTER_DEFAULT,
+    " MCC_FAN_DEFAULT=", MCC_FAN_DEFAULT,
+    " MCC_FAN_INTAKE_CLR=", MCC_FAN_INTAKE_CLR,
+    " MCC_FAN_BAY_CLR=", MCC_FAN_BAY_CLR));
 
 echo("mcc test_constants: OK");
 

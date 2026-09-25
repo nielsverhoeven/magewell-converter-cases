@@ -416,6 +416,20 @@ function mcc_case_layout(dev, cfg) =
         fan_y = is_undef(fan_y_cfg) ? y_dev_c : fan_y_cfg,
         fan_pos = [L / 2, fan_y, z_conn_c],
 
+        // Fan bay reserved world AABB (architecture.md §6 reservation rule, §13 D23, issue #36).
+        // THIS IS THE RESERVATION OF RECORD -- mcc_fan_envelope() (fan.scad) is only its %-ghost.
+        // Reads MCC_FANS/MCC_FAN_INTAKE_CLR directly (L0): this file may never `use` fan.scad, an
+        // L1 geometry provider (§3). fan_bay_x is the SAME quantity shell.scad's T1-18(c) checks
+        // against -- it reads it from this struct, it does not recompute it.
+        // AXIS MAPPING (do not swap): the bay is the fan frame seen through the +X end wall, i.e.
+        // through rotate([0,-90,0]) -- fan-local X -> world +Z, fan-local Y -> world Y, fan-local
+        // +Z (frame depth + intake) -> world -X, inward from the wall's inner face.
+        fan_frame = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame"),
+        fan_bay_depth = fan_frame[2] + MCC_FAN_INTAKE_CLR,
+        fan_bay_x = [L / 2 - MCC_WALL - fan_bay_depth, L / 2 - MCC_WALL],
+        fan_bay_y = [fan_y - fan_frame[1] / 2, fan_y + fan_frame[1] / 2],
+        fan_bay_z = [z_conn_c - fan_frame[0] / 2, z_conn_c + fan_frame[0] / 2],
+
         // PoE-splitter bay, -X end, on edge (env[2]->X, env[0]->Y, env[1]->Z).
         splitter_ind = search([MCC_SPLITTER_DEFAULT], MCC_SPLITTERS)[0],
         splitter_env = struct_val(MCC_SPLITTERS[splitter_ind][1], "size"),
@@ -518,6 +532,25 @@ function mcc_case_layout(dev, cfg) =
         str("mcc: T1-43 fan switch has nowhere to go on \"", mcc_dev_slug(dev), "\" (switch_y_hi=",
             switch_y_hi, " < switch_y_lo=", switch_y_lo, ") -- set [\"fan_switch\", false] for this SKU ",
             "(layout-patch-wall.md §5, D-18)"))
+    // T1-46a-d: the fan bay's Y/Z footprint (architecture.md §6/§13 D23, layout-patch-wall.md
+    // §5/§9, issue #36). Evaluated UNCONDITIONALLY, like T1-18(c) -- §6 reserves the bay even when
+    // cfg.fan == false. All four pass by construction today (compact slack: 12.96 / 10.10 / 2.50 /
+    // 2.50 mm), so they are regression guards against a future change to fan_y, MCC_FANS,
+    // MCC_T_PATCH or the lid-fastener ring -- not fixes to a live failure.
+    assert(fan_bay_y[0] >= corners[1][1] + max(MCC_WALL / 2, boss_od_lid / 2) + MCC_FAN_BAY_CLR - MCC_EPS,
+        str("mcc: T1-46a fan bay -Y edge ", fan_bay_y[0], " is within MCC_FAN_BAY_CLR=", MCC_FAN_BAY_CLR,
+            " of the (+X,-Y) corner lid-fastener boss/gusset at y=", corners[1][1], " on \"",
+            mcc_dev_slug(dev), "\""))
+    assert(fan_bay_y[1] <= W / 2 - MCC_T_PATCH - d_bay_free - MCC_FAN_BAY_CLR + MCC_EPS,
+        str("mcc: T1-46b fan bay +Y edge ", fan_bay_y[1], " is within MCC_FAN_BAY_CLR=", MCC_FAN_BAY_CLR,
+            " of the connector bay's plug envelope at y=", W / 2 - MCC_T_PATCH - d_bay_free, " on \"",
+            mcc_dev_slug(dev), "\""))
+    assert(fan_bay_z[0] >= MCC_FLOOR_T - MCC_EPS,
+        str("mcc: T1-46c fan bay bottom ", fan_bay_z[0], " is below the interior floor on \"",
+            mcc_dev_slug(dev), "\""))
+    assert(fan_bay_z[1] <= MCC_FLOOR_T + H_int + MCC_EPS,
+        str("mcc: T1-46d fan bay top ", fan_bay_z[1], " is above the interior ceiling on \"",
+            mcc_dev_slug(dev), "\""))
     [
         ["L", L], ["W", W], ["H", H], ["H_int", H_int],
         ["ez_neg", ez_neg], ["ez_pos", ez_pos],
@@ -528,6 +561,7 @@ function mcc_case_layout(dev, cfg) =
         ["n_slots", n_slots], ["pitch", pitch], ["slot_x", slot_x],
         ["d_bay_free", d_bay_free],
         ["fan_pos", fan_pos], ["fan_y", fan_y],
+        ["fan_bay_x", fan_bay_x], ["fan_bay_y", fan_bay_y], ["fan_bay_z", fan_bay_z],
         ["switch_pos", switch_pos],
         ["splitter_bay_x", splitter_bay_x], ["splitter_bay_y", splitter_bay_y], ["splitter_bay_z", splitter_bay_z],
         ["side_bolt_x", side_bolt_x], ["side_bolt_z", side_bolt_z],

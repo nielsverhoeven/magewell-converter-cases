@@ -17,7 +17,8 @@ use <ports.scad>
 use <layout.scad>
 use <panel.scad>       // mcc_panel_cutout(), mcc_panel_fixing_pos() indirectly via layout.scad
 use <fasteners.scad>
-use <fan.scad>
+use <fan.scad>         // mcc_fan_envelope() -- the reservation ghost in mcc_shell_base(). Do not
+                       // remove: an unknown module call only WARNS, it does not fail the render.
 use <switch.scad>
 use <poe_splitter.scad>
 use <cradle.scad>
@@ -373,8 +374,10 @@ module mcc_shell_base(dev, cfg) {
     // borrowed lateral one.
     pos_ext = [for (p = mcc_ports_external(dev)) if (mcc_port_face(p)[0] > 0) p];
     axial_terms = [for (p = pos_ext) mcc_plug_axial(mcc_port_kind(p))];
-    fan_env_depth = struct_val(mcc_fan_spec(MCC_FAN_DEFAULT), "frame")[2] + 5;
-    assert(struct_val(l, "x_dev_hi") + max(concat([0], axial_terms)) <= L / 2 - MCC_WALL - fan_env_depth + MCC_EPS,
+    fan_bay_x = struct_val(l, "fan_bay_x"); // single source of truth: layout.scad's
+                                             // mcc_case_layout() (constants.scad
+                                             // MCC_FAN_INTAKE_CLR) -- no local recompute (D23, #36).
+    assert(struct_val(l, "x_dev_hi") + max(concat([0], axial_terms)) <= fan_bay_x[0] + MCC_EPS,
         str("mcc: T1-18(c) +X axial cable clearance fails on \"", mcc_dev_slug(dev), "\""));
     // Reservation rule (architecture.md §6): the splitter bay must never intrude into the device's
     // own cradle footprint or the far-wall duct.
@@ -468,6 +471,22 @@ module mcc_shell_base(dev, cfg) {
 
             mcc_floor_features_cut(dev, cfg);
         }
+
+        // Fan bay reservation ghost (architecture.md §6 rev 12, §13 D23, issue #36). The
+        // reservation of RECORD is numeric -- fan_bay_x/y/z from mcc_case_layout(), enforced by
+        // T1-46a-d there and by T1-18(c) above. This is its review-only visualization:
+        // mcc_fan_envelope() is `%`-ed and gated behind MCC_SHOW_GHOST (default false), so it emits
+        // nothing in any export and no golden can move.
+        // TRANSFORM -- do NOT copy vents.scad's. mcc_fan_cutout()'s local Z spans the wall and is
+        // placed with rotate([0,90,0]) (local +Z -> world +X, outward); mcc_fan_envelope()'s local
+        // Z starts at the mounting plane and grows INTO the interior (fan.scad header), so it
+        // needs rotate([0,-90,0]) (local +Z -> world -X). With rotate([0,90,0]) the whole
+        // reservation lands OUTSIDE the case and, being a ghost, no check would report it.
+        // The origin comes from the struct (fan_bay_x[1] == L/2 - MCC_WALL) so the ghost and the
+        // asserted AABB cannot drift apart.
+        translate([fan_bay_x[1], fan_pos[1], fan_pos[2]])
+            rotate([0, -90, 0])
+                mcc_fan_envelope();
     }
 }
 
