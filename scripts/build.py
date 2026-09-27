@@ -165,18 +165,25 @@ def discover_coupons() -> list[Target]:
 
 
 def discover_brackets() -> list[Target]:
-    """models/brackets/*.scad — single-part flat plates (VESA sandwich bracket, truss bracket),
-    structurally identical in shape to a coupon target (no base/lid split, no device, no variant
-    config), so this mirrors discover_coupons() exactly rather than forcing them through
-    discover_models()'s case.scad-shaped mechanism (issue #26, architecture.md §3 rev 9,
-    layout-patch-wall.md §17.2)."""
+    """models/brackets/*.scad — flat plates (VESA sandwich bracket, arch TV bracket, truss
+    bracket), structurally identical in shape to a coupon target (no device, no variant config), so
+    this mirrors discover_coupons() exactly rather than forcing them through discover_models()'s
+    case.scad-shaped mechanism (issue #26, architecture.md §3 rev 9, layout-patch-wall.md §17.2).
+    Single part named after the file stem by default, unless the file declares a
+    `// build.py: parts = a, b` marker listing multiple printable parts (issue #47 — a bracket may
+    be more than one printed plate, e.g. arch-tv-bracket.scad's "arm"/"centre")."""
 
     if not BRACKETS_DIR.is_dir():
         return []
     targets = []
     for scad_path in sorted(BRACKETS_DIR.glob("*.scad")):
         stem = scad_path.stem
-        targets.append(Target(name=f"brackets/{stem}", scad_path=scad_path, parts=[stem], kind="bracket"))
+        try:
+            text = scad_path.read_text(encoding="utf-8")
+        except OSError:
+            text = ""
+        parts = _bracket_parts(text) or [stem]
+        targets.append(Target(name=f"brackets/{stem}", scad_path=scad_path, parts=parts, kind="bracket"))
     return targets
 
 
@@ -213,15 +220,31 @@ def discover_models() -> list[Target]:
 # exactly like base/lid/panel.
 _EXTRA_PARTS_MARKER_RE = re.compile(r"//\s*build\.py:\s*extra_parts\s*=\s*(.+)")
 
+# A models/brackets/*.scad file can declare its own printable part list beyond "named after the
+# file stem" via a `// build.py: parts = <name>[, <name>...]` comment marker (issue #47 —
+# arch-tv-bracket.scad's "arm"/"centre"). Distinct from _EXTRA_PARTS_MARKER_RE above (that one
+# requires "extra_parts" after "build.py:", this one requires "parts" with nothing before it, so
+# neither regex can match the other's marker). Anchored to the start of a line so prose that merely
+# quotes the marker mid-sentence is not picked up as a part list.
+_PARTS_MARKER_RE = re.compile(r"^\s*//\s*build\.py:\s*parts\s*=\s*(.+)", re.MULTILINE)
 
-def _extra_parts(case_scad_text: str) -> list[str]:
+
+def _marker_list(text: str, regex: re.Pattern[str]) -> list[str]:
     names: list[str] = []
-    for m in _EXTRA_PARTS_MARKER_RE.finditer(case_scad_text):
+    for m in regex.finditer(text):
         for raw in m.group(1).split(","):
             name = raw.strip()
             if name and name not in names:
                 names.append(name)
     return names
+
+
+def _extra_parts(case_scad_text: str) -> list[str]:
+    return _marker_list(case_scad_text, _EXTRA_PARTS_MARKER_RE)
+
+
+def _bracket_parts(bracket_scad_text: str) -> list[str]:
+    return _marker_list(bracket_scad_text, _PARTS_MARKER_RE)
 
 
 # Print pose per part (scripts/bambu_project.py POSES). Defaults: a model's "lid" and "panel" are
@@ -1218,6 +1241,12 @@ def cmd_golden(args: argparse.Namespace) -> int:
 
             if not gpath.exists():
                 print(f"  [FAIL] {label}  missing golden {gpath.relative_to(REPO_ROOT)} (run `golden --update` to create it)")
+                # Goldens can only be produced by the pinned OpenSCAD nightly (tessellation/Manifold
+                # differ from a distro build), which a developer's own container cannot download —
+                # print the computed payload as one JSON line so it can be copied straight out of
+                # the CI log and pasted into a new tests/golden/**/*.json file, rather than needing
+                # to download the CI "exports" artifact by hand.
+                print(f"    would-be golden {gpath.relative_to(REPO_ROOT)}: {json.dumps(current, sort_keys=True)}")
                 all_ok = False
                 continue
 

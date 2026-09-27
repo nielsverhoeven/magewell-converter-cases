@@ -155,6 +155,29 @@ form for the retention target this depends on).
 Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
 user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
 
+### `arch-tv-bracket.scad` (issue #47)
+
+`arch-tv-bracket.scad` screws **directly** onto a TV's top two VESA 400 screw positions (M8); no
+VESA plate. Printed once per mounting point, not per case. **Do not print for use before M15
+(rail-latch), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
+defect tracked as issue #48) are closed** — see `models/brackets/README.md`.
+
+| Item | Part number | Qty | Notes | Source |
+|---|---|---|---|---|
+| `arch-tv-bracket` arm | `models/brackets/arch-tv-bracket.scad` part `arm`, ASA | 2 | Same STL printed twice — the left arm is the right one rotated (not mirrored), see the file's own `PLAN-ASSUMPTION-4` header note | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.1 |
+| `arch-tv-bracket` centre | same file, part `centre`, ASA | 1 | Carries the rail; sits stacked on the two arms' laps | `docs/plans/2026-09-27-arch-tv-bracket.md` §1.5 |
+| M8 socket head cap screw (ISO 4762) | generic | 2 | **Length: MEASURE, do not guess.** Under-head length = `pad_clamp_t` (echoed by the render, `-D part="arm"` or `"centre"`; 7.0 mm at the current parameters) + the usable thread depth of *your* TV's VESA inserts, minus >= 1 mm, rounded **down** to a stock length. Too long can damage the TV panel | measurement M18b; user decision #47 |
+| M8 flat washer (ISO 7089, ⌀16) | generic | 2 | Under the head, in the pad counterbore — spreads the clamp load on ASA | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.4 (`assumed` ISO nominal, `PLAN-ASSUMPTION-9`) |
+| M8 washer, as a spacer | generic | 0–4 (situational) | Only if the TV back is not flat along an arm (arms bear directly on the TV — the centre never touches it); adding spacers lengthens the required screw by their thickness | risk R-F (proposed R33) |
+| M3 socket head cap screw M3×10 (ISO 4762) | generic | 8 | Lap joints, 4 per side, driven from the top face | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.3 derivation |
+| M3 heat-set insert Ruthex RX-M3x5.7 | RX-M3x5.7 | 8 | In the arm laps, installed from the top face | `knowledge/components/fasteners-and-hardware.md:35` (length), `:40` (hole diameter) |
+
+Deviations from the issue's own text, flagged for the user at PR review (`PLAN-ASSUMPTION-1`,
+`-3`): the lap joints use **M3**, not M4 (a sourced insert, blind in the 8 mm arm, >10x pull-out
+margin — `fasteners-and-hardware.md:56`, `:59`); and the **centre plate stands 8 mm off the TV** —
+only the two arms bear directly on it, forced by the case's own +X slide-on sweep over the right
+arm's M8 pad (see the `.scad` file's own header comment for the full Z-stack derivation).
+
 ---
 
 ## Purchase hints (EU)

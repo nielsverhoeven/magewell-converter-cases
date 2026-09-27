@@ -38,6 +38,7 @@ true for coupons, whose single part is named after the file stem), otherwise
 | `coupons/neutrik-tile` | `neutrik-tile` | `tests/golden/coupons/neutrik-tile.json` |
 | `pro-convert-hdmi-tx` | `base` | `tests/golden/pro-convert-hdmi-tx.base.json` |
 | `pro-convert-hdmi-tx` | `lid` | `tests/golden/pro-convert-hdmi-tx.lid.json` |
+| `brackets/arch-tv-bracket` | `arm` | `tests/golden/brackets/arch-tv-bracket.arm.json` |
 
 ## Tolerance policy
 
