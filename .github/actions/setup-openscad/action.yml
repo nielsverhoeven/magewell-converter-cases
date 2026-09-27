@@ -51,6 +51,18 @@ runs:
           libxcb-xinerama0 libxcb-xkb1 libxcb-cursor0 libxcb-shape0 libxcb-randr0 \
           libfontconfig1 libfreetype6 libdbus-1-3 fontconfig fonts-dejavu-core
 
+    - name: TEMP re-pin probe — list Linux snapshots + published sha256 (remove before merge)
+      shell: bash
+      run: |
+        set -uo pipefail
+        curl -fsSL https://files.openscad.org/snapshots/ -o /tmp/snap.html || { echo "listing fetch failed"; exit 0; }
+        grep -oE 'OpenSCAD-[^"<> /]*x86_64[^"<> /]*\.AppImage' /tmp/snap.html | sort -u -V > /tmp/snaps.txt
+        echo "linux x86_64 AppImages listed: $(wc -l < /tmp/snaps.txt)"
+        cat /tmp/snaps.txt
+        for f in $(tail -3 /tmp/snaps.txt); do
+          echo "SHA256FILE $f: $(curl -fsSL "https://files.openscad.org/snapshots/$f.sha256" || echo none)"
+        done
+
     - name: Install pinned OpenSCAD nightly (AppImage)
       shell: bash
       env:
