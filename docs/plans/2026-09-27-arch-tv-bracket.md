@@ -563,3 +563,181 @@ Branch `feature/issue-47-arch-tv-bracket` off `main` (confirm with the `git-flow
 9. **ISO 4762 / ISO 7089 head and washer dimensions** are used as nominal standards, marked
    `assumed`, because `knowledge/components/fasteners-and-hardware.md` does not carry them yet —
    suggest a researcher follow-up to source and add them.
+
+---
+
+## 12. Architect verdict (2026-09-27)
+
+(Numbered §12: §9 is this plan's risk list and §10–§11 exist.)
+
+**Verdict: APPROVE WITH CHANGES — 11 binding changes (B1–B11).** The concept, the Z stack, the
+one-file/two-part split and the `build.py` marker are sound, and most numbers reproduce. But one of
+the plan's own Tier-1 asserts **fails at the placeholder**, so the first render would go red (B1).
+Separately, the review found a **defect in the rail interface that #47 inherits from #25** (F1). It
+does not block this PR, but it blocks printing *any* bracket for use.
+
+### 12.1 What was re-derived (independently, numeric sweep over `TV_TOP_CLEAR ∈ [73.2, 184.99]`)
+
+| Claim | Plan | Architect | Status |
+|---|---|---|---|
+| `CASE_TOP_ABOVE_RAIL`, `rise` @150, range | 63.175 / 76.825 / `TV_TOP_CLEAR ≥ 73.175`, `rise < 111.825` | same | ✓ |
+| `L_max`, `W_max` | 211.5 (`sdi-plus`), 166.35 (`hdmi-plus`, `…-4k`) | same, cross-checked against the committed `tests/golden/*.base*.json` / `.lid.json` bboxes (shipped cfgs) | ✓ |
+| Pad cannot be cleared from above | needs `rise > 118.175`, max 111.825 | same | ✓ |
+| Sweep condition ⇒ `T ≥ 8` | `2T + 3 − (T + 9) ≥ 2` | same; case base bbox `min z = 0` on all 8 SKUs, so nothing protrudes below the case floor | ✓ |
+| `alpha`, `A` @150 | 36.19°, 130.10 | same | ✓ |
+| Arm bbox | 165.1 / ≤ 188.4 × 40 × 17 | same | ✓ |
+| Centre bbox | 237.8 / ≤ 239.7 × 50 × 17 | 239.70 max X (worst at the top of the range), 50.0 Y, Z `8 + MCC_RAIL_SILL_H + MCC_RAIL_END_STOP_H` = 17 (matches `tv-bracket.json`'s rail height 9) | ✓ |
+| Rail keep-out | x `[−81, 75]`, y `[−7.31, +10.91]` | same | ✓ |
+| **A8, M3 counterbore to rail keep-out** | **worst ≥ 4.7 mm** | **open-end (+X) lap: ≥ 4.87 ✓. End-stop (−X) lap: −0.60 mm at 150, −1.13 mm at 184.9 → the counterbore overlaps the end-stop flange/pedestal footprint.** Positive only below `TV_TOP_CLEAR ≈ 135` | **✗ → B1** |
+| A9, rib vs centre body | ≥ 3.5 | ≥ 4.85 (segment check, not just corners) | ✓ (B2 hardens the assert) |
+| M3 stack | seat 12.7, tip 2.7, 5.3 engaged, 1.3 skin | same | ✓ |
+| M8 pad | clamp 7.0, head 0.4 below 17, boss wall 6.7 | same; ISO nominals (k 8, washer 16 × 1.6; M3 dk 5.5, k 3) are correct standard values | ✓ |
+| Structure | ≈ 1° static / 3° at `F_D` | reproduced. See N1: `⅓bt³` overstates `J` by ≈ 13 % for b/t = 5. Separately, bearing on the TV back makes the real arm torsion much stiffer. Conclusion unchanged | ✓ |
+| Citations | `fasteners-and-hardware.md:17, :22, :58` | **stale.** `:17`/`:22` now hold unrelated text; the figures are at `:35` (RX-M3x5.7, 5.7 mm), `:40` (4.0 mm hole) and `:59` (ASA pull-out `unknown`). `:56`, `fdm-…:17/:67/:68/:127/:227`, `pro-convert-hdmi-plus.md:18`, `pro-convert-hdmi-tx.md:17` and every code `file:line` check out | **✗ → B5** |
+| `mcc_bbox_ok()` 250 vs `MAX_AXIS_MM` 244 | flagged | `build.py` is right: `MCC_BED_MARGIN` is a per-side margin. `util.scad:43` and the `architecture.md` §9 Tier-1 row are wrong | → D26, B9 |
+
+### 12.2 Binding changes
+
+- **B1 — centre the rail's physical footprint on the centre plate (fixes the A8 failure).** In
+  `models/brackets/arch-tv-bracket.scad` add
+  `RAIL_X = MCC_RAIL_END_STOP_L / 2; // = 3.0, derived: moves the rotated footprint [−81, 75] to [−78, 78]`.
+  Use it consistently in four places:
+  1. the rail call `translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male();`
+  2. the keep-out rectangle, x `[RAIL_X − MCC_RAIL_LEN/2 − MCC_RAIL_END_STOP_L, RAIL_X + MCC_RAIL_LEN/2]`, still built from `MCC_RAIL_*`
+  3. the case mate transform `translate([RAIL_X, rise + MCC_RAIL_Y, Z_RAIL + MCC_FLOOR_T]) rotate([0, 0, 180])`
+  4. A13, which becomes `l_max/2 + abs(RAIL_X) + 10 ≤ HALF_PITCH − PAD_BOSS_D/2`.
+
+  A8 must evaluate **each lap separately** against the asymmetric rectangle. Re-derived worst case
+  with B1: **1.87 mm on both laps** (≥ `ARCH_KEEPOUT_CLR` = 1.0). Correct §3.2's table to 1.87.
+  If F1's fix ever drops the end-stop flange, `RAIL_X` becomes 0 automatically. Do **not** fix this
+  by moving `XJ`: the centre bbox has only 4.3 mm left.
+- **B2 — A9 checks the rib edges, not only their end corners.** For each of the 4 rib edge lines
+  (arm-local `y = ±ARM_W/2`, `±(ARM_W/2 − RIB_T)`), sample from the rib end to `x = 0` in ≤ 1 mm
+  steps. Assert every sample is ≥ `ARCH_KEEPOUT_CLR` outside the centre body rectangle, reusing
+  `_mcc_arch_tv_circle_rect_gap()` with `r = 0`. A corner can lie outside the rectangle via `y`
+  while the edge re-enters it further along. Today the margin is 4.85 either way, but the assert
+  must be correct for every future `CENTRE_W` or `XJ`.
+- **B3 — the UP arrow gets a size and an assert.** Add `ARROW_L = 8.0`, `ARROW_W = 6.0` (`assumed`,
+  cosmetic). Put the arrow centre at centre-local
+  `(−30, (KEEPOUT_Y_MAX + CENTRE_W/2) / 2)`, i.e. `y ≈ 15.45`, not the hand-typed `+14`. Add
+  **T1-60**: the arrow's bbox stays ≥ `ARCH_KEEPOUT_CLR` inside the body edge and ≥ `ARCH_KEEPOUT_CLR`
+  outside the rail keep-out rectangle. At `+14` with an unspecified size, a 6 mm arrow would sit
+  0.09 mm off the latch nub's keep-out.
+- **B4 — assert ids.** A1–A13 become **T1-47 … T1-59** in order, plus B3's **T1-60**. Every assert
+  message carries its id (the highest in the repo today is T1-46).
+- **B5 — use the correct citations** in code comments, assert messages and the BOM rows:
+  `knowledge/components/fasteners-and-hardware.md:35` (RX-M3x5.7, 5.7 mm), `:40` (4.0 mm hole),
+  `:56` (≈ 1400 N, PLA), `:59` (ASA/PETG/PC pull-out `unknown`). Do **not** copy
+  `constants.scad`'s own stale `:17`/`:22` (follow-up, N4).
+- **B6 — correct the slide-on travel.** The case can only engage once its leading end wall passes
+  the rail's open end (see F1), so engagement starts at case centre
+  `x = RAIL_X + MCC_RAIL_LEN/2 + L/2`, not `+MCC_RAIL_LEN`.
+  - Add `slide_clear = MCC_RAIL_LEN/2 + l_max/2` (= 180.75) to the geom struct and the `echo()`
+    summary.
+  - `assembly_sweep` shifts the ghost case by `MCC_RAIL_LEN/2 + L_ghost/2`.
+  - `models/brackets/README.md` and M18c state: "free space to the right of the mounted case's right
+    edge ≥ `slide_clear` (≈ 181 mm), plus hand room, from 19 to 70 mm off the TV back" (replaces
+    "≈ 150 mm").
+  - Fix §1.3's first paragraph to match. The Z-stack conclusion is unchanged: the case still passes
+    over the right pad.
+- **B7 — one list of devices, and a hook for the next SKU.** Collect the 8 device records into one
+  named list, `_ARCH_TV_DEVS = [MCC_DEV_…, …]`, consumed by `_mcc_arch_tv_envelope_max()`. Its
+  header comment says "a new SKU must be added here". Also add one line to
+  `.claude/skills/new-case-variant/SKILL.md`'s checklist: "if the new case can hang on
+  `models/brackets/arch-tv-bracket.scad`, add its device include and record to `_ARCH_TV_DEVS`, then
+  re-golden `brackets/arch-tv-bracket`." Reason: the IP-decoder family (120 × 79.3) is wider than
+  the Plus family. If it were missed, A2 would silently pass while the case stuck up past the TV's
+  top edge, breaking a user decision.
+- **B8 — the CI change, narrowed.** On "Upload exports" in `.github/workflows/render.yml` use
+  `if: ${{ !cancelled() }}`, not `if: always()`. The workflow has `cancel-in-progress: true`, and
+  `always()` also uploads partial exports from superseded runs. Put it in its **own commit**
+  (`ci: upload exports even when build.py all fails`) so it can be reviewed and reverted on its own.
+  No security objection: the step runs no code, needs no secrets, and uploads only generated
+  STL/3MF/summary/manifest files (fork PRs run with a read-only token).
+- **B9 — A1 (T1-47) asserts the stricter cap, written as an expression.** Assert every bbox axis
+  `≤ MCC_BUILD − 2 * MCC_BED_MARGIN`, never a literal `244`, and cite **D26** in the message.
+  `mcc_bbox_ok()` may be called as well but is not the gate. Do **not** change `util.scad` in this PR
+  (D26 has its own follow-up).
+- **B10 — print gate wording.** The `models/brackets/README.md` and `print-check` `SKILL.md` rows
+  read: "Do not print for use before **M15** (rail-latch), **M18** (TV measurements) and **R38**
+  (rail entry/interference, F1) are closed." The README also says that the released STL is rendered
+  for the **placeholder** `TV_TOP_CLEAR = 150`, and that a measured TV needs
+  `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
+- **B11 — the PR body names the two deviations from the issue text** so the user can veto them at
+  review:
+  - M3 instead of M4 lap screws (PLAN-ASSUMPTION-1).
+  - The centre stands 8 mm off the TV; only the arms touch it (PLAN-ASSUMPTION-3).
+
+  It also lists M18 and R38, and states "no existing golden moves; `tv-bracket.json` unchanged".
+
+### 12.3 F1 — inherited from #25, escalated, not fixed here (proposed **R38**)
+
+Evidence: an intersection render (OpenSCAD 2021.01, CGAL) of the case floor, the sill and
+`mcc_rail_female_cut()` under `tv-bracket.scad`'s own mate transform, against the rotated
+`mcc_rail_male()`. Four problems:
+
+- **(a) No entry path.** The female groove is **blind at both ends**: 150 mm long in a 194.9 or
+  211.5 mm floor, and nothing in `mounts.scad` or `shell.scad` runs it out through an end wall. The
+  male taper stands 4 mm above the case's exterior floor plane, so no case can slide on, and the
+  dovetail stops it being lowered on.
+- **(b) The end stop sits in the floor.** At full mate the end-stop flange occupies
+  `x ∈ [75, 81]`, case-local `z ∈ [0, 6]`, which **intersects the solid case floor (263 mm³)**. The
+  stop concept (the flange hits un-grooved floor at `len/2`) contradicts any run-out on the entry
+  side.
+- **(c) The latch arm hits the groove flank.** The arm stands on the nominal root-width line, but
+  the groove is tapered and the latch pocket covers only the nub. The arm intersects the groove
+  flank/floor over `x ∈ [60, 69]` (42 mm³).
+- **(d) The nub pocket is too shallow.** It does not account for `MCC_RAIL_LATCH_ARM_T`: the nub
+  pokes 0.3 mm past it.
+
+The `rail-latch` coupon cannot reveal (a) or (b): its female plinth is exactly `LEN` long, so the
+groove is open at both ends and the plinth's end face acts as the stop. It is also not modelled
+mated.
+
+**Ruling:** open a separate ticket against `lib/mcc/rail.scad` / `mounts.scad` (an interface
+redesign). It blocks use of *both* brackets and of the M15 pull test's meaning; it does **not**
+block this PR. The arch bracket derives every rail-dependent value (keep-out, Z bbox, `RAIL_X`,
+`slide_clear`) from `MCC_RAIL_*`, so it absorbs the fix with a re-golden and no code edit.
+
+### 12.4 Non-binding notes
+
+- **N1.** For torsion use `J ≈ β·b·t³` with `β ≈ 0.29` at b/t = 5 (≈ 6130 mm⁴, not 6990). Tilt
+  rises ≈ 13 %, still ≈ 1° static.
+- **N2.** Sink the rail foot and the arm ribs `MCC_EPS` into their plates (the `rail-latch.scad`
+  lesson). `tv-bracket` passes `parts == 1` with coincident faces today, so this is optional.
+- **N3.** Keep `_mcc_arch_tv_envelope_max()` cheap. A `use`d file re-evaluates its top-level
+  assignments per call, and each call runs 8 × `mcc_case_layout()`. That is fine for 3 smoke values;
+  do not add a large sweep to the smoke test.
+- **N4.** Follow-up: `constants.scad:85-95` cites `fasteners-and-hardware.md:17/:22`, which are now
+  `:35/:40`.
+- **N5.** M18d acceptance (proposed, `assumed`): static rail tilt ≤ 2° after 24 h with the heaviest
+  Plus SKU. If it fails, set `ARCH_PLATE_T = 10` and re-derive.
+- **N6.** The README should say that the TV's top VESA holes must not also carry another mount
+  (direct mount by user decision).
+
+### 12.5 PLAN-ASSUMPTION rulings
+
+| # | Ruling |
+|---|---|
+| 1 | **RATIFIED.** M3: sourced insert, blind in 8 mm, > 10× pull-out margin. M4 would re-derive the whole Z stack. The fastener size is not among the user's fixed decisions, but the PR body flags it for veto (B11) |
+| 2 | **RATIFIED as `assumed`.** Both values stay named parameters with `-D` override. No print for use before M18a (B10) |
+| 3 | **RATIFIED.** Re-derived (§12.1). The centre's 8 mm stand-off is forced by the +X sweep, not chosen. This does not re-open the direct-mount decision: the arms carry and bear on the TV. Stated in the PR (B11) |
+| 4 | **RATIFIED.** The arm is symmetric about its own axis; the left arm is `rotate(alpha)`, a proper rotation; the laps land at `(±XJ, rise)` ✓. One STL, qty 2 in the BOM |
+| 5 | **RATIFIED as a precedent, with conditions.** The architect records these in `architecture.md` §9: a test may `use` (never `include`) a `models/**` file; `lib/**` never references `models/**`; the model keeps all Tier-1 asserts in a public assert module, which it also calls at top level (`use` skips bare top-level asserts); the test never assigns `part`; public symbols carry the file's `mcc_arch_tv_` prefix |
+| 6 | **RATIFIED** with B3 (defined size, T1-60). A cue, not a key (R-B stands) |
+| 7 | **RATIFIED.** The `parts` marker is the right mechanism: it mirrors `extra_parts`, keeps every shared lap/rise parameter in one file, and is inert for `tv-bracket`. One file per part would need either L0 pollution or a shared `.scad` that `discover_brackets()` would glob as a target. The CI change is accepted with B8 |
+| 8 | **RATIFIED.** Every material and mass figure is `assumed` and labelled so. `T = 8` is set by geometry; stiffness is only corroborative. M18d with N5's threshold is the real check |
+| 9 | **RATIFIED.** ISO 4762/7089 nominals are correct standard values and properly labelled `assumed`, which is not an invented dimension. Researcher follow-up: source them into `knowledge/components/fasteners-and-hardware.md` |
+| ¹ bbox | **Deviation D26.** Intended rule `MCC_BUILD − 2·MCC_BED_MARGIN` (244, per-side margin); violations at `lib/mcc/util.scad:43` and the `architecture.md` §9 Tier-1 row (250). Fix owner: a separate small ticket (change `util.scad`, prove it golden-neutral: every current caller is ≤ 230, and update §9). This PR asserts 244 explicitly (B9) |
+
+**Ids the architect will record after merge (not the developer):**
+
+- **T1-47 … T1-60**, assert ids (B4).
+- **R30 … R37**, the plan's R-A … R-H in order.
+- **R38**, F1.
+- **M18a–d**, the TV measurements.
+- **D26**, the bbox cap.
+- **`architecture.md` rev 13, §3 rule update.** A bracket may `include` device data files, read-only,
+  for previews or envelope derivation, and may list multiple parts via `// build.py: parts = …`.
+  This legitimises `tv-bracket.scad:77` and B7.
+- **§9**, the PLAN-ASSUMPTION-5 test precedent.
