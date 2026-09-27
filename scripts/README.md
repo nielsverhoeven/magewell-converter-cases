@@ -51,9 +51,9 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 | Command | Does |
 |---|---|
 | `doctor` | Print resolved OpenSCAD path/version, BOSL2 submodule SHA, venv/trimesh status, and every discovered coupon/bracket/model target. Run this first. |
-| `render --all` | Render every discovered coupon, bracket, and model part to STL in `exports/`. |
+| `render --all` | Render every discovered coupon, bracket, and model part. Per part: `<part>.model.stl` (OpenSCAD's model frame — goldens, STEP), `<part>.stl` (print pose, on the X1C bed centre) and `<part>.3mf` (single-plate Bambu Studio project); per model also `<slug>.3mf` (the whole case on its plates). Print pose: `print_pose()` in `build.py`, overridable per part with `// build.py: print_pose = <part>:<pose>`. See architecture.md §8 rev 13. |
 | `render coupons/neutrik-tile` | Render one coupon by name. |
-| `render coupons/neutrik-tile --format both` | Also emit `.3mf`. |
+| `render coupons/neutrik-tile --format stl` | Only the print-pose `.stl` (default `both` also writes the `.3mf` project). |
 | `render brackets/tv-bracket` | Render one bracket by name — `models/brackets/*.scad`, discovered by `discover_brackets()` (mirrors `discover_coupons()`: single-part flat plates, no base/lid split, no device record). |
 | `render pro-convert-hdmi-tx --part base --part lid` | Render specific parts of a model. |
 | `render path/to/some.scad --part base -D foo=1` | Render an ad-hoc `.scad` file with extra `-D` overrides. |
@@ -61,12 +61,14 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 | `step pro-convert-for-ndi-to-hdmi` | Convert one target's already-rendered STL(s) to `exports/<target>/<part>.step` — a B-rep with coplanar facets merged (`ShapeUpgrade_UnifySameDomain`), curved surfaces still faceted. Needs `render` to have run first. Records backend + face counts (before/after unify) into `<part>.manifest.json`'s `"step"` key. |
 | `step --all` | STEP-convert every discovered target. Warns and exits 0 if no STEP backend is available locally; fails (exit 1) if `CI=true` and no backend is available. |
 | `smoke` | Tier 2: run every `tests/test_*.scad` with `-o *.csg` (evaluates the tree, asserts fire, no tessellation). Fast. |
-| `check --all` | Tier 3: trimesh mesh checks (watertight, winding-consistent, volume > 0, single connected shell, bbox ≤ 244 mm/axis) on every `exports/**/*.stl`. |
+| `check --all` | Tier 3: trimesh mesh checks (watertight, winding-consistent, volume > 0, single connected shell, bbox ≤ 244 mm/axis) **plus the printability gate** (`printability.py`: no floating island in any 0.2 mm layer — Bambu Studio's "floating regions") on every print-pose `exports/**/*.stl` (the `*.model.stl` twins are skipped). `--verbose` also lists >45° overhang layers (info only). |
 | `check exports/coupons/neutrik-tile/neutrik-tile.stl` | Check specific STL file(s). |
 | `golden` | Tier 3: compare every rendered target's measured summary against its committed golden in `tests/golden/`. |
 | `golden --update coupons/neutrik-tile` | (Re)write the golden for one target from its current render. Justify golden changes in the PR — see `tests/golden/README.md`. |
 | `confidence` | Lists every model's ports below `"measured"` confidence (parsed straight from `lib/mcc/devices/*.scad`'s DATA-ONLY port records — no OpenSCAD render needed). Exit code is always `0`; this is a report, not a gate. `--json` for machine-readable output; either form writes `prerelease=true\|false` to `$GITHUB_OUTPUT` when set. Used by `release.yml` to decide the GitHub Release's pre-release flag. |
-| `all` | `smoke` → `render --all` → `check --all` → `golden`, in order. What CI runs on every push/PR. |
+| `slicer-check` | Local-only ground truth: slice every rendered `<part>.3mf` headlessly with the installed Bambu Studio (`bambu-studio.exe --slice 0`, `MCC_BAMBU_STUDIO` to override the path) and fail on any `warning_message` in its `result.json` ("floating regions", "floating cantilever", exclusion area, ...). Skips with a notice when Bambu Studio is not installed (CI). |
+| `review` | Write `exports/review.3mf`: every rendered design in one Bambu Studio project (each model on its own plates, coupons/brackets packed) — open it and *Slice all* to review the whole set. Not committed; released as `review-<version>.3mf`. |
+| `all` | `smoke` → `render --all` → `check --all` → `golden` → `review`, in order. What CI runs on every push/PR. |
 | `all --release` | Same, with the release warning gate on (fails on any `WARNING: unmeasured` port echoed at render time). |
 | `all --with-step` | `all`, then `step --all` at the end. What `release.yml` runs. |
 

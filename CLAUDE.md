@@ -75,7 +75,10 @@ Two knowledge trees, do not merge them:
 - Always the black `-B` Neutrik variant — no exceptions, no "just for the prototype."
 - No `$fn` set globally — see `openscad-authoring`. Functional holes get local `$fn≥64` + `circum=true`.
 - STL/3MF are **never** committed — `exports/` is gitignored; CI renders on tag. Small text goldens
-  (`tests/golden/*.json`) *are* committed.
+  (`tests/golden/*.json`) *are* committed. That includes the Bambu review project: only its
+  generator (`build.py review`) lives in git (user decision 2026-09-27).
+- Every exported STL/3MF is **print-ready**: print pose, on the X1C bed, `.3mf` = a real Bambu Studio
+  project (architecture.md §8 rev 13). Never ship a part the slicer user has to re-orient.
 - Third-party reference assets live in `knowledge/**/assets/` with attribution, nowhere else.
 - **Coupons before cases** — `neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`,
   `tolerance-ladder` are printed and measured before any full-size case is printed.
@@ -86,9 +89,11 @@ Two knowledge trees, do not merge them:
 python scripts/build.py doctor        # environment sanity (OpenSCAD, BOSL2 submodule pinned)
 python scripts/build.py render        # render all models, --backend=Manifold
 python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire, non-zero exit = fail
-python scripts/build.py check         # mesh checks (watertight, winding, single shell)
+python scripts/build.py check         # mesh checks (watertight, winding, single shell) + no floating islands
 python scripts/build.py golden        # diff tests/golden/*.json, --update to refresh
-python scripts/build.py all           # doctor + smoke + render + check + golden
+python scripts/build.py review        # exports/review.3mf: every design in one Bambu Studio project
+python scripts/build.py slicer-check  # local only: slice every part with Bambu Studio's CLI, fail on any warning
+python scripts/build.py all           # smoke + render + check + golden + review
 ```
 
 ## Which skill for what

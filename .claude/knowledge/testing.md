@@ -31,7 +31,9 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
    `-o *.csg` (evaluates the CSG tree, so Tier-1 asserts fire, without tessellating — fast).
 3. **Tier 3 — `python scripts/build.py check --all` and `... golden`.** `check` runs trimesh
    mesh checks (watertight, winding-consistent, positive volume, exactly one connected shell,
-   bbox ≤ 244 mm/axis) against every exported STL. `golden` compares bbox/volume/area/facet-count
+   bbox ≤ 244 mm/axis) against every exported print-pose STL, plus the **printability gate**
+   (`scripts/printability.py`, 2026-09-27): sliced at 0.2 mm, no layer may contain a floating
+   island (Bambu Studio's "floating regions"). `golden` compares bbox/volume/area/facet-count
    from each render against a committed snapshot in `tests/golden/**`.
 4. **Tier 4 — physical coupons, `models/coupons/*.scad`.** Printed and measured by a human;
    non-negotiable before any full case is printed. The calibrated result is written back into
@@ -45,11 +47,13 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
   when anything below misbehaves, especially after a fresh clone or a BOSL2 submodule update.
 - `smoke`: every `tests/test_*.scad` completed with no `ERROR:` (or there are none yet — that is
   not a failure, just an unwritten test).
-- `check --all`: every STL under `exports/**` passes all five mesh checks.
+- `check --all`: every print-pose STL under `exports/**` passes all five mesh checks and has zero
+  floating islands. Goldens are measured on the model-frame `<part>.model.stl`, so a print-pose
+  change never moves a golden.
 - `golden`: every rendered target matches its committed golden within tolerance (bbox ±0.1 mm/axis,
   volume ±0.5%, area ±1%; facet-count differences are printed but never fail the comparison —
   they can shift for reasons unrelated to intended geometry change).
-- `all` (`smoke` → `render --all` → `check --all` → `golden`) exits 0. This is exactly what CI
+- `all` (`smoke` → `render --all` → `check --all` → `golden` → `review`) exits 0. This is exactly what CI
   (`.github/workflows/render.yml`) runs on every push/PR; `all --release` (which additionally
   fails on any `WARNING: unmeasured` in OpenSCAD's output — a port below `measured` confidence
   used for a real cutout) is what runs on `v*` tags.

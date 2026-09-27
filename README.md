@@ -71,7 +71,8 @@ venv itself is otherwise unaffected):
 .venv\Scripts\python scripts\build.py doctor                    # resolved tool paths/versions, discovered targets
 .venv\Scripts\python scripts\build.py render coupons\neutrik-tile
 .venv\Scripts\python scripts\build.py smoke                     # Tier-2 headless asserts
-.venv\Scripts\python scripts\build.py all                       # smoke -> render --all -> check --all -> golden
+.venv\Scripts\python scripts\build.py all                       # smoke -> render --all -> check --all -> golden -> review
+.venv\Scripts\python scripts\build.py review                    # exports\review.3mf: every design in one Bambu Studio project
 ```
 
 Or equivalently via the wrapper: `scripts\render.ps1 doctor`, etc. Full command reference in
@@ -107,23 +108,30 @@ cases" below). Full release-flow detail: `CONTRIBUTING.md`'s "Release" section.
 
 ## Open in Bambu Studio
 
-Each device zip contains `base`, `lid`, and (where the variant has one) `panel`, each as `.stl`,
-`.3mf`, and `.step`:
+Every `.3mf` in a release is a **ready-to-slice Bambu Studio project** — no re-orienting, arranging
+or profile picking needed:
 
-1. **File → Import → Import 3MF/STL/STEP...** (`Ctrl+I`).
-2. Pick `base.3mf` and `lid.3mf` — both import **open side up**, exactly as exported; no
-   reorientation needed. `panel.3mf` is authored with its outward (connector) face at `Z=0`, the
-   *top* of its bounding box (`lib/mcc/panel.scad`'s `mcc_panel_plate()`: "front (outward) face at
-   Z=0"), so it imports connector-face-up — rotate it 180° in the slicer so the connector face
-   prints **down**, flat on the bed (`.claude/skills/print-check/SKILL.md` §3 for why that
-   orientation matters).
-3. Select the **Bambu Lab X1 Carbon** printer with the **0.4 mm nozzle**, and a **Bambu ASA** (or
-   **Generic ASA**) filament profile. Keep the enclosure closed — ASA needs it.
-4. The `.3mf` is plain geometry only — it carries no print settings, supports, or plate layout, so
-   there's nothing to strip before applying your own profile. The `.step` is a faceted B-rep (planar
-   facets merged into single faces where coplanar; cylindrical/curved surfaces stay faceted, not
-   NURBS-fitted) — use it if you want the part in another CAD tool rather than straight in the
-   slicer; Bambu Studio can import it too, but the `.3mf`/`.stl` are the tested path.
+1. Open the device zip's **`<device-slug>.3mf`** (double-click, or **File → Open Project**,
+   `Ctrl+O`). It holds the whole case: base + connector panel on plate 1, lid on plate 2, each part
+   already in its print pose — base and lid **open side up**, panel **connector face down** (flat on
+   the bed; `.claude/skills/print-check/SKILL.md` §3 explains why).
+2. The project already selects **Bambu Lab X1 Carbon 0.4 nozzle**, **Bambu ASA** and
+   *0.20mm Standard @BBL X1C* with the repo's edits (5 walls, 8 mm outer brim — shown as a modified
+   preset). Sync your AMS slot if needed, keep the enclosure closed (ASA), **Slice all**.
+3. Want a single part? Open `<part>.3mf` instead (one plate). Another slicer? Use `<part>.stl` — same
+   print pose, already sitting on the bed centre.
+4. `<part>.step` is in the **assembly frame** (the parts mate when imported together) for other CAD
+   tools. It is a faceted B-rep converted from the mesh — good as a reference body or for fit
+   checks, not a parametric, editable model (OpenSCAD has no B-rep kernel).
+
+**Check every generated design at once:** `python scripts/build.py review` (after `render --all`)
+writes `exports/review.3mf` — every case (each on its own plates) plus all coupons and brackets in
+one Bambu Studio project; each release also carries it as `review-vX.Y.Z.3mf`. Open it, **Slice
+all**, and every plate should slice without a "floating regions" or exclusion-area warning —
+`build.py check` gates the same floating-island / cantilever conditions in CI
+(`scripts/printability.py`), and `build.py slicer-check` slices every part headlessly with your
+local Bambu Studio and fails on any slicer warning — the ground truth; run it before a print-facing
+PR.
 
 See `.claude/skills/print-check/SKILL.md` for the full pre-slice checklist (orientation, ASA
 profile hints, coupons-before-cases).
