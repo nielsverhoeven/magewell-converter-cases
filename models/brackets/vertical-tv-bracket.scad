@@ -175,6 +175,8 @@ ARROW_DEPTH = 0.6; // mm. assumed, cosmetic "UP" deboss (A5 -- a cue, not a key:
                     // top/bottom symmetry would otherwise let happen unnoticed).
 ARROW_L = 8.0; // mm. assumed.
 ARROW_W = 6.0; // mm. assumed.
+ARROW_X = -30.0; // mm. assumed -- centre-local X of the arrow's own centre (fit-check FX1: named so
+                  // T1-82's own counterbore-clearance check reads the same value the geometry draws).
 
 // reused from constants.scad, no new library constant: MCC_M8_CLR_D, MCC_M3_CLR_D, MCC_INSERT_M3,
 // MCC_RAIL_LEN, MCC_RAIL_Y, MCC_RAIL_MALE_H, MCC_M3_MAJOR_D, MCC_WALL, MCC_BUILD, MCC_BED_MARGIN,
@@ -417,6 +419,8 @@ module mcc_vert_tv_assert(g) {
         assert(centre_bbox[i] <= max_axis + MCC_EPS,
             str("mcc: vertical-tv-bracket T1-70 centre bbox axis ", i, "=", centre_bbox[i],
                 " exceeds MCC_BUILD-2*MCC_BED_MARGIN=", max_axis));
+    for (d = [struct_val(g, "spacer_d"), struct_val(g, "spacer_d"), struct_val(g, "spacer_t")])
+        assert(d <= max_axis + MCC_EPS, str("mcc: vertical-tv-bracket T1-70 spacer bbox axis ", d, " exceeds ", max_axis));
 
     // T1-71 (B2): the case's own mated footprint stays clear of the TV's side edge -- the right
     // obstacle check for this bracket's fixed OUTBOARD layout (R43). User-confirmed non-binding, kept
@@ -542,6 +546,14 @@ module mcc_vert_tv_assert(g) {
     assert(arrow_y + ARROW_W / 2 <= centre_h / 2 - KEEPOUT_CLR + MCC_EPS,
         str("mcc: vertical-tv-bracket T1-82 UP-arrow top edge ", arrow_y + ARROW_W / 2,
             " too close to the body edge (centre_h/2=", centre_h / 2, ")"));
+    // ... and the arrow stays clear of every joint counterbore (DB2: the joints sit in its band).
+    arrow_r = norm([ARROW_W / 2, ARROW_L / 2]); // conservative: the arrow's circumradius
+    for (side = [-1, 1], h = _mcc_vert_tv_joint_holes(g)) {
+        p = _mcc_vert_tv_xform(h, side, g);
+        assert(norm(p - [ARROW_X, arrow_y]) - arrow_r - m3_counterbore_r >= KEEPOUT_CLR - MCC_EPS,
+            str("mcc: vertical-tv-bracket T1-82 UP arrow within ",
+                norm(p - [ARROW_X, arrow_y]) - arrow_r - m3_counterbore_r, " of the M3 counterbore at ", p));
+    }
 
     // T1-83 (B14, DB13): the case's own lid-top Z fits the user-stated wall gap.
     assert(z_rail + h_max <= wall_gap + MCC_EPS,
@@ -635,7 +647,7 @@ module mcc_vert_tv_centre(g) {
         }
         // Cosmetic "UP" arrow deboss, top face, pointing +Y -- outside the rail keep-out and below
         // the body edge (T1-82), never in contact with the mated case (it sits below z_rail).
-        translate([-30, arrow_y, z_rail - ARROW_DEPTH])
+        translate([ARROW_X, arrow_y, z_rail - ARROW_DEPTH])
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }
@@ -647,15 +659,20 @@ module mcc_vert_tv_centre(g) {
 
 // Module: mcc_vert_tv_spacer()
 // Usage:
-//   mcc_vert_tv_spacer();
+//   mcc_vert_tv_spacer(g);
 // Description:
 //   The exported "spacer" part (printed TWICE -- the lift's other, unoccupied column): a flat disc,
-//   diameter PAD_D, thickness VTV_PLATE_T, one centred M8 through-hole. No other features (R42/DB5).
-module mcc_vert_tv_spacer() {
+//   diameter `spacer_d`, thickness `spacer_t` -- drawn from `g` (fit-check FX3) rather than the pad's
+//   own constants directly, so T1-85 actually checks what gets printed, not a tautology. In practice
+//   spacer_d == PAD_D and spacer_t == VTV_PLATE_T (R42/DB5) -- one centred M8 through-hole, no other
+//   features.
+module mcc_vert_tv_spacer(g) {
+    spacer_d = struct_val(g, "spacer_d");
+    spacer_t = struct_val(g, "spacer_t");
     difference() {
-        cyl(h = VTV_PLATE_T, d = PAD_D, anchor = BOTTOM, $fn = 64, circum = true);
+        cyl(h = spacer_t, d = spacer_d, anchor = BOTTOM, $fn = 64, circum = true);
         translate([0, 0, -MCC_EPS])
-            cyl(h = VTV_PLATE_T + 2 * MCC_EPS, d = MCC_M8_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
+            cyl(h = spacer_t + 2 * MCC_EPS, d = MCC_M8_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
     }
 }
 
@@ -686,7 +703,7 @@ if (part == "arm") {
     mcc_vert_tv_centre(G);
 
 } else if (part == "spacer") {
-    mcc_vert_tv_spacer();
+    mcc_vert_tv_spacer(G);
 
 } else if (part == "assembly" || part == "assembly_sweep") {
     reach  = struct_val(G, "reach");

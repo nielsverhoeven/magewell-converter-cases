@@ -12,6 +12,16 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Added (2026-09-28, issue #56)
+
+- **Vertical VESA-column bracket** (`models/brackets/vertical-tv-bracket.scad`, architecture.md rev 18):
+  sandwiched between a Samsung TV (VESA 400 × 300) and its own TV lift on one column, case outboard of
+  the +X column; one arm printed twice, a centre carrying the rail, two printed ASA spacers for the
+  other column.
+- **Arch bracket sandwich parts** (`arm_sandwich`, `centre_sandwich`, `spacer`, D51) beside the
+  unchanged direct parts: flat clamp pads, ribs clear of the lift's rail, a taller centre so the
+  slide-on clears the lift's rail and bolt head (M3×18 lap screws).
+
 ### Changed (modeller feedback, 2026-09-28) — MAJOR: printed panels/bases are not interchangeable
 
 - **No separate connector panel** (architecture.md D36): the connectors mount straight into the

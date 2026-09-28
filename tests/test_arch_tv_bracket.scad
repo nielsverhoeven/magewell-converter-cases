@@ -33,8 +33,9 @@ for (i = [0:len(_TV_TOP_CLEAR_VALUES) - 1], j = [0:len(_MOUNT_MODES) - 1]) {
     translate([i * 500, j * 700 + 400, 0]) mcc_arch_tv_centre(g);
 }
 
-// The spacer takes no parameters -- exercised once, independent of TV_TOP_CLEAR/mode.
-translate([1500, 1400, 0]) mcc_arch_tv_spacer();
+// The spacer's own dimensions don't vary with TV_TOP_CLEAR -- exercised once, in sandwich mode
+// (fit-check FX2: mcc_arch_tv_spacer(g) now draws from g's own spacer_t/spacer_d fields).
+translate([1500, 1400, 0]) mcc_arch_tv_spacer(mcc_arch_tv_geom(mount_mode = "sandwich"));
 
 echo("mcc test_arch_tv_bracket: OK");
 

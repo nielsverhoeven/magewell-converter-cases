@@ -363,6 +363,11 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "direct") =
         ["pad_clamp_t", pad_clamp_t],
         ["m3_joint_screw_l", m3_joint_screw_l],
         ["rib_pad_gap", rib_pad_gap],
+        // Fit-check FX2: the spacer's own clamp height/footprint, drawn straight from the constants
+        // DB9 names (ARCH_PLATE_T / ARM_W) -- mode-independent, but carried in the struct so
+        // mcc_arch_tv_spacer(g) and T1-90 both read the SAME source, never a hand-typed duplicate.
+        ["spacer_t", ARCH_PLATE_T],
+        ["spacer_d", ARM_W],
         ["slide_clear", slide_clear],
         ["arm_bbox", arm_bbox],
         ["centre_bbox", centre_bbox],
@@ -637,6 +642,16 @@ module mcc_arch_tv_assert(g) {
         str("mcc: arch-tv-bracket T1-90 spacer thickness ARCH_PLATE_T=", ARCH_PLATE_T, " below 2xMCC_WALL=", 2 * MCC_WALL));
     assert((ARM_W - MCC_M8_CLR_D) / 2 >= 2 * MCC_WALL - MCC_EPS,
         str("mcc: arch-tv-bracket T1-90 spacer wall=", (ARM_W - MCC_M8_CLR_D) / 2, " below 2xMCC_WALL=", 2 * MCC_WALL));
+    // Fit-check FX2: in sandwich mode, the drawn spacer dimensions must actually equal the arm's own
+    // sandwich pad clamp height (pad_clamp_t, which is ARCH_PLATE_T in sandwich mode) and its footprint
+    // (ARM_W) -- not just the always-true DB9 constants comparison above.
+    if (mode == "sandwich") {
+        assert(abs(struct_val(g, "spacer_t") - pad_clamp_t) < MCC_EPS,
+            str("mcc: arch-tv-bracket T1-90 spacer thickness ", struct_val(g, "spacer_t"),
+                " != the sandwich pad's clamp height ", pad_clamp_t));
+        assert(abs(struct_val(g, "spacer_d") - ARM_W) < MCC_EPS,
+            str("mcc: arch-tv-bracket T1-90 spacer diameter ", struct_val(g, "spacer_d"), " != ARM_W=", ARM_W));
+    }
 
     // T1-59 (A13, B1 updated): the case hangs BETWEEN the screws (user decision), now accounting
     // for the B1 RAIL_X shift.
@@ -767,17 +782,21 @@ module mcc_arch_tv_centre(g) {
 
 // Module: mcc_arch_tv_spacer()
 // Usage:
-//   mcc_arch_tv_spacer();
+//   mcc_arch_tv_spacer(g);
 // Description:
 //   The exported "spacer" part (printed TWICE -- the bracket's own unused, bottom row of VESA
-//   holes, sandwich mode only): a flat disc, diameter ARM_W, thickness ARCH_PLATE_T -- matching the
-//   arm's own sandwich pad exactly, never `centre_t`, never a boss diameter (R42/DB9) -- with one
-//   centred M8 through-hole.
-module mcc_arch_tv_spacer() {
+//   holes, sandwich mode only): a flat disc, diameter `spacer_d`, thickness `spacer_t` -- drawn from
+//   `g` (fit-check FX2) rather than the constants directly, so T1-90 actually checks what gets
+//   printed. In practice spacer_d == ARM_W and spacer_t == ARCH_PLATE_T, matching the arm's own
+//   sandwich pad exactly, never `centre_t`, never a boss diameter (R42/DB9) -- with one centred M8
+//   through-hole.
+module mcc_arch_tv_spacer(g) {
+    spacer_t = struct_val(g, "spacer_t");
+    spacer_d = struct_val(g, "spacer_d");
     difference() {
-        cyl(h = ARCH_PLATE_T, d = ARM_W, anchor = BOTTOM, $fn = 64, circum = true);
+        cyl(h = spacer_t, d = spacer_d, anchor = BOTTOM, $fn = 64, circum = true);
         translate([0, 0, -MCC_EPS])
-            cyl(h = ARCH_PLATE_T + 2 * MCC_EPS, d = MCC_M8_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
+            cyl(h = spacer_t + 2 * MCC_EPS, d = MCC_M8_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
     }
 }
 
@@ -826,7 +845,7 @@ if (part == "arm") {
     mcc_arch_tv_centre(G_SANDWICH);
 
 } else if (part == "spacer") {
-    mcc_arch_tv_spacer();
+    mcc_arch_tv_spacer(G_SANDWICH);
 
 } else if (part == "assembly" || part == "assembly_sweep") {
     Gp = (MOUNT_MODE == "sandwich") ? G_SANDWICH : G;

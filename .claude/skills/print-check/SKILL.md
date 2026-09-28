@@ -77,7 +77,7 @@ turning by hand, that is a bug in the pose table, not a slicer step.
 
 No unsupported span over **10 mm** anywhere (the general shell rule, architecture.md §5), with one
 sanctioned exception: the mount-rail groove roof in every base, a ≈ 66 mm bridge (architecture.md R40,
-D44), which the `rail-latch` coupon (M15) judges. Check any
+D44), which the `rail-lock` coupon (M15) judges. Check any
 new rabbet roof, vent hood, or aperture chamfer against this before slicing. Roofs ≤45° from vertical
 print self-supporting on a 0.4 mm nozzle; steeper needs either a redesign or accepted supports (rare
 in this repo — a support-requiring roof is usually a sign the geometry should be rethought, not

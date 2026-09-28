@@ -2,6 +2,11 @@
 
 > **Implemented as amended by the architect verdicts appended below (rev-2 verdict DB1-DB16, after plan F). Where they conflict, the verdicts win.**
 
+> **As built (post-F, re-derived in the file, confirmed by the DB16 fit-check):** rail keep-out
+> y ∈ [−32.5, 33.2]; `YJ_V` 49.46; `REACH` 136.75; α 36.33°; `ARM_LEN` 169.73; `RIB_PAD_GAP` 53.19;
+> `rib_end` 107.06; `CENTRE_H` 138.91 (148.91 with tabs); arm 204.7 × 40 × 20; centre 180 × 148.9 × 14.5;
+> spacer 40 × 40 × 11. Arch sandwich: `centre_t` 16.6, `z_rail` 27.6, M3×18; `arm_sandwich`
+> 167.2 × 40 × 20, `centre_sandwich` 238.1 × 92 × 20.1. §2's table below predates plan F and is superseded.
 
 Status: **researcher plan, not architect-validated.** Rev 2, written per the architect's rejection
 of rev 1, the teamlead's relay of new user decisions (2026-09-28), and the architect's Amendment 1
@@ -247,10 +252,11 @@ of the arm's own top surface** — RD3's own recommendation. RD3 ties this speci
 the inboard layout*; since R43/Q22(b) fixed the layout to outboard instead (§3.2), that particular
 benefit is moot, but the flush design is kept anyway on its own merits: no isolated raised boss to
 print, one continuous bearing plane for the TV lift's rail to seat against, and it is the simpler
-shape. (Part B, §7, keeps arch's *existing* raised boss instead — a different, equally valid choice,
+shape. ~~(Part B, §7, keeps arch's *existing* raised boss instead — a different, equally valid choice,
 made for a different reason: minimal disruption to an already-shipped file. Both are legitimate;
 flagged for the architect to confirm it is comfortable with the asymmetry rather than demanding one
-convention across both files.)
+convention across both files.)~~ *(struck by DB7 — both brackets' sandwich pads are flat at the arm
+top; no asymmetry exists.)*
 
 **New keep-out consequence:** the TV lift's own rail (M20: `W_LIFT_RAIL`, unmeasured) runs along
 the column, in the same (X, Y) neighbourhood as this bracket's own pad and the inboard part of each
@@ -1322,3 +1328,153 @@ The coordinator relayed the user's answers to Q22 and D47. **Where this amendmen
 - **D47:** the tv-bracket is retired inside plan A. The DO-NOT about `tv-bracket.json` staying byte-identical no longer applies; the file is gone.
 - **M20** is still open. It now also covers the arch sandwich mode's Z clearance (mount-rail thickness and bolt-head height).
 - **Order:** unchanged, except that step 2 now waits only for (d) and M20. Rev 2 covers the vertical bracket **and** the arch sandwich mode, both in one re-gate.
+
+---
+
+## Architect fit-check (DB16, after the fact)
+
+
+Checked by `solution-architect`, 2026-09-28, read-only.
+
+**What was read.** The developer's worktree `.claude/worktrees/agent-a475b61a219ead99c` at branch head `9b60cdc`, which equals the local `refs/remotes/origin/feature/vertical-tv-bracket`. I have no shell tool, so I could not run `git fetch` myself. If origin has moved past `9b60cdc`, re-check only the delta.
+
+**Against what:**
+- `D-vesa-400x300-bracket.VERDICT-rev2.md` (DB1–DB16, Appendices G/H/E);
+- `F-gravity-lock.VERDICT.md` (F-R1/F-R2);
+- A's verdict.
+
+## Result: **FAIL — 7 small required fixes** (FX1–FX7)
+
+None of them changes geometry or a golden. Once they are applied the fit-check passes, with no re-gate.
+
+The substance is right:
+- the post-F re-derivation;
+- the rail interface;
+- the sandwich pads and spacers;
+- the exported sandwich parts;
+- the rib start and rib end derivations;
+- the verbatim rev-18 texts.
+
+The failures are asserts that are missing or weaker than DB2/DB9 require, which the rev-18 records describe as if they existed, plus record and doc upkeep.
+
+## What passes
+
+**The re-derivation was done right.** I checked it independently against the real F interface.
+- **Rail inputs:** `mcc_rail_male_keepout()` = rail-local y ∈ [−33.2, 32.5], rotated to `RAIL_KEEPOUT_Y` [−32.5, 33.2].
+- **Joint position:** `YJ_V` = 33.2 + 1.0 + 3.05 + 12.207 = **49.457**.
+- **Arm:** `REACH` 136.75; α 36.33°; `ARM_LEN` 169.73; arm bbox 204.7 × 40 × 20.
+- **Centre:** `CENTRE_H` 138.9 for the body, 148.9 with the tabs; centre bbox 180 × 148.9 × 14.5, which equals the golden (±74.455).
+- **Ribs:** `RIB_PAD_GAP` (DB2) 53.19 and `rib_end` (DB3) 107.06, so each rib runs 53.9 mm.
+- **B8:** the worst hole clears the keep-out by exactly `KEEPOUT_CLR`, by construction.
+- **Arch sandwich parts:** `centre_t` 16.6, `z_rail` 27.6 and lid 78.6 ≤ 150. `arm_sandwich` is 167.2 × 40 × 20; `centre_sandwich` is 238.1 × 92 × 20.1, which equals the golden (±119.066).
+- **Arch rib start:** `rib_pad_gap` 31.0 / 54.3 / 68.0 at `TV_TOP_CLEAR` 69.7 / 150 / 184.9.
+- **Arch lap screw:** M3 window [16.8, 18.5], so M3×18.
+
+My rev-2 estimate of 52.4 was computed from the latch-era keep-out (36.1). The difference is expected and the formulas absorb it.
+
+**Binding changes that pass as implemented:**
+- **DB1:** only `mcc_rail_male()` (no arguments) and `mcc_rail_male_keepout()`; no window, no `MCC_RAIL_LATCH_*`.
+- **DB2** and **DB3:** see the numbers above. The T1-78 lift-band clause samples both arms.
+- **DB4:** B8 is checked per hole; the centre bbox includes the tabs.
+- **DB5:** `PAD_D = ARM_W`; `REACH_KEEPOUT`, B4, B12 and B16 use it; the spacer is 40 × 11.
+- **DB6:** T1-84 checks the rib run ≥ 2·`RIB_T`.
+- **DB8:** five exported parts; the part name fixes the mode; `MOUNT_MODE` is preview-only; every centre formula reads `centre_t`. Direct mode is provably unchanged: `centre_t` = `ARCH_PLATE_T` and `hole_h` = `arm_top_z`. The six new goldens are additions only.
+- **DB9 geometry:** the arch spacer is `ARCH_PLATE_T` × `ARM_W`.
+- **DB10:** T1-89 is correct. Centre-local X equals assembly X for the arch, and both columns are checked.
+- **DB11** and **DB12:** T1-86/87/88 are present; tests cover 3 × 2 modes plus the spacer.
+- **DB13:** the TV-lift parameters have the same names and values in both files and are echoed.
+- **DB14:** the print gates are in the README, BOM and print-check.
+
+**Docs:**
+- `CLAUDE.md` E1 and E2 are in, including F's D49 sentences.
+- The BOM sections are complete: M8 × 4 in sandwich mode, M3×18, the spacers, no washers.
+- The README, the `print-check` rows and the `new-case-variant` second bullet are all present.
+
+**Verbatim rev-18 texts all landed:**
+- `architecture.md`: header G1; §9 G2; R42 (G3), R43 (G4), R47 (G5); Q22 (G6); M20, M22 and the numbering note (G7); D51 (G8).
+- `layout-patch-wall.md`: H1 and H2.
+
+## Required fixes
+
+**FX1 — T1-82 lacks its DB2 clause** ("the UP arrow clear of the joint counterbores").
+- The rev-18 record (`layout-patch-wall.md` T1-82) says the check exists. It is clear today by about 12 mm, but it is not asserted.
+- In `vertical-tv-bracket.scad`, add `ARROW_X = -30.0; // mm. assumed` next to `ARROW_L`/`ARROW_W`. Use it in `mcc_vert_tv_centre()` instead of the literal `-30`.
+- Append to T1-82 in `mcc_vert_tv_assert()`:
+```openscad
+    // ... and the arrow stays clear of every joint counterbore (DB2: the joints sit in its band).
+    arrow_r = norm([ARROW_W / 2, ARROW_L / 2]); // conservative: the arrow's circumradius
+    for (side = [-1, 1], h = _mcc_vert_tv_joint_holes(g)) {
+        p = _mcc_vert_tv_xform(h, side, g);
+        assert(norm(p - [ARROW_X, arrow_y]) - arrow_r - m3_counterbore_r >= KEEPOUT_CLR - MCC_EPS,
+            str("mcc: vertical-tv-bracket T1-82 UP arrow within ",
+                norm(p - [ARROW_X, arrow_y]) - arrow_r - m3_counterbore_r, " of the M3 counterbore at ", p));
+    }
+```
+
+**FX2 — T1-90 does not assert what DB9 and the record say** (spacer = the sandwich pad's clamp height and footprint).
+- Today it asserts only minimum thickness and wall, and the spacer module hard-codes its dimensions. A later edit to the spacer would go unnoticed.
+- In `arch-tv-bracket.scad`:
+  - `mcc_arch_tv_geom()` gains `["spacer_t", ARCH_PLATE_T]` and `["spacer_d", ARM_W]`.
+  - `mcc_arch_tv_spacer(g)` uses `struct_val(g, "spacer_t")` and `struct_val(g, "spacer_d")`.
+  - The `part == "spacer"` dispatch calls `mcc_arch_tv_spacer(G_SANDWICH)`.
+  - `tests/test_arch_tv_bracket.scad` calls `mcc_arch_tv_spacer(mcc_arch_tv_geom(mount_mode = "sandwich"))`.
+- Keep the existing wall assert. Add to T1-90:
+```openscad
+    if (mode == "sandwich") {
+        assert(abs(struct_val(g, "spacer_t") - pad_clamp_t) < MCC_EPS,
+            str("mcc: arch-tv-bracket T1-90 spacer thickness ", struct_val(g, "spacer_t"),
+                " != the sandwich pad's clamp height ", pad_clamp_t));
+        assert(abs(struct_val(g, "spacer_d") - ARM_W) < MCC_EPS,
+            str("mcc: arch-tv-bracket T1-90 spacer diameter ", struct_val(g, "spacer_d"), " != ARM_W=", ARM_W));
+    }
+```
+
+**FX3 — T1-85 is a tautology.**
+- `mcc_vert_tv_spacer()` ignores the `spacer_t`/`spacer_d` fields that T1-85 checks.
+- Make it `mcc_vert_tv_spacer(g)` using those two fields. The `part == "spacer"` dispatch passes `G`; the test passes `g`.
+- T1-85 then compares the drawn values with the pad: `spacer_t == VTV_PLATE_T`, the arm pad's clamp height, and `spacer_d == ARM_W`, the pad end's diameter.
+
+**FX4 — T1-70's record says "bboxes incl. tabs and spacer ≤ 244"**, but the spacer's bbox is not asserted. Add one line to T1-70:
+```openscad
+    for (d = [struct_val(g, "spacer_d"), struct_val(g, "spacer_d"), struct_val(g, "spacer_t")])
+        assert(d <= max_axis + MCC_EPS, str("mcc: vertical-tv-bracket T1-70 spacer bbox axis ", d, " exceeds ", max_axis));
+```
+
+**FX5 — The plan record (DB7, DB15, DB16)**, in `docs/plans/2026-09-28-vesa-column-bracket.md`:
+- (a) Strike §3.3's parenthetical `(Part B, §7, keeps arch's *existing* raised boss instead — … demanding one convention across both files.)`. Mark it `~~…~~ *(struck by DB7)*`.
+- (b) Insert directly under the banner line:
+```
+> **As built (post-F, re-derived in the file, confirmed by the DB16 fit-check):** rail keep-out
+> y ∈ [−32.5, 33.2]; `YJ_V` 49.46; `REACH` 136.75; α 36.33°; `ARM_LEN` 169.73; `RIB_PAD_GAP` 53.19;
+> `rib_end` 107.06; `CENTRE_H` 138.91 (148.91 with tabs); arm 204.7 × 40 × 20; centre 180 × 148.9 × 14.5;
+> spacer 40 × 40 × 11. Arch sandwich: `centre_t` 16.6, `z_rail` 27.6, M3×18; `arm_sandwich`
+> 167.2 × 40 × 20, `centre_sandwich` 238.1 × 92 × 20.1. §2's table below predates plan F and is superseded.
+```
+- (c) Append this fit-check under `## Architect fit-check (DB16, after the fact)`.
+
+**FX6 — `CHANGELOG.md` has no entry for #56.** Every notable change gets one (CONTRIBUTING). Insert under `## [Unreleased]`, directly before the first `### ` heading below it:
+```
+### Added (2026-09-28, issue #56)
+
+- **Vertical VESA-column bracket** (`models/brackets/vertical-tv-bracket.scad`, architecture.md rev 18):
+  sandwiched between a Samsung TV (VESA 400 × 300) and its own TV lift on one column, case outboard of
+  the +X column; one arm printed twice, a centre carrying the rail, two printed ASA spacers for the
+  other column.
+- **Arch bracket sandwich parts** (`arm_sandwich`, `centre_sandwich`, `spacer`, D51) beside the
+  unchanged direct parts: flat clamp pads, ribs clear of the lift's rail, a taller centre so the
+  slide-on clears the lift's rail and bolt head (M3×18 lap screws).
+```
+
+**FX7 — A stale coupon name left over from #59 (A + F), found here.** In `.claude/skills/print-check/SKILL.md` §3, replace `which the `rail-latch` coupon (M15) judges` with `which the `rail-lock` coupon (M15) judges`. F's rename missed this line, and so did my F verdict.
+
+**After FX1–FX7:**
+- `smoke`, then `render brackets/vertical-tv-bracket brackets/arch-tv-bracket`, then `check`.
+- `golden`: no golden may change. FX2 and FX3 refactor the spacer modules to identical geometry.
+- Push, and CI must be green. No architect re-gate is needed.
+
+## Optional (non-blocking)
+
+- **T1-78's comment** "side cancels" is wrong: the sign of the `y_line` term flips with `side`. The check is still complete, because both edges of both ribs are sampled on both sides. Reword the comment.
+- **The arch `.scad` header's PRINT GATE** (lines 60–63) could add "sandwich parts also: M20, M22", matching the README, BOM and print-check.
+- **README arch section:** give the sandwich figures beside the direct ones — 27.6 to 78.6 mm off the TV back, M3×18, four M8 bolts.
+- **`tests/test_vertical_tv_bracket.scad`:** also sweep `w_lift_rail` (e.g. 40 / 60 / 120). `REACH`, the rib start and end, and R47's bed limit all move with it.

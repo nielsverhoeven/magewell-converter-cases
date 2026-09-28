@@ -31,8 +31,9 @@ for (i = [0:len(_TV_SIDE_CLEAR_VALUES) - 1]) {
     translate([i * 500, 300, 0]) mcc_vert_tv_centre(g);
 }
 
-// The spacer takes no parameters -- exercised once, independent of tv_side_clear.
-translate([1500, 600, 0]) mcc_vert_tv_spacer();
+// The spacer's own dimensions don't vary with tv_side_clear -- exercised once, at the default geom
+// (fit-check FX3: mcc_vert_tv_spacer(g) now draws from g's own spacer_t/spacer_d fields).
+translate([1500, 600, 0]) mcc_vert_tv_spacer(mcc_vert_tv_geom());
 
 echo("mcc test_vertical_tv_bracket: OK");
 
