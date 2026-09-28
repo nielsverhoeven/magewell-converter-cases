@@ -284,3 +284,8 @@ may be *developed* in parallel; it is the **merge order** that matters.
 - [ ] If the new case can hang on `models/brackets/arch-tv-bracket.scad`, add its device include and
       record to `_ARCH_TV_DEVS`, then re-golden `brackets/arch-tv-bracket` (issue #47 B7 — otherwise
       that bracket's own "fully behind the TV" assert silently ignores the new SKU).
+- [ ] If the new case can hang on `models/brackets/vertical-tv-bracket.scad`, add its device include
+      and record to that file's own `_VERT_TV_DEVS` list (a separate, independent copy — never shared
+      with `_ARCH_TV_DEVS`), then re-golden `brackets/vertical-tv-bracket` (issue #56 — otherwise the
+      envelope function silently ignores the new SKU and `REACH`/the case-clearance asserts stay
+      stale).

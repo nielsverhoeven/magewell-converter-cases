@@ -74,11 +74,12 @@ Two knowledge trees, do not merge them:
   Case height stays **51 mm** (4 mm Z web; 49 mm proposal vetoed); **no right-angle HDMI adapter in
   the default BOM** — end zones are sized for straight plugs, measured with the `depth-mockup` coupon.
 - **Mount brackets** (user decisions 2026-09-28): the **arch bracket** is the horizontal option (top
-  VESA row; it mounts directly today and gains a sandwich mode), and a **vertical VESA-column
-  bracket** is planned (Samsung 400 × 300, one column; the case sits outboard of the right-hand column
-  seen from behind the TV). In sandwich mode a bracket is clamped between the TV and the TV's own
-  wall mount on longer M8 bolts, and **printed ASA in that clamp path is accepted** (architecture.md
-  §11 R42). The VESA 100/200 `tv-bracket` is **retired** (D47) — do not reintroduce it.
+  VESA row; direct parts, and sandwich parts for a TV whose own mount uses all four holes), and the
+  **vertical VESA-column bracket** (`vertical-tv-bracket.scad`; Samsung 400 × 300, one column; the case
+  sits outboard of the right-hand column seen from behind the TV) is sandwich-only. A sandwiched
+  bracket is clamped between the TV and the TV's own mount (a TV lift) on longer M8 bolts, and
+  **printed ASA in that clamp path is accepted** (architecture.md §11 R42). The VESA 100/200
+  `tv-bracket` is **retired** (D47) — do not reintroduce it.
   **A mounted case always hangs patch-wall down** (user decision 2026-09-28, D49) — on every bracket,
   the truss mount (#27) included, and never on a TV turned to portrait: the gravity lock only engages
   when the case's weight rests on the rail's upper flank. Take the case off before the TV is laid
@@ -146,13 +147,16 @@ paths, module names, ordered steps). Tests → `tester`.
 ## Current status
 
 **Print-ready since 2026-09-28:** every export is in its print pose and every `.3mf` is a Bambu
-Studio project; every part (8 cases as base + lid, coupons, `arch-tv-bracket` arm ×2
-+ centre) slices with **zero Bambu Studio warnings**, enforced in CI by the slicer gate (render.yml:
-six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions since — the
-connectors mount straight into the patch wall, no panel part (D36), no floor insert (D35), no
-floor-pad island (D37), boss-wide lid-boss webs (D38), the rail
-gravity lock that replaced the D34 latch (D48), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47) — are in architecture.md §13. Slicer rules and the
-debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio` skill.
+Studio project; every part (8 cases as base + lid, coupons, `arch-tv-bracket` direct and sandwich
+parts, `vertical-tv-bracket`) slices with **zero Bambu Studio warnings**, enforced in CI by the
+slicer gate (render.yml: six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry
+evolutions since — the connectors mount straight into the patch wall, no panel part (D36), no floor
+insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail gravity lock that
+replaced the D34 latch (D48), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
+instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47),
+the vertical VESA-column bracket and the arch's sandwich parts (D51) — are in architecture.md §13.
+Slicer rules and the debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio`
+skill.
 
 **All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,
 HDMI/SDI Plus, NDI to HDMI / HDMI 4K / SDI / AIO), built on the full library: L0 (`constants`,

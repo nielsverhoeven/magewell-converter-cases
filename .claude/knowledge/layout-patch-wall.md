@@ -1,5 +1,9 @@
 # Patch-wall layout contract
 
+Status: **revision 18, 2026-09-28** (aligned with `architecture.md` rev 18 — plan D, issue #56: the
+vertical VESA-column bracket and the arch's sandwich parts). **§9** gains **T1-70 … T1-90**; no case
+figure moves.
+
 Status: **revision 17, 2026-09-28** (aligned with `architecture.md` rev 17 — D48, the gravity lock). **§9**
 gains **T1-64 … T1-66**, and the T1-62 row's mate check now covers the lock bump. No envelope figure
 moves on any SKU.
@@ -1381,6 +1385,8 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-64** | *the case rides over the lock bump inside the flank play* — `MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_LOCK_PLAY_MARGIN ≤ 2·MCC_RAIL_CLR_HORIZ` (0.70 + 0.2 ≤ 1.155) | **new rev 17** (D48). Evaluated in `mcc_rail_male()` and `tests/test_rail.scad`; `scripts/rail_fit.py` measures the real lift (0.70 ± 0.02) against a rendered base |
 | **T1-65** | *the lock is self-locking and fits the rail* — exit face 75–90° to the slide axis, entry ramp 15–60°, the bump inside `(−len/2 + 5, len/2 − 1)` | **new rev 17** (D48). Evaluated in `mcc_rail_male()` and `tests/test_rail.scad` |
 | **T1-66** | *the case keeps wall around the lock* — sill wall behind the pocket `MCC_RAIL_SILL_SIDE_W − MCC_RAIL_CLR_HORIZ − lock_e ≥ MCC_WALL/2` (1.72 ≥ 1.5); lead-in `MCC_RAIL_LEADIN ≤ MCC_WALL` | **new rev 17** (D48). Evaluated in `mcc_rail_female_cut()` and `tests/test_rail.scad`. T1-67 … T1-69 stay unused; T1-70 … T1-90 belong to plan D; **the next free id is T1-91** |
+| **T1-70 … T1-85** | *vertical VESA-column bracket* (`models/brackets/vertical-tv-bracket.scad`): T1-70 bboxes incl. tabs and spacer ≤ 244; T1-71 case ≤ `TV_SIDE_CLEAR`; T1-72 `REACH` self-consistency; T1-73 case clears both pads in Y; T1-74 slide-on sweep ≥ `SWEEP_CLR`; T1-75 rib proportions; T1-76 rail footprint (`mcc_rail_male_keepout()`) on the centre body; T1-77 every M3 counterbore clears the rail keep-out; T1-78 ribs clear the centre body, the TV lift's rail band and the case (sampled); T1-79 insert bores and edge distances; T1-80 M3 stack; T1-81 sandwich pad thickness and wall; T1-82 UP arrow clear of body edge, keep-out and counterbores; T1-83 lid ≤ `WALL_GAP`; T1-84 rib run ≥ 2·`RIB_T`; T1-85 spacer = pad height and footprint | **new rev 18** (plan D, issue #56; plan ids B1 … B16) |
+| **T1-86 … T1-90** | *arch sandwich parts* (`arch-tv-bracket.scad`): T1-86 mode ∈ {direct, sandwich}; T1-87 sweep clears the lift rail + bolt head at the right-hand column; T1-88 lid ≤ `WALL_GAP`; T1-89 ribs clear the lift's rail band; T1-90 spacer = pad clamp height (`ARCH_PLATE_T`) and footprint (`ARM_W`). T1-47 … T1-60 hold in both modes | **new rev 18** (D51). **The next free id is T1-91** |
 
 ---
 

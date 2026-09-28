@@ -143,28 +143,58 @@ tests: `models/coupons/rail-lock.scad`, M15).
 Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
 user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
 
-### `arch-tv-bracket.scad` (issue #47)
+### `arch-tv-bracket.scad` (issue #47; sandwich mode issue #56, D51)
 
-`arch-tv-bracket.scad` screws **directly** onto a TV's top two VESA 400 screw positions (M8); no
-VESA plate. Printed once per mounting point, not per case. **Do not print for use before M15
-(rail-lock), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
-defect tracked as issue #48) are closed** — see `models/brackets/README.md`.
+`arch-tv-bracket.scad` mounts on a TV's top two VESA 400 screw positions (M8) in one of two modes,
+fixed by which STL you print — **direct** (`arm`/`centre`, no VESA plate, screws go straight into
+the TV) or **sandwich** (`arm_sandwich`/`centre_sandwich`/`spacer`, for a TV whose own mount — a TV
+lift in the user's installation — already uses all four VESA holes: this bracket clamps between the
+TV and the lift on longer M8 bolts). Printed once per mounting point, not per case. **Do not print
+for use before M15 (the gravity-lock coupon, as plan F redefines it), M18/M20 (the TV/TV-lift
+measurements) and M22 (the sandwich tilt/preload check) are closed** — see
+`models/brackets/README.md`.
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
-| `arch-tv-bracket` arm | `models/brackets/arch-tv-bracket.scad` part `arm`, ASA | 2 | Same STL printed twice — the left arm is the right one rotated (not mirrored), see the file's own `PLAN-ASSUMPTION-4` header note | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.1 |
-| `arch-tv-bracket` centre | same file, part `centre`, ASA | 1 | Carries the rail; sits stacked on the two arms' laps | `docs/plans/2026-09-27-arch-tv-bracket.md` §1.5 |
-| M8 socket head cap screw (ISO 4762) | generic | 2 | **Length: MEASURE, do not guess.** Under-head length = `pad_clamp_t` (echoed by the render, `-D part="arm"` or `"centre"`; 10.0 mm at the current parameters (11 mm plates since D44)) + the usable thread depth of *your* TV's VESA inserts, minus >= 1 mm, rounded **down** to a stock length. Too long can damage the TV panel | measurement M18b; user decision #47 |
-| M8 flat washer (ISO 7089, ⌀16) | generic | 2 | Under the head, in the pad counterbore — spreads the clamp load on ASA | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.4 (`assumed` ISO nominal, `PLAN-ASSUMPTION-9`) |
-| M8 washer, as a spacer | generic | 0–4 (situational) | Only if the TV back is not flat along an arm (arms bear directly on the TV — the centre never touches it); adding spacers lengthens the required screw by their thickness | risk R-F (proposed R33) |
-| M3 socket head cap screw M3×12 (ISO 4762) | generic | 8 | Lap joints, 4 per side, driven from the top face (M3×12 since D44: 11 mm centre plate, counterbore `M3_HEAD_K + 1.3` — T1-57) | `models/brackets/arch-tv-bracket.scad` T1-57; `docs/plans/2026-09-27-arch-tv-bracket.md` §3.3 derivation |
-| M3 heat-set insert Ruthex RX-M3x5.7 | RX-M3x5.7 | 8 | In the arm laps, installed from the top face | `knowledge/components/fasteners-and-hardware.md:35` (length), `:40` (hole diameter) |
+| `arch-tv-bracket` arm | `models/brackets/arch-tv-bracket.scad` part `arm`, ASA | 2 | **Direct mode.** Same STL printed twice — the left arm is the right one rotated (not mirrored), see the file's own `PLAN-ASSUMPTION-4` header note | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.1 |
+| `arch-tv-bracket` centre | same file, part `centre`, ASA | 1 | **Direct mode.** Carries the rail; sits stacked on the two arms' laps | `docs/plans/2026-09-27-arch-tv-bracket.md` §1.5 |
+| `arch-tv-bracket` arm (sandwich) | same file, part `arm_sandwich`, ASA | 2 | **Sandwich mode instead of the direct-mode arm above** — flat clamp pad, no counterbore, no washer seat; ribs start further from the pad so they clear the TV lift's own rail band (T1-89) | issue #56, D51 |
+| `arch-tv-bracket` centre (sandwich) | same file, part `centre_sandwich`, ASA | 1 | **Sandwich mode instead of the direct-mode centre above** — taller plate (`centre_t`, ≈16.6 mm at the M20 placeholders) so the case's own +X slide-on sweep clears the TV lift's rail + bolt head at the right-hand column (T1-87) | issue #56, D51 |
+| `arch-tv-bracket` spacer | same file, part `spacer`, ASA | 2 | **Sandwich mode only** — flat ASA disc, same clamp height/footprint as the arm's own sandwich pad (`ARCH_PLATE_T` × `ARM_W`), under the bracket's own unused (bottom) row of VESA holes, so the TV lift's rail stays coplanar across both rows (R42) | issue #56, D51/T1-90 |
+| M8 socket head cap screw (ISO 4762) | generic | 2 (direct) / **4 (sandwich — all four VESA holes now carry a bolt)** | **Length: MEASURE, do not guess.** Direct mode: under-head length = `pad_clamp_t` (echoed by the render, `-D part="arm"`/`"centre"`; 10.0 mm at the current parameters) + the usable thread depth of *your* TV's VESA inserts, minus >= 1 mm, rounded **down**. **Sandwich mode: length = the TV lift's own rail/plate thickness at the hole (M20: `T_LIFT_RAIL`) + this bracket's own pad/spacer height (`ARCH_PLATE_T` = 11) + the usable TV thread depth, minus >= 1 mm, rounded down** — no washer/head seated in a counterbore any more (the TV lift's own hardware stack governs the outer end; do not go looking for a pocket that no longer exists) | measurement M18b/M20; user decision #47/#56 |
+| M8 flat washer (ISO 7089, ⌀16) | generic | 2 | **Direct mode only** — under the head, in the pad counterbore, spreads the clamp load on ASA. **Sandwich mode has no counterbore/washer seat** — the TV lift's own hardware (rail + bolt head/washer) bears on the flat pad/spacer instead | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.4 (`assumed` ISO nominal, `PLAN-ASSUMPTION-9`) |
+| M8 washer, as a spacer | generic | 0–4 (situational) | Direct mode only, and only if the TV back is not flat along an arm (arms bear directly on the TV — the centre never touches it); adding spacers lengthens the required screw by their thickness | risk R-F (proposed R33) |
+| M3 socket head cap screw M3×12 (ISO 4762) | generic | 8 | **Direct mode.** Lap joints, 4 per side, driven from the top face (M3×12 since D44: 11 mm centre plate, counterbore `M3_HEAD_K + 1.3` — T1-57) | `models/brackets/arch-tv-bracket.scad` T1-57; `docs/plans/2026-09-27-arch-tv-bracket.md` §3.3 derivation |
+| M3 socket head cap screw M3×18 (ISO 4762) | generic | 8 | **Sandwich mode instead of the M3×12 above** — the taller `centre_sandwich` needs a longer lap screw, chosen inside the same tip-clearance/engagement window T1-57 checks (never a rounded-up raw number, DB11) | issue #56, D51, T1-57 |
+| M3 heat-set insert Ruthex RX-M3x5.7 | RX-M3x5.7 | 8 | In the arm laps, installed from the top face (either mode — the insert side of the joint is mode-independent) | `knowledge/components/fasteners-and-hardware.md:35` (length), `:40` (hole diameter) |
 
 Deviations from the issue's own text, flagged for the user at PR review (`PLAN-ASSUMPTION-1`,
 `-3`): the lap joints use **M3**, not M4 (a sourced insert, blind in the 11 mm arm, >10x pull-out
-margin — `fasteners-and-hardware.md:56`, `:59`); and the **centre plate stands 11 mm off the TV** (D44) —
-only the two arms bear directly on it, forced by the case's own +X slide-on sweep over the right
-arm's M8 pad (see the `.scad` file's own header comment for the full Z-stack derivation).
+margin — `fasteners-and-hardware.md:56`, `:59`); and the **centre plate stands off the TV** (11 mm
+direct, ≈16.6 mm sandwich — D44/D51) — only the two arms bear directly on it (direct mode) or on the
+TV lift's own rail (sandwich mode), forced by the case's own +X slide-on sweep over the right arm's
+M8 pad / the right-hand column (see the `.scad` file's own header comment for the full Z-stack
+derivation).
+
+### `vertical-tv-bracket.scad` (issue #56, D51)
+
+Sandwich-only (no direct-mount option exists for this bracket): mounts on ONE vertical VESA column
+(Samsung 400×300, 300 mm pitch), clamped between the TV and its own TV lift on longer M8 bolts,
+case outboard of the +X column (seen from behind the TV). Printed once per mounting point, not per
+case. **Do not print for use before M15 (the gravity-lock coupon), M20 (the TV/TV-lift measurements)
+and M22 (the sandwich tilt/preload check) are closed** — see `models/brackets/README.md`.
+
+| Item | Part number | Qty | Notes | Source |
+|---|---|---|---|---|
+| `vertical-tv-bracket` arm | `models/brackets/vertical-tv-bracket.scad` part `arm`, ASA | 2 | Top screw + bottom screw — same STL printed twice, placed by ±α rotation (hub topology, no mirror) | issue #56, T1-70…T1-85 |
+| `vertical-tv-bracket` centre | same file, part `centre`, ASA | 1 | Carries the rail; sits stacked on both arms' laps | issue #56 |
+| `vertical-tv-bracket` spacer | same file, part `spacer`, ASA | 2 | Under the lift's OTHER, unoccupied column's two VESA holes, same clamp height/footprint as the arm's own pad, so the lift's rail stays coplanar across both columns (R42) | issue #56, T1-85 |
+| M8 socket head cap screw (ISO 4762) | generic | **4 — all four VESA holes carry a bolt** (two through the arms' pads, two through the spacers) | **Length: MEASURE, do not guess.** Length = the TV lift's own rail/plate thickness at the hole (M20: `T_LIFT_RAIL`) + the pad/spacer height (`VTV_PLATE_T` = 11) + the usable TV thread depth, minus >= 1 mm, rounded **down**. **No washer/head seated in a counterbore** — the pad and spacers are flat clamp faces; the TV lift's own hardware stack governs the outer end | measurement M20 |
+| M3 socket head cap screw M3×12 (ISO 4762) | generic | 8 | Lap joints, 4 per side, driven from the top face (T1-80) | issue #56, T1-80 |
+| M3 heat-set insert Ruthex RX-M3x5.7 | RX-M3x5.7 | 8 | In the arm laps, installed from the top face | `knowledge/components/fasteners-and-hardware.md:35` (length), `:40` (hole diameter) |
+
+No sleeves, no steel spacers anywhere in this bracket's BOM — the user accepted printed ASA in the
+clamp path (R42, 2026-09-28); the spacers above are ASA, not steel.
 
 ---
 
