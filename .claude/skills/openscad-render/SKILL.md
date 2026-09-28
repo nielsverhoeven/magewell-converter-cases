@@ -151,13 +151,13 @@ file's numbers directly to make a diff pass.
 
 ## Multiple `-D` overrides in one invocation
 
-`-D` can be repeated for multiple parameters, e.g. rendering a specific variant's `panel` part
-directly without going through the model file's own `part` dispatch:
+`-D` can be repeated for multiple parameters, e.g. rendering a variant's `base` with the fast
+(plain-bore) connector threads and the reservation ghosts on:
 
 ```powershell
 & "C:\Program Files\OpenSCAD (Nightly)\openscad.com" --backend=Manifold `
-    -o exports\pro-convert-hdmi-tx-panel.stl `
-    -D 'part="panel"' -D 'MCC_SHOW_GHOST=true' `
+    -o exports\pro-convert-hdmi-tx-base-fast.stl `
+    -D 'part="base"' -D 'MCC_THREAD_FAST=true' -D 'MCC_SHOW_GHOST=true' `
     models\pro-convert-hdmi-tx\case.scad
 ```
 

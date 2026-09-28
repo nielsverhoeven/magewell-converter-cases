@@ -200,8 +200,6 @@ def discover_models() -> list[Target]:
             text = case_path.read_text(encoding="utf-8")
         except OSError:
             text = ""
-        if 'part == "panel"' in text:
-            parts.append("panel")
         for extra in _extra_parts(text):
             if extra not in parts:
                 parts.append(extra)
@@ -247,9 +245,9 @@ def _bracket_parts(bracket_scad_text: str) -> list[str]:
     return _marker_list(bracket_scad_text, _PARTS_MARKER_RE)
 
 
-# Print pose per part (scripts/bambu_project.py POSES). Defaults: a model's "lid" and "panel" are
-# flipped (print-check §3 — panel face-down, shells open-side-up; the lid is authored in its
-# assembled pose, exterior on top), everything else prints as modelled. A .scad file overrides with
+# Print pose per part (scripts/bambu_project.py POSES). Defaults: a model's "lid" is flipped
+# (print-check §3 — shells open-side-up; the lid is authored in its assembled pose, exterior on
+# top), everything else prints as modelled. A .scad file overrides with
 # `// build.py: print_pose = <part>:<pose>[, <part>:<pose>...]`, e.g. a variant part such as
 # `lid_novent:flip`, or a coupon authored upside-down.
 _PRINT_POSE_MARKER_RE = re.compile(r"//\s*build\.py:\s*print_pose\s*=\s*(.+)")
@@ -312,7 +310,7 @@ def print_set(target: Target) -> list[str]:
         extras = set()
     # Always the discovered part list — a `render --part base` run must not shrink the project.
     full = next((t for t in discover_models() if t.name == target.name), target)
-    order = {"base": 0, "panel": 1, "lid": 2}
+    order = {"base": 0, "lid": 1}
     return sorted((p for p in full.parts if p not in extras), key=lambda p: order.get(p, 9))
 
 
@@ -551,7 +549,9 @@ def render_part(
     # OpenSCAD always writes the model-frame STL; the user-facing STL/3MF are derived from it in
     # the print pose below (write_print_artefacts()), never exported by OpenSCAD directly.
     measure_stl = export_dir / f"{part}{MODEL_FRAME_SUFFIX}"
-    ok, lines = run_openscad(exe, target.scad_path, defines, [measure_stl], summary_path)
+    # The CSG tree comes out of the same evaluation for free; `step` builds the exact B-rep
+    # (true cylinders/circles) from it — scripts/csg_to_step.py.
+    ok, lines = run_openscad(exe, target.scad_path, defines, [measure_stl, export_dir / f"{part}.csg"], summary_path)
 
     if release:
         if any(RELEASE_WARNING_MARKER in ln for ln in lines):
@@ -719,11 +719,11 @@ def find_bambu_studio() -> Path | None:
 
 def _unit_cost(target: Target, part: str) -> float:
     """Relative CI cost of one part (render + check + slice + STEP), for balancing part groups. Rough
-    wall-clock weights measured on ubuntu-latest (2026-09-28): case bases dominate, thread-bearing
-    panels are next, coupons are cheap."""
+    wall-clock weights measured on ubuntu-latest (2026-09-28): case bases dominate (and carry the
+    slowest exact STEP build, ~2.5 min), coupons are cheap."""
 
     if target.kind == "model":
-        return {"base": 10.0, "base_fan": 10.0, "panel": 6.0, "lid": 4.0}.get(part, 6.0)
+        return {"base": 14.0, "base_fan": 14.0, "lid": 4.0}.get(part, 6.0)
     if target.kind == "bracket":
         return 5.0
     return 2.0
@@ -800,13 +800,10 @@ def cmd_ci(args: argparse.Namespace) -> int:
             if not ok or warnings:
                 errors += [f"slicer: {w}" for w in (warnings or ["slicing failed"])]
         if not args.no_step:
-            proc = subprocess.run(
-                [sys.executable, str(Path(__file__).with_name("mesh_to_step.py")),
-                 str(target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"),
-                 str(target.export_dir / f"{part}.step"), "--product", f"{target.name}/{part}"],
-                capture_output=True, text=True, check=False)
-            if proc.returncode != 0:
-                errors.append("step: " + ((proc.stderr or proc.stdout).strip().splitlines() or ["failed"])[-1])
+            ok, detail = export_step(target, part)
+            stats["step"] = detail
+            if not ok:
+                errors.append("step: " + detail)
         print(f"   done {label}: {'ok' if not errors else 'FAIL'}", flush=True)
         return label, errors, stats
 
@@ -984,40 +981,57 @@ def _print_result_table(label: str, results: list[RenderResult]) -> None:
     print(f"  {n_ok}/{len(results)} passed")
 
 
-# -----------------------------------------------------------------------------------------
-# step  (STL -> STEP via scripts/mesh_to_step.py; see architecture.md §8 export policy)
-# -----------------------------------------------------------------------------------------
+EXACT_STEP_TIMEOUT_S = 900  # a case base takes ~2.5 min; beyond this, fall back rather than stall CI
 
-def _update_manifest_with_step(target: Target, part: str, result) -> None:
-    """Merge a `step` sub-object into the part's existing `<part>.manifest.json` (written by
-    `render_part()`). Never overwrites the render-time fields — only adds/replaces `manifest["step"]`."""
 
-    manifest_path = target.export_dir / f"{part}.manifest.json"
-    manifest: dict = {}
-    if manifest_path.is_file():
+def export_step(target: Target, part: str) -> tuple[bool, str]:
+    """STEP for one rendered part, in the model (assembly) frame. Exact path first:
+    scripts/csg_to_step.py rebuilds OpenSCAD's CSG tree as an OpenCascade B-rep, so holes and
+    roundings are real cylinders/circles (user report 2026-09-28: the mesh-converted STEP was
+    "all rectangles", useless for CAD post-processing), cross-checked against the rendered mesh
+    volume. Only when that fails (an unsupported node such as an engraved text() label) does it
+    fall back to scripts/mesh_to_step.py's faceted B-rep. Returns (ok, detail); detail names the
+    path taken, and the manifest records it under "step"."""
+    csg = target.export_dir / f"{part}.csg"
+    stl = target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"
+    step = target.export_dir / f"{part}.step"
+    product = f"{target.name}/{part}"
+    detail = ""
+    if csg.is_file():
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            manifest = {}
+            proc = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("csg_to_step.py")), str(csg), str(step),
+                 "--product", product, "--mesh", str(stl)],
+                capture_output=True, text=True, check=False, timeout=EXACT_STEP_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            proc = subprocess.CompletedProcess([], 1, "", f"exact conversion timed out after {EXACT_STEP_TIMEOUT_S} s")
+        line = next((ln for ln in proc.stdout.splitlines() if ln.startswith("ok=")), "")
+        if proc.returncode == 0:
+            _merge_manifest_step(target, part, {"ok": True, "backend": "csg-exact", "summary": line})
+            return True, "exact (csg): " + line
+        detail = line or ((proc.stderr or proc.stdout).strip().splitlines() or ["failed"])[-1]
+    else:
+        detail = f"no {csg.name}"
+    r = mesh_to_step.convert(stl, step, product)
+    _merge_manifest_step(target, part, {"ok": r.ok, "backend": f"mesh-faceted ({r.backend})",
+                                        "why_not_exact": detail, "error": r.error})
+    return r.ok, f"FACETED fallback ({detail})" + ("" if r.ok else f": {r.error}")
 
-    manifest["step"] = {
-        "ok": result.ok,
-        "backend": result.backend,
-        "faces_before_unify": result.faces_before_unify,
-        "faces_after_unify": result.faces_after_unify,
-        "size_bytes": result.size_bytes,
-        "validated": result.validated,
-        "duration_s": round(result.duration_s, 2) if result.duration_s else None,
-        "error": result.error,
-        "path": (
-            str(result.step_path.relative_to(REPO_ROOT).as_posix())
-            if result.step_path is not None and result.step_path.is_file()
-            else None
-        ),
-    }
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+def _merge_manifest_step(target: Target, part: str, info: dict) -> None:
+    manifest_path = target.export_dir / f"{part}.manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
+    except (OSError, json.JSONDecodeError):
+        manifest = {}
+    manifest["step"] = info
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
 
+
+# -----------------------------------------------------------------------------------------
+# step  (exact CSG -> B-rep via scripts/csg_to_step.py, faceted mesh fallback via
+#        scripts/mesh_to_step.py; see architecture.md §8 export policy)
+# -----------------------------------------------------------------------------------------
 
 def cmd_step(args: argparse.Namespace) -> int:
     if args.all:
@@ -1057,16 +1071,13 @@ def cmd_step(args: argparse.Namespace) -> int:
                 ))
                 continue
 
-            step_path = target.export_dir / f"{part}.step"
-            product_name = f"{target.name}/{part}"
-            print(f"-> step {target.name} part={part}")
-            r = mesh_to_step.convert(stl_path, step_path, product_name, backend=backend)
-            _update_manifest_with_step(target, part, r)
+            print(f"-> step {target.name} part={part}", flush=True)
+            ok, detail = export_step(target, part)
             results.append(StepBuildResult(
-                target=target.name, part=part, ok=r.ok, backend=r.backend, step_path=r.step_path,
-                faces_before_unify=r.faces_before_unify, faces_after_unify=r.faces_after_unify,
-                size_bytes=r.size_bytes, error=r.error,
+                target=target.name, part=part, ok=ok, backend=detail.split(" ")[0],
+                step_path=target.export_dir / f"{part}.step", error=None if ok else detail,
             ))
+            print(f"   {detail}", flush=True)
 
     print("\nstep results:")
     width = max((len(f"{r.target}:{r.part}") for r in results), default=10)
@@ -1074,7 +1085,7 @@ def cmd_step(args: argparse.Namespace) -> int:
         status = "PASS" if r.ok else "FAIL"
         key = f"{r.target}:{r.part}".ljust(width)
         if r.ok:
-            extra = f"  (faces {r.faces_before_unify}->{r.faces_after_unify}, {r.size_bytes} bytes)"
+            extra = f"  ({r.backend})"
         else:
             extra = f"  ({r.error})"
         print(f"  [{status}] {key}{extra}")

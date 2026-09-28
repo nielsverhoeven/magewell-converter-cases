@@ -311,25 +311,22 @@ MCC_APERTURE_BRIDGE_MAX = 10.0; // max unsupported horizontal span anywhere in t
                           // aperture, mm — the one place architecture.md §5's "no unsupported
                           // horizontal span over 10 mm anywhere in the shell" becomes a number.
                           // Used by T1-34a (window apex flat-bridge width w_flat).
-MCC_APERTURE_SELF_SUPPORT_MAX_D = 10.0; // assumed -- round-hole diameter below which a
-                          // horizontally-printed hole needs NO teardrop of its own (same 10 mm span
-                          // rule, read as a diameter). Used by T1-34a to justify the plain-circle
-                          // boss reliefs (d_rel = 8.88 < 10.0).
 MCC_APERTURE_CAP_RISE = 0.4; // assumed -- how far the truncated-teardrop cap sits above the body
                           // circle's own top, mm: cap_h = d_win/2 + MCC_APERTURE_CAP_RISE. Chosen as
                           // the smallest rise that still hides the cap behind the plate
                           // (cap_h > mcc_cutout_d(part)/2, margin 0.7 mm) while keeping w_flat under
                           // MCC_APERTURE_BRIDGE_MAX. Calibrate with the neutrik-tile coupon.
-MCC_APERTURE_RELIEF_INTRUSION_MAX = 1.5; // assumed -- maximum radial intrusion of a boss relief
-                          // inside the plate's own cutout silhouette, mm -- the numeric form of "the
-                          // D slots must read as exactly round" (the user's rejection, 2026-09-08).
-                          // Actual worst case today 1.235 mm (NE8FDP-B). T1-34b.
+MCC_WALL_THREAD_WEB_MIN = 1.2; // assumed -- minimum wall between a connector's printed M3 thread
+                          // (slopped major diameter) and the seat hole / body window beside it, mm
+                          // (D36, T1-48): three 0.4 mm perimeters. The screws sit 15.3 mm from the
+                          // connector centre on a 24 mm hole, so this is the tightest web in the
+                          // patch wall; only a sliver of each thread's circumference is this thin.
 MCC_APERTURE_LIP_WEB_MIN = 2.0; // minimum lip material between any part of a window and the plate's
                           // own edge, mm. knowledge/design/fdm-rugged-enclosure-guidelines.md:127.
                           // T1-34c.
 MCC_INSERT_BORE_EXTRA = 0.5; // assumed -- extra bore depth past a heat-set insert's own length so
                           // the insert seats fully, mm. Replaces the bare "+ 1" literal in
-                          // mcc_neutrik_d_bosses() (deviation D10 / T1-35).
+                          // the old connector bosses (deviation D10 / T1-35).
 
 // -----------------------------------------------------------------------------------------
 // Section: Printed M3 threads (connector fixing, GitHub issue #30) -- the connector's own two
@@ -375,7 +372,7 @@ MCC_THREAD_M3_PAD_D = 8.28; // connector-fixing pad outer diameter, mm. Pinned E
                              // plate-fixing bosses) cannot silently move the wall aperture via
                              // this file.
 MCC_THREAD_M3_PAD_H = 7.0;  // connector-fixing pad depth, mm. Numerically unchanged from the old
-                             // mcc_neutrik_d_bosses() boss_h default (architecture.md §5 "~7 mm
+                             // connector-boss boss_h default (architecture.md §5 "~7 mm
                              // total"). Minus MCC_THREAD_M3_CHAMFER, gives 6.5 mm / 13 full turns
                              // of engagement at MCC_THREAD_M3_PITCH -- above both the ticket's
                              // >=3-turn floor (T1-42b) and the sourced 2.0-2.5x-diameter
@@ -412,12 +409,6 @@ MCC_THREAD_FAST = false; // when true (-D MCC_THREAD_FAST=true only -- NEVER the
                           // stray fast-path render fails the golden. NEVER set true for a
                           // release/coupon/print export.
 
-MCC_PLATE_RIM_W = 6.0; // the panel plate's rim (border) width, mm. Named once so
-                          // mcc_panel_plate()'s rim_w default, _mcc_patch_wall_aperture()'s local
-                          // rim_w and the literal passed to _mcc_patch_wall_fixing_bosses() cannot
-                          // drift apart across the two L2 files that used to hardcode "6"
-                          // independently -- the exact drift hazard that produced deviation D6.
-
 MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL;
                           // total patch-wall Y stack at the panel band, mm. DERIVED —
                           // layout-patch-wall.md §2.1 "MCC_T_PATCH total = 8.0" =
@@ -445,6 +436,9 @@ MCC_GAP_DEV = 2.0;         // clearance between the deepest plug envelope and th
 MCC_LID_SPAN_MAX = 180.0;  // lid span threshold above which 6 (not 4) captive thumbscrews are used,
                             // mm. Architect-derived, user-reviewed, ACCEPTED 2026-09-08 (D-04) —
                             // layout-patch-wall.md §6 / §10.
+MCC_WEB_BORE_KEEP = 0.8; // how far a lid-boss web reaches INTO its boss (radially, from the boss's
+                         // outer radius), mm (D38). Only has to be a real overlap and stay well
+                         // outside the insert bore; not a physical dimension of any part.
 MCC_FASTENER_INSET = 10.0; // lid-fastener ring inset from the outer faces ("e"), mm. assumed —
                             // layout-patch-wall.md §6.
 MCC_LID_FASTENER_CLR_MIN =
@@ -557,10 +551,8 @@ MCC_CRADLE_RIB_T = 3.0;    // locating-rib thickness, mm. layout-patch-wall.md �
                             // "Locating ribs | 3.0 mm thick x 9.0 mm tall".
 MCC_CRADLE_RIB_H = 9.0;    // locating-rib height, mm. Same table; <= 3x thickness rule
                             // (fdm-rugged-enclosure-guidelines.md:65-70) satisfied (9 <= 9).
-MCC_CRADLE_FLOOR_PAD_T = 2.0; // compliant EPDM floor-pad thickness under the device, mm.
-                               // fasteners-and-hardware.md:186, layout-patch-wall.md §7.
-MCC_CRADLE_FLOOR_PAD_MIN = 40; // minimum compliant floor-pad footprint (square), mm.
-                                // layout-patch-wall.md §7 "footprint >= 40x40".
+// (MCC_CRADLE_FLOOR_PAD_T / _MIN retired with the floor-pad island, D37 — the compliant pad sits
+// on the side-bolt boss face, architecture.md §11 R8.)
 
 // Ribbed cradle deck lattice (issue #29, rev 9 D-17 -- replaces the solid deck slab). The ladder
 // ribs reuse MCC_CRADLE_RIB_T above, NOT a derived per-family thickness -- architecture.md §13 D22
@@ -677,60 +669,56 @@ MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-loca
 // 19.31) so the disc/rect clearance in §1.4 (2.69 mm) comfortably exceeds MCC_FLOOR_FEATURE_EDGE_MIN.
 MCC_RAIL_Y = -20.0;
 
-// Spring-lip latch on the MALE rail: DISABLED (user decision 2026-09-27, architecture.md §13 D28).
-// As modelled, _mcc_rail_latch_tab() starts 1 mm above the bracket plate and hangs only from the
-// dovetail's top edge (the 60 deg flank touches the arm nowhere else), so it prints entirely in
-// mid-air (Bambu Studio "floating regions" on the rail-latch coupon and the tv-bracket), and above
-// the groove mouth it sits outside the flank, where the case floor is. It returns via a redesign
-// (fixed root, free tip, printable without support, clear of the groove) — flip this back only
-// together with that redesign. The female latch pocket in the case floor stays cut (inert without
-// the arm) so re-enabling needs no case reprint and no case golden moves.
-MCC_RAIL_LATCH_ENABLED = false;
-MCC_RAIL_LATCH_ARM_L = 14.0;  // spring-lip latch cantilever arm length, mm. assumed — matches the
-                               // T_L=14 flexure-feature precedent (models/coupons/tg-ladder.scad) and
-                               // clears the L/t >= 8:1 rule below.
-MCC_RAIL_LATCH_ARM_T = 1.6;   // spring-lip latch cantilever arm thickness, mm. assumed — matches
-                               // MCC_TG_W's existing 1.6 mm feature-thickness precedent.
-                               // L/t = 14.0/1.6 = 8.75 >= 8:1
-                               // (knowledge/components/fasteners-and-hardware.md:133).
-MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED —
+// Rail latch — REDESIGNED 2026-09-28 (issue #46, architecture.md §13 D34; replaces the D28
+// disabled spring-lip). An in-plane snap arm cut out of the male rail's own -Y flank: a flank-
+// parallel strip MCC_RAIL_LATCH_ARM_T thick, freed from the rail core by a MCC_RAIL_LATCH_SLOT slot
+// and from the bracket plate by a window through the plate, so it stands on the bed and is joined
+// only at its root. It bends in Y — in the printed layer plane, the strong FDM axis
+// (fasteners-and-hardware.md:137). A nub on its free tip rides the groove flank during the slide
+// and snaps into a notch in the case groove's flank at full insertion; it releases by pulling
+// (ramped both ways, steeper on the way out) — no thumb access through the case floor any more.
+// Root at the +X end (towards the case's open end), tip at -X: the pull-off load puts the arm in
+// tension, not compression.
+MCC_RAIL_LATCH_ENABLED = true;
+MCC_RAIL_LATCH_ARM_L = 18.0;  // snap arm free length, root to tip, mm. assumed — L/t = 11.25 >= 8
+                               // (fasteners-and-hardware.md:133) and tip strain ~1.5 % (asserted
+                               // against MCC_SNAP_STRAIN_MAX in rail.scad).
+MCC_RAIL_LATCH_ARM_T = 1.6;   // snap arm thickness (Y, flank-parallel), mm. assumed — MCC_TG_W's
+                               // 1.6 mm feature-thickness precedent; 4 lines at 0.42 mm.
+MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED — minimum root radius,
                                // fasteners-and-hardware.md:134 "fillet >= 0.5x base thickness".
-MCC_RAIL_LATCH_ENGAGE = 2.0;  // latch nub engagement depth, mm.
+MCC_RAIL_LATCH_ENGAGE = 2.0;  // nub protrusion beyond the flank, mm.
                                // fasteners-and-hardware.md:136 "≥ ~2 mm for a secure catch".
-MCC_RAIL_LATCH_W = 6.0;       // spring-lip latch cantilever arm width, mm. assumed — clears the
-                               // >=5 mm minimum clip width (fasteners-and-hardware.md:135).
-MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the open (insertion) end to the latch/detent, so the case
-                               // self-aligns on the dovetail before the latch has to do any work.
-                               // assumed. Named (not folded into MCC_RAIL_LATCH_X below) because
-                               // lib/mcc/rail.scad's modules re-derive the latch's own X position
-                               // from their OWN `len` parameter as -len/2 + MCC_RAIL_LATCH_LEAD_IN —
-                               // not from MCC_RAIL_LATCH_X directly, which is fixed to MCC_RAIL_LEN
-                               // — so a shorter test length (models/coupons/rail-latch.scad, len=60)
-                               // still gets a valid, in-bounds latch position.
-MCC_RAIL_LATCH_X = -MCC_RAIL_LEN / 2 + MCC_RAIL_LATCH_LEAD_IN; // = -55.0. Local X of the latch/
-                               // detent at the PRODUCTION length (MCC_RAIL_LEN) — informational/BOM
-                               // use; rail.scad's own geometry modules do not read this directly.
-MCC_RAIL_ACCESS_W = 10.0;     // thumb-release access cutout width, mm. assumed — fingertip/thin-tool
-                               // clearance, centred at MCC_RAIL_LATCH_X.
-MCC_RAIL_ACCESS_L = 14.0;     // thumb-release access cutout length, mm. assumed — same basis.
+MCC_RAIL_LATCH_SLOT = MCC_RAIL_LATCH_ENGAGE + 0.6; // = 2.6. gap between arm and rail core, mm —
+                               // room for the full inward deflection plus margin; its rounded root
+                               // end (radius SLOT/2 = 1.3) is the root fillet (>= ROOT_FILLET).
+MCC_RAIL_LATCH_RAMP_IN = 30;  // nub entry ramp angle to the slide axis, deg. assumed — easy snap-in.
+MCC_RAIL_LATCH_RAMP_OUT = 45; // nub exit ramp angle, deg. assumed — steeper = more pull-off force;
+                               // tune against the >= 30 N target on models/coupons/rail-latch.scad.
+MCC_RAIL_LATCH_FLAT = 3.0;    // nub flat length at full protrusion, mm. assumed.
+MCC_RAIL_LATCH_WINDOW_CLR = 0.6; // clearance of the bracket-plate window around the arm leg and
+                               // slot, mm. assumed — keeps the arm from fusing to the plate.
+MCC_SNAP_STRAIN_MAX = 0.025;  // allowed peak bending strain of a printed ASA snap arm at full
+                               // deflection (1.5 t d / L^2). assumed — the usual ~2.5 % design limit
+                               // for ABS-class snap fits; no sourced ASA figure in knowledge/**.
+MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the case's OPEN (+X) end of the working length to the
+                               // latch, so the case self-aligns on the dovetail before the nub has
+                               // to ride the flank. assumed. rail.scad re-derives the latch X from
+                               // its own `len` (+len/2 - LEAD_IN) so a short coupon rail works too.
+MCC_RAIL_LATCH_X = MCC_RAIL_LEN / 2 - MCC_RAIL_LATCH_LEAD_IN; // = +55.0 at the production length.
+                               // Informational/BOM; geometry re-derives from `len`.
+MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs out through the case's
+                               // +X end zone (D34). There the passage only guides the male during
+                               // insertion — at full mate nothing loads it — so the T1-38 residual
+                               // (MCC_FLOOR_T) does not apply; the fan-bay reservation above caps
+                               // the passage sill at fan_bay_z[0]. assumed.
 
-// End-stop (closed, +X end — opposite the latch): a WIDTH feature, not a height bump. A bump raised
-// above MCC_RAIL_SILL_H cannot physically stop anything, because the case's own residual floor is
-// UNIFORMLY MCC_RAIL_SILL_H tall everywhere within the sill footprint (T1-38) — a Z-height shoulder
-// positioned anywhere inside the working rail length would sit in open interior air the whole slide,
-// never contacting the case. Instead, mcc_rail_male() extends its solid pedestal MCC_RAIL_END_STOP_L
-// beyond the dovetail's own working length (len), full MCC_RAIL_ROOT_W wide — OUTSIDE the female
-// groove's own footprint entirely, so it never collides during approach, and the case's own un-
-// grooved floor edge (immediately past the sill) contacts it exactly once the case reaches full
-// insertion (len/2 <-> the case's own sill boundary), capping over-travel by plain interference, not
-// a Z clearance trick.
-MCC_RAIL_END_STOP_L = 6.0;    // end-stop flange length beyond the rail's own working length, mm.
-                               // assumed — long enough to print/mold as a clean, obviously-distinct
-                               // shoulder; not calibration-critical (models/coupons/rail-latch.scad
-                               // verifies the fit).
-MCC_RAIL_END_STOP_H = 2.0;    // end-stop flange's EXTRA rise above MCC_RAIL_SILL_H, mm — cosmetic/
-                               // structural only (the flange sits outside the groove's footprint, so
-                               // this does not itself carry the stop function — see above). assumed.
+// End stop: the CLOSED (-X) end of the case groove itself (D34). The old separate end-stop flange
+// on the male rail sat inside the case footprint and 6 mm above the case bottom — it would have hit
+// the case floor — so it is retired. The constants stay at 0 so bracket placement math that still
+// adds them keeps its meaning; drop them at the next bracket rework.
+MCC_RAIL_END_STOP_L = 0;
+MCC_RAIL_END_STOP_H = 0;
 
 // MCC_RAIL_CLR: deliberately NOT a new constant. Reuse MCC_CLR_SLIDE (0.3, above) for the
 // per-side dovetail sliding-fit clearance — same coupon (tolerance-ladder / the new rail-latch

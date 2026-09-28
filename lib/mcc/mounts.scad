@@ -64,6 +64,21 @@ module mcc_floor_features_add(dev, cfg) {
             // Width: root + a full side wall each side (MCC_RAIL_SILL_SIDE_W, D30) — never just
             // the root width, which leaves knife-edge sill walls and an unsupported groove roof.
             _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], MCC_RAIL_SILL_H);
+
+        // Insertion passage (D34): the groove runs on from +MCC_RAIL_LEN/2 out through the +X wall
+        // so a case can actually be slid onto a bracket. Its sill is capped by the fan-bay
+        // reservation above it (fan_bay_z[0]; the bay is reserved in every variant, §6), leaving a
+        // thinner roof than T1-38's — acceptable because at full mate the male no longer reaches
+        // here (it only guides during insertion). The -X end zone is not an option: the splitter
+        // bay reservation starts on the floor there.
+        pass_h = min(MCC_RAIL_SILL_H, struct_val(l, "fan_bay_z")[0]);
+        assert(pass_h - MCC_RAIL_DEPTH >= MCC_RAIL_PASSAGE_ROOF_MIN - MCC_EPS,
+            str("mcc: D34 rail passage roof ", pass_h - MCC_RAIL_DEPTH, " below MCC_RAIL_PASSAGE_ROOF_MIN on \"",
+                mcc_dev_slug(dev), "\""));
+        pass_x0 = MCC_RAIL_LEN / 2 - MCC_EPS;
+        pass_x1 = L / 2 - MCC_WALL + MCC_EPS;
+        translate([(pass_x0 + pass_x1) / 2, MCC_RAIL_Y, 0])
+            _mcc_floor_boss_from_below_rect([pass_x1 - pass_x0, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], pass_h);
     }
 }
 
@@ -96,8 +111,10 @@ module mcc_rail_features_cut(dev, cfg) {
     rail_flag = struct_val(cfg, "rail");
     rail_on = is_undef(rail_flag) ? true : rail_flag;
     if (rail_on) {
+        // Open at +X through the case wall (D34): the groove's closed -X end is the end stop.
+        L = struct_val(mcc_case_layout(dev, cfg), "L");
         translate([0, MCC_RAIL_Y, 0])
-            mcc_rail_female_cut(len = MCC_RAIL_LEN);
+            mcc_rail_female_cut(len = MCC_RAIL_LEN, open_ext = L / 2 - MCC_RAIL_LEN / 2 + 1);
     }
 }
 

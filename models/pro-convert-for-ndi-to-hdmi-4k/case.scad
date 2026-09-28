@@ -3,9 +3,9 @@
 //   L4 thin assembly (architecture.md §4, new-case-variant skill), copied from the normative
 //   models/pro-convert-for-ndi-to-hdmi/case.scad template. Pro Convert for NDI to HDMI 4K (Plus
 //   chassis, NDI-decoder electronics -- lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad;
-//   GitHub issue #7). part in {"base","lid","panel","assembly","panel_placed","ghost_device",
-//   "ghost_plugs"}; only base/lid/panel are picked up by scripts/build.py's discover_models() (it
-//   hardcodes ["base","lid"] + "panel" iff the literal substring 'part == "panel"' appears below).
+//   GitHub issue #7). part in {"base","lid","assembly","ghost_device",
+//   "ghost_plugs"}; only base/lid are picked up by scripts/build.py's discover_models() (it
+//   hardcodes ["base","lid"]; the separate connector panel is gone, D36).
 // Render:
 //   openscad --backend=Manifold -D 'part="base"' -o out/base.stl models/pro-convert-for-ndi-to-hdmi-4k/case.scad
 //////////////////////////////////////////////////////////////////////
@@ -18,7 +18,7 @@ $fa = 1; $fs = 0.4; // the ONLY place $fn-adjacent globals are set (openscad-aut
 part = "base"; // overridden via -D part="..."
 
 // explode: Z-lift (mm) applied to the lid ONLY when part=="assembly" (preview aid). No effect on
-// base/lid/panel exports.
+// base/lid exports.
 explode = 0;
 
 // Variant config (cfg): case-level options only. The connector slot set is NEVER driven by this
@@ -46,7 +46,7 @@ explode = 0;
 //   "rail"      (bool, optional, default true) -- cuts the tool-less dovetail mount-rail groove in
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Left at the
 //               library default (true) -- not overridden here.
-//   "tripod_insert" (bool, optional, default true, D-16) -- draws the case's own 1/4"-20
+//   "tripod_insert" (bool, optional, default false since D35; was true, D-16) -- draws the case's own 1/4"-20
 //               floor-mount insert boss (cradle.scad, T1-32), braced into the deck lattice with
 //               a collar (T1-41). Pass false to omit both the boss and its bore cut.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- not overridden here;
@@ -83,21 +83,11 @@ variant = [
     ["fan",         fan],
     ["splitter",    splitter],
     ["fan_switch",  fan],
-    ["tripod_insert", true],
+    ["tripod_insert", false], // user decision 2026-09-28 (D35): no floor insert — the side bolt is the only screw
     ["lid_vents", lid_vents],
 ];
 
 dev = MCC_DEV_PRO_CONVERT_FOR_NDI_TO_HDMI_4K;
-
-// Shared slot-list construction for the "panel" and "assembly" branches (data assembly, not raw
-// geometry -- acceptable per new-case-variant's stop-and-report gate).
-function _mcc_case_slot_list(dev, cfg) =
-    let(
-        slots_raw = mcc_slot_assignment(dev),
-        layout    = mcc_case_layout(dev, cfg),
-        slot_x    = struct_val(layout, "slot_x")
-    )
-    [for (s = slots_raw) let(i = struct_val(s, "slot")) [slot_x[i - 1], 0, struct_val(s, "part"), false]];
 
 L_dims = mcc_case_dims(dev, variant);
 echo(str("pro-convert-for-ndi-to-hdmi-4k: L=", L_dims[0], " W=", L_dims[1], " H=", L_dims[2]));
@@ -111,47 +101,27 @@ module _mcc_case_at_device(layout) {
         children();
 }
 
-// The panel plate at its assembled position in the patch wall. Plate's local frame: front
-// (connector) face at local Z=0, field/rim extend into local -Z; local X = plate width (= world X);
-// local Y = plate height. rotate([-90,0,0]) maps local Z -> world Y and local Y -> world -Z (same
-// rotation shell.scad uses for the side-bolt boss). The front face lands on the bezel-recessed
-// plane W/2 - MCC_PANEL_BEZEL_T at connector centreline height z_conn_c.
-module _mcc_case_panel_placed(layout) {
-    translate([0, struct_val(layout, "W") / 2 - MCC_PANEL_BEZEL_T, struct_val(layout, "z_conn_c")])
-        rotate([-90, 0, 0])
-            mcc_panel_plate(size = mcc_panel_plate_dims(dev), slots = _mcc_case_slot_list(dev, variant));
-}
-
 if (part == "base") {
     mcc_shell_base(dev = dev, cfg = variant);
 
 } else if (part == "lid") {
     mcc_shell_lid(dev = dev, cfg = variant);
 
-} else if (part == "panel") {
-    plate_sz = mcc_panel_plate_dims(dev);
-    mcc_panel_plate(size = plate_sz, slots = _mcc_case_slot_list(dev, variant));
-
 } else if (part == "assembly") {
     // Non-exported preview only. scripts/build.py's discover_models() hardcodes parts=["base",
-    // "lid"] (+ "panel" iff the literal string 'part == "panel"' appears in this file) -- it never
+    // "lid"] () -- it never
     // looks for "assembly", so this branch is invisible to render --all / check --all / golden by
     // construction.
     layout = mcc_case_layout(dev, variant);
     color("SlateGray") mcc_shell_base(dev = dev, cfg = variant);
     translate([0, 0, explode])
         color("LightSteelBlue", 0.9) mcc_shell_lid(dev = dev, cfg = variant);
-    color("DimGray") _mcc_case_panel_placed(layout);
     // device + plug envelopes at the device's assembled position; %-rendered, excluded from CSG
     _mcc_case_at_device(layout) mcc_ghost(dev, show = MCC_SHOW_GHOST);
 
-} else if (part == "panel_placed") {
-    // The plate at its assembled position (web viewer only; build.py exports the flat "panel").
-    _mcc_case_panel_placed(mcc_case_layout(dev, variant));
-
 } else if (part == "ghost_device") {
     // SOLID (no %) export of the device bounding box at its assembled position, for the web viewer
-    // only -- never rendered by build.py (not in its "base"/"lid"/"panel" part set).
+    // only -- never rendered by build.py (not in its "base"/"lid" part set).
     _mcc_case_at_device(mcc_case_layout(dev, variant))
         cube(mcc_dev_size(dev), center = true);
 

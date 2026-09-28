@@ -11,7 +11,7 @@ Usage:
 Writes:
     dist/<slug>-<version>.zip    one per discovered model — the <slug>.3mf Bambu Studio project for
                                   the whole case, plus STL + 3MF + STEP + manifest for every
-                                  part (base/lid/panel), plus a README.txt naming the device, the
+                                  part (base/lid), plus a README.txt naming the device, the
                                   version, and the git SHA (and a PRE-RELEASE notice when any of
                                   that model's ports are below "measured" confidence — see
                                   `build.py confidence`).
@@ -101,12 +101,13 @@ def _write_readme(
         "Open in Bambu Studio: double-click a .3mf (or File -> Open Project, Ctrl+O). In a device zip",
         "<slug>.3mf is the whole case, <part>.3mf one part. Every .3mf is a Bambu Studio project, ready",
         "to slice: Bambu Lab X1 Carbon 0.4 nozzle, Bambu ASA, 0.20mm Standard + 5 walls and an 8 mm",
-        "outer brim; every part already in its print pose (base open side up, lid open side up, panel",
-        "face down), on its own plate or sharing one where it fits. The <part>.stl files carry the",
+        "outer brim; every part already in its print pose (base and lid open side up; the connectors",
+        "mount straight into the base's patch wall), on its own plate or sharing one where it fits. The <part>.stl files carry the",
         "same print pose and sit on the bed centre, for any other slicer. The <part>.step files are",
-        "in the ASSEMBLY frame (parts mate when imported together) for other CAD tools; they are",
-        "faceted B-reps converted from the mesh, not parametric solids. See README.md \"Open in",
-        "Bambu Studio\".",
+        "in the ASSEMBLY frame (parts mate when imported together) for other CAD tools: exact solids",
+        "rebuilt from the OpenSCAD CSG tree, so holes and roundings are real cylinders and circles",
+        "(a part's manifest says \"csg-exact\"; the rare faceted fallback says why). They are not",
+        "parametric feature trees. See README.md \"Open in Bambu Studio\".",
     ]
     if prerelease:
         lines += ["", "PRE-RELEASE: dimensions assumed, coupons not yet measured."]

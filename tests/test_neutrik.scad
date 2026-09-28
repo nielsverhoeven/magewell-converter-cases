@@ -1,7 +1,8 @@
 //////////////////////////////////////////////////////////////////////
 // tests/test_neutrik.scad
 //   Tier-2 headless smoke test (architecture.md §9). Instantiates mcc_neutrik_d_cutout(),
-//   mcc_neutrik_d_bosses(), and mcc_panel_plate() at default, minimum, and maximum parameters.
+//   mcc_thread_pad() and the wall-integrated mcc_neutrik_d_wall_cut() / mcc_panel_wall_cut() (D36)
+//   at default, minimum, and maximum parameters.
 //   CSG export (-o out.csg) evaluates the full tree so in-model asserts fire, without
 //   tessellating (architecture.md:353-355).
 // Run:
@@ -13,11 +14,9 @@ $fa = 1; $fs = 0.4;
 include <mcc/mcc.scad>
 
 // --- Default parameters -------------------------------------------------------------------
-// T1-42a/b/c (architecture.md rev 10, GitHub issue #30): mcc_neutrik_d_bosses()'s bore is now a
-// printed M3x0.5 internal thread via mcc_thread_pad() -- pad wall, engaged turns, and residual
-// radial engagement vs $slop all self-assert at the module's own default parameters.
+// T1-42a/b/c (architecture.md rev 10, GitHub issue #30): mcc_thread_pad()'s printed M3x0.5
+// thread -- pad wall, engaged turns, and residual radial engagement vs $slop all self-assert.
 mcc_neutrik_d_cutout("NE8FDP-B");
-mcc_neutrik_d_bosses("NE8FDP-B");
 mcc_neutrik_d_flange_outline();
 
 // --- Minimum-ish parameters: seat_t == panel_t (no rear pocket cut at all), AND the shortest
@@ -26,15 +25,14 @@ translate([40, 0, 0])
     mcc_neutrik_d_cutout("NAHDMI-W-B", mirror = true, seat_t = 1.0, panel_t = 1.0);
 translate([40, 0, 0])
     // pad_h at the T1-42b boundary: chamfer + MIN_TURNS*pitch = 0.5 + 3*0.5 = 2.0.
-    mcc_neutrik_d_bosses("NAHDMI-W-B", mirror = true,
-        pad_h = MCC_THREAD_M3_CHAMFER + MCC_THREAD_ENGAGE_MIN_TURNS * MCC_THREAD_M3_PITCH);
+    mcc_thread_pad(pad_h = MCC_THREAD_M3_CHAMFER + MCC_THREAD_ENGAGE_MIN_TURNS * MCC_THREAD_M3_PITCH);
 
 // --- Maximum-ish parameters: etherCON at its full 4 mm panel-thickness rating, AND a long pad_h
 // well past the production default -- exercises a long threaded bore -----------------------
 translate([80, 0, 0])
     mcc_neutrik_d_cutout("NE8FDP-B", mirror = false, seat_t = 2.0, panel_t = 4.0);
 translate([80, 0, 0])
-    mcc_neutrik_d_bosses("NE8FDP-B", mirror = false, pad_h = 12);
+    mcc_thread_pad(pad_h = 12);
 
 // --- MCC_THREAD_FAST fast-path equivalence: the cheap clearance-bore substitute (production
 // toggle: `-D MCC_THREAD_FAST=true`, architect verdict B6) must keep exactly the same pad
@@ -49,11 +47,19 @@ translate([80, 0, 0])
 translate([120, 0, 0]) mcc_thread_pad(fast = false); // real thread (default path)
 translate([140, 0, 0]) mcc_thread_pad(fast = true);  // MCC_THREAD_FAST override
 
-// --- Panel plate: single slot and a 2-slot plate at the minimum D-series pitch -------------
-translate([0, 60, 0])
-    mcc_panel_plate([70, 45], slots = [[0, 0, "NE8FDP-B", false]]);
-translate([100, 60, 0])
-    mcc_panel_plate([120, 45], slots = [[-40, 0, "NE8FDP-B", false], [40, 0, "NAHDMI-W-B", false]]);
+// --- Wall-integrated connector cut (D36): every part class at the production wall (seat 2 +
+// lip 3), the blank, and the thinnest wall that still gives T1-42b's 3 turns. The T1-48 web and
+// T1-34a bridge asserts fire inside the module. Differenced from a block so the thread renders
+// as a real negative. --------------------------------------------------------------------
+for (i = [0:1:3])
+    translate([i * 40, 60, 0])
+        difference() {
+            translate([0, 0, -2.5]) cube([36, 40, 5], center = true);
+            mcc_panel_wall_cut(["NE8FDP-B", "NAHDMI-W-B", "NAUSB-W-B", "DBA-BL-B"][i], wall_t = 5);
+        }
+translate([0, 110, 0])
+    mcc_neutrik_d_wall_cut("NBB75DFGB", wall_t = MCC_THREAD_M3_CHAMFER + MCC_THREAD_ENGAGE_MIN_TURNS * MCC_THREAD_M3_PITCH + 0.5,
+        seat_t = 1.0, fast = true);
 
 echo("mcc test_neutrik: OK");
 

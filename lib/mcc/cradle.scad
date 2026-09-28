@@ -2,13 +2,12 @@
 // LibFile: mcc/cradle.scad
 //   L2. Device cradle: deck LATTICE (issue #29, rev 9 D-17 — a MCC_WALL-wide perimeter frame plus
 //   an interior ladder of X-/Y-running ribs on a ~MCC_CRADLE_DECK_GRID_PITCH grid, replacing the
-//   old solid deck slab), the compliant-pad pocket cut from a solid island kept under it (T1-40),
-//   far-flank ribs (duct-clearing, deterministic placement per
+//   old solid deck slab), far-flank ribs (duct-clearing, deterministic placement per
 //   .claude/knowledge/layout-patch-wall.md §7 rev-5 addendum), patch-flank ribs, and the case's own
 //   1/4"-20 floor-mount insert boss (T1-32, installed from the underside and unioned into the deck
-//   hollow, opt-in via cfg["tripod_insert"] — default true, D-16 — and braced into the lattice with
-//   a collar when drawn, T1-41). Never cuts the floor (architecture.md §6 floor rule — that is
-//   mounts.scad's job). `use`d only by lib/mcc/shell.scad (the L2 composition root, architecture.md
+//   hollow, opt-in via cfg["tripod_insert"] — default false since D35 — and braced into the
+//   lattice with a collar when drawn, T1-41). Never cuts the floor (architecture.md §6 floor
+//   rule — that is mounts.scad's job). `use`d only by lib/mcc/shell.scad (the L2 composition root, architecture.md
 //   §3 rev 5) — never by panel.scad/mounts.scad/vents.scad, which must not `use` each other.
 // Includes:
 //   include <mcc/mcc.scad>
@@ -35,10 +34,10 @@ use <fasteners.scad> // mcc_side_bolt_keepout(), mcc_case_tripod_insert_bore()
 //   mounts.scad's own mcc_rail_features_cut() guard pattern.
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default true).
+//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default false — D35, 2026-09-28).
 module mcc_tripod_insert_bore_cut(dev, cfg) {
     tripod_flag = struct_val(cfg, "tripod_insert");
-    tripod_on = is_undef(tripod_flag) ? true : tripod_flag;
+    tripod_on = is_undef(tripod_flag) ? false : tripod_flag;
     if (tripod_on) {
         translate([0, 0, MCC_EPS])
             rotate([180, 0, 0])
@@ -64,25 +63,6 @@ function _mcc_cradle_deck_grid(lo, hi) =
         step   = span / n_bays
     )
     [for (i = [1:1:n_ribs]) lo + MCC_WALL + i * step];
-
-// Function: _mcc_gap_centres()
-// Description:
-//   Private, pure. `walls` = list of [lo, hi] solid intervals along one axis (any order, may
-//   overlap). Returns the centre of every open gap (> 1 mm) between the merged intervals — the bay
-//   centres of a rib lattice. Used to put exactly one vent in the middle of each bay (D33).
-function _mcc_gaps(walls) =
-    let(w = sort(walls, idx = 0))
-    [for (i = [0:1:len(w) - 2])
-        let(end = max([for (j = [0:1:i]) w[j][1]]), nxt = w[i + 1][0])
-        if (nxt - end > MCC_EPS) [end, nxt]];
-// Solid intervals along one deck axis: the lattice frame, its ribs, and the island skirt's two
-// walls (island starting at `c`), along either axis.
-function _mcc_island_walls(deck, c) = concat(
-    [[deck[0], deck[0] + MCC_WALL], [deck[1] - MCC_WALL, deck[1]]],
-    [for (g = _mcc_cradle_deck_grid(deck[0], deck[1])) [g - MCC_CRADLE_RIB_T / 2, g + MCC_CRADLE_RIB_T / 2]],
-    [[c, c + MCC_CRADLE_RIB_T],
-     [c + MCC_CRADLE_FLOOR_PAD_MIN - MCC_CRADLE_RIB_T, c + MCC_CRADLE_FLOOR_PAD_MIN]]);
-function _mcc_gap_centres(walls) = [for (g = _mcc_gaps(walls)) if (g[1] - g[0] > 1) (g[0] + g[1]) / 2];
 
 // Module: _mcc_cradle_deck_lattice()
 // Usage:
@@ -170,18 +150,17 @@ function _mcc_far_flank_rib_x(x_dev_lo, x_dev_hi, x_bolt) =
 // Description:
 //   ADDITIVE device cradle for `dev` under variant config `cfg`: a ribbed deck LATTICE from the
 //   interior floor to the device underside (spanning the device's XY footprint plus a small
-//   locating lip — issue #29, rev 9 D-17, see _mcc_cradle_deck_lattice() above), a solid island kept
-//   under the compliant floor-pad pocket so it lands on solid material rather than open lattice
-//   bays (T1-40), the deterministic far-flank ribs (each with a self-supporting open notch below
+//   locating lip — issue #29, rev 9 D-17, see _mcc_cradle_deck_lattice() above), the deterministic
+//   far-flank ribs (each with a self-supporting open notch below
 //   the deck top so the MCC_GAP_FAR duct is never fully dammed — layout-patch-wall.md §7),
 //   patch-flank ribs (only outboard of the panel aperture, T1-20 — none on the priority SKU today,
 //   since the device's own X span never reaches outboard of the aperture), and the case's own
 //   1/4"-20 floor-mount insert boss installed from the underside, unioned into the deck hollow
 //   (T1-32) and braced into the lattice with a collar (T1-41) — opt-in via cfg["tripod_insert"]
-//   (default true, D-16).
+//   (default false since D35).
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default true).
+//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default false — D35, 2026-09-28).
 module mcc_cradle(dev, cfg) {
     l = mcc_case_layout(dev, cfg);
     x_dev_lo = struct_val(l, "x_dev_lo"); x_dev_hi = struct_val(l, "x_dev_hi");
@@ -191,7 +170,7 @@ module mcc_cradle(dev, cfg) {
     x_bolt   = struct_val(l, "side_bolt_x");
 
     tripod_flag = struct_val(cfg, "tripod_insert");
-    tripod_on = is_undef(tripod_flag) ? true : tripod_flag; // D-16, rev 9: default true.
+    tripod_on = is_undef(tripod_flag) ? false : tripod_flag; // D35: default false.
 
     LIP = MCC_WALL; // deck footprint margin beyond the device's own XY extent, mm — a small
                      // locating lip (this file's module contract), also wide enough that the
@@ -203,80 +182,12 @@ module mcc_cradle(dev, cfg) {
     deck_h = z_dev_lo - MCC_FLOOR_T;
     assert(deck_h > 0, str("mcc: mcc_cradle deck height ", deck_h, " <= 0 on \"", mcc_dev_slug(dev), "\""));
 
-    // T1-40: the compliant floor-pad pocket must land on a solid island, not open lattice bays —
-    // keep MCC_CRADLE_FLOOR_PAD_T + 1.0 mm of solid material under the deck top over the whole
-    // MCC_CRADLE_FLOOR_PAD_MIN footprint (1.0 mm residual below the pocket's own floor, same margin
-    // style as T1-26's zero-slack asserts elsewhere in this file's family).
-    pad_island_h = MCC_CRADLE_FLOOR_PAD_T + 1.0;
-    assert(pad_island_h <= deck_h,
-        str("mcc: T1-40 pad island depth ", pad_island_h, " exceeds deck height ", deck_h,
-            " on \"", mcc_dev_slug(dev), "\""));
-
     union() {
-        // --- Deck lattice (perimeter frame + interior ladder ribs, issue #29) with a solid pad
-        // island unioned in before the pocket is cut, so the pocket always lands on solid material
-        // regardless of whether a ladder rib happens to cross this XY position (T1-40). ---
-        difference() {
-            union() {
-                _mcc_cradle_deck_lattice(deck_x, deck_y, deck_h, dev);
-
-                // Solid pad island — same corner-anchored translate the pocket cut below uses, so
-                // the two share the exact XY footprint by construction.
-                translate([x_dev_c, y_dev_c, MCC_FLOOR_T + deck_h - pad_island_h])
-                    cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, pad_island_h]);
-
-                // Sliver fill (D33): where a skirt wall lands within a rib's width of a lattice rib
-                // the slot between them is too narrow to vent — fill it solid instead.
-                for (g = _mcc_gaps(_mcc_island_walls(deck_y, y_dev_c)))
-                    if (g[1] - g[0] < MCC_CRADLE_RIB_T && g[0] >= y_dev_c - MCC_EPS &&
-                        g[1] <= y_dev_c + MCC_CRADLE_FLOOR_PAD_MIN + MCC_EPS)
-                        translate([x_dev_c, g[0] - MCC_EPS, MCC_FLOOR_T])
-                            cube([MCC_CRADLE_FLOOR_PAD_MIN, g[1] - g[0] + 2 * MCC_EPS, deck_h - pad_island_h + MCC_EPS]);
-                for (g = _mcc_gaps(_mcc_island_walls(deck_x, x_dev_c)))
-                    if (g[1] - g[0] < MCC_CRADLE_RIB_T && g[0] >= x_dev_c - MCC_EPS &&
-                        g[1] <= x_dev_c + MCC_CRADLE_FLOOR_PAD_MIN + MCC_EPS)
-                        translate([g[0] - MCC_EPS, y_dev_c, MCC_FLOOR_T])
-                            cube([g[1] - g[0] + 2 * MCC_EPS, MCC_CRADLE_FLOOR_PAD_MIN, deck_h - pad_island_h + MCC_EPS]);
-
-                // Island skirt (2026-09-27, architecture.md D33): a MCC_CRADLE_RIB_T-walled square
-                // tube from the floor up to the island's underside, around its whole edge. Without
-                // it the island started deck_h - pad_island_h above the floor and hung off whichever
-                // lattice ribs happened to cross under it, its edges 6-8 mm out over open bays
-                // (Bambu Studio "floating cantilever"). With it every bay under the island is
-                // closed on all four sides, i.e. a plain bridge, and the pad's load goes straight
-                // to the floor.
-                translate([x_dev_c, y_dev_c, MCC_FLOOR_T])
-                    difference() {
-                        cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, deck_h - pad_island_h + MCC_EPS]);
-                        translate([MCC_CRADLE_RIB_T, MCC_CRADLE_RIB_T, -MCC_EPS])
-                            cube([MCC_CRADLE_FLOOR_PAD_MIN - 2 * MCC_CRADLE_RIB_T,
-                                  MCC_CRADLE_FLOOR_PAD_MIN - 2 * MCC_CRADLE_RIB_T,
-                                  deck_h - pad_island_h + 3 * MCC_EPS]);
-                    }
-            }
-
-            // Compliant floor-pad pocket, centred at (x_dev_c, y_dev_c) — inside the device's own
-            // footprint by construction (layout-patch-wall.md §7).
-            translate([x_dev_c, y_dev_c, MCC_FLOOR_T + deck_h - MCC_CRADLE_FLOOR_PAD_T])
-                cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_T + MCC_EPS]);
-
-            // Vent channels (D33): with the skirt, every lattice bay under the island is closed on
-            // all sides — sealed voids inside the part (build.py check: parts > 1). They are opened
-            // SIDEWAYS, not through the island: any hole in the island's bridge over a bay (tried
-            // both as a fixed grid and one per bay centre) makes Bambu Studio read that bridge as a
-            // "floating cantilever". One 3 x 2 mm channel per row of bays runs along X through the
-            // ribs and the skirt, above the rail sill and below the island, so every bay under the
-            // island breathes into the open deck and each wall crossing is a plain 3 mm bridge.
-            vy_c = _mcc_gap_centres(_mcc_island_walls(deck_y, y_dev_c));
-            ch_z0 = MCC_RAIL_SILL_H + 0.5;                     // clear of the rail sill / groove roof
-            ch_z1 = MCC_FLOOR_T + deck_h - pad_island_h - 1.0;  // 1 mm of wall left under the island
-            assert(ch_z1 - ch_z0 >= 1.5,
-                str("mcc: D33 vent channel only ", ch_z1 - ch_z0, " mm tall on \"", mcc_dev_slug(dev), "\""));
-            for (cy = vy_c)
-                if (cy > y_dev_c + MCC_CRADLE_RIB_T && cy < y_dev_c + MCC_CRADLE_FLOOR_PAD_MIN - MCC_CRADLE_RIB_T)
-                    translate([x_dev_c - MCC_CRADLE_DECK_GRID_PITCH_MIN, cy - 1.5, ch_z0])
-                        cube([MCC_CRADLE_FLOOR_PAD_MIN + 2 * MCC_CRADLE_DECK_GRID_PITCH_MIN, 3, min(2, ch_z1 - ch_z0)]);
-        }
+        // --- Deck lattice (perimeter frame + interior ladder ribs, issue #29). The device rests on
+        // the rib tops. There is no floor-pad island any more (D37, 2026-09-28): the compliant pad
+        // moved to the side-bolt boss face with D-09 (architecture.md §11 R8), and the solid
+        // 40 x 40 mm island left behind for it was the unexplained "square" the modeller flagged. ---
+        _mcc_cradle_deck_lattice(deck_x, deck_y, deck_h, dev);
 
         // --- Case tripod-mount insert boss (T1-32): a PLAIN solid cylinder (no internal bore —
         // see mcc_tripod_insert_bore_cut() below). Installed from the underside: its own body

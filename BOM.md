@@ -42,8 +42,8 @@ the per-variant tables.
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | RX-M3x5.7 | 4 | Bosses standing rearward off the rabbet lip, at `mcc_panel_fixing_pos()` = `(±(plate_l/2-3), ±16.5)` — corrected 2026-09-08 (deviation D6) from the doc's original `z_conn_c ± 14`, which did not match the already-implemented `mcc_panel_plate()` | `.claude/knowledge/layout-patch-wall.md` §2.3 rev-5 correction; `lib/mcc/layout.scad:mcc_panel_fixing_pos()`; `lib/mcc/panel.scad:mcc_panel_plate()` |
-| M3 machine screw, ~10–12 mm | generic pan/socket-head M3 | 4 | Screws along +Y through the plate's `MCC_PLATE_END_PAD` tabs into the bosses above | `knowledge/components/fasteners-and-hardware.md:96` (6–20 mm generic range); `:207` (a 3rd-party M3×12 mm kit specifically sold for Neutrik D-type panels, cited as a sourcing example, not this project's chosen length) |
+| ~~M3×5.7 heat-set insert, panel-plate retention~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D36):** there is no separate connector panel any more — the connectors mount straight into the base's patch wall, so the 4 plate-retention bosses and their inserts are gone. | architecture.md §13 D36 |
+| ~~M3 machine screw, panel-plate retention~~ | — | **0** | **Removed with the panel plate (D36).** | architecture.md §13 D36 |
 
 ### Device retention — captive side bolt (D-09, far wall)
 
@@ -52,17 +52,17 @@ the per-variant tables.
 | 1/4"-20 UNC slotted screw, ~19.05 mm under-head length (stock 3/4") | **Recommended: slotted fillister-head 1/4"-20 UNC × 3/4", A2 stainless, ASME B18.6.3** (confirmed in stock at zollschraubendirekt.de) — closest imperial match to the assumed `MCC_SIDE_BOLT_HEAD_D/H`; round-head and pan-head alternatives do not reliably clear the ⌀12 mm recess, and no captive/thumb-screw candidate fits without enlarging it — see `knowledge/components/fasteners-and-hardware.md` §5 | 1 | Threads `MCC_SIDE_BOLT_ENGAGE = 6.0 mm` into the device's own metal side thread — **no nut/insert on the device end** | `lib/mcc/constants.scad:143-150,240-242` (`MCC_SIDE_BOLT_HEAD_*`, `MCC_SIDE_BOLT_SCREW_LEN`); confidence **assumed** throughout, unverified against the real device thread (M2 in architecture's measurement list); `knowledge/components/fasteners-and-hardware.md` §5.1–5.2 (orderable options, issue #28) |
 | DIN 6799 E-clip, nominal size 5 | generic (groove ⌀5.0, groove width 0.8, clip OD ≈11.0, thickness 0.7) — **orderable: RS PRO 0289203 (steel) or 2096592 (A2 stainless)**, both spec'd "5 mm shaft, 4.8 mm groove diameter" (RS Components UK/NL) | 1 | Retains the screw in its pocket inside the boss — **replaces a nut**, no nut is used in the current design | `lib/mcc/constants.scad:157-167` (`MCC_SIDE_BOLT_CLIP`); flagged "NOT VERIFIED — DIN 6799 is not in `knowledge/**`" — confirm against the actual standard before ordering (M4); `knowledge/components/fasteners-and-hardware.md` §5.3 (RS PRO stock numbers **spec'd for a 4.8 mm groove, not the 5.0 mm assumed here** — flagged as a follow-up, not applied to this constant in this ticket) |
 | EPDM anti-slip pad, side-bolt annulus, OD 18 / ID 8 mm | generic self-adhesive EPDM | 1 | On the boss face, compressed working thickness 2.0 mm | `lib/mcc/constants.scad:184-191` (`MCC_SIDE_BOLT_PAD_*`); `knowledge/components/fasteners-and-hardware.md:186` (⌀12×2.5 mm listed example, 2.0 mm compressed figure `assumed`) |
-| EPDM anti-slip pad, floor, ≥40×40 mm footprint | generic self-adhesive EPDM | 1 | Under the device, compressed working thickness 2.0 mm — **a second, distinct pad from the side-bolt annulus above**, not the same item | `.claude/knowledge/layout-patch-wall.md` §7 Cradle table ("Compliant pad, floor 2.0 mm EPDM ... footprint ≥40×40"); `knowledge/components/fasteners-and-hardware.md:186` |
+| ~~EPDM anti-slip pad, floor~~ | — | **0** | **Removed (D37, 2026-09-28):** the compliant pad moved to the side-bolt boss face with D-09 (architecture.md §11 R8, row above); the floor island left for it is gone from the cradle. | architecture.md §13 D37 |
 
 *(Connector-count-dependent rows — 2× M3×10 machine screw per D-connector, threading directly into
-the printed rear pad, no insert (rev 10, GitHub issue #30 — see the per-variant tables below) — are
+the printed M3 thread in the patch wall itself (D36), no insert (rev 10, GitHub issue #30 — see the per-variant tables below) — are
 in each per-variant table below, since the connector count varies 3–4 by SKU.)*
 
 ### Case floor mounting (own tripod/cheeseplate feature, distinct from the device-retention bolt above)
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
-| 1/4"-20 brass heat-set insert | generic, ⌀8.8 mm hole / ⌀9.5 mm OD / 12.7 mm length (all `assumed`, typical brass-insert catalog range) | 1 | Case's own floor mount feature (tripod/cheeseplate) — **not** the device-retention side bolt, which threads directly into the device and needs no insert | `lib/mcc/constants.scad:102-113` (`MCC_INSERT_1_4_20`); no sourced figure exists in `knowledge/components/fasteners-and-hardware.md` for a 1/4"-20 insert specifically — flagged `confidence: assumed` in the constant's own comment |
+| ~~1/4"-20 brass heat-set insert~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D35):** the case has no floor insert any more — the side bolt (above) is the only screw. `cfg["tripod_insert"]` can bring it back per variant. | architecture.md §13 D35 |
 | — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**) needs no BOM hardware of its own: both the female groove (case floor) and the male rail + spring-lip latch are printed features, no fasteners. See a future bracket's own `## Mounting brackets` section (issue #26/#27, not yet on `main`) for its own hardware. The Magewell-Fishtail-compatible M4 pattern remains a **reserve-only** band (hole pitch `unknown`, M7) — no hardware row until it is actually cuttable | `.claude/knowledge/architecture.md` §6 floor rule (rev 9); `lib/mcc/rail.scad` |
 | Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
 | Cable zip tie / adhesive mount base | generic | as needed | Internal cable dressing | `knowledge/components/fasteners-and-hardware.md:215-222` |
@@ -201,7 +201,7 @@ tracked in this document**):
 
 Each table below is one row per external port (`panel` ≠ `"none"` in the device's `lib/mcc/devices/*.scad`
 file) plus that SKU's connector-rear-boss hardware and internal patch cables. Common hardware
-(lid, panel-plate retention, side-bolt retention, floor insert, mount rail, fan/splitter bays) is
+(lid, side-bolt retention, floor insert, mount rail, fan/splitter bays) is
 **not repeated per section** — see "Common hardware" above.
 
 Internal patch cable lengths follow `knowledge/components/cables.md`'s shortest **confirmed
@@ -220,14 +220,14 @@ per-variant option but is not the default and is not listed here).
 | Neutrik NAHDMI-W-B | 1 | `hdmi_in` port | `lib/mcc/devices/pro-convert-hdmi-tx.scad:23-24`; `lib/mcc/constants.scad:424`; `knowledge/neutrik/README.md:35` |
 | Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config | `lib/mcc/devices/pro-convert-hdmi-tx.scad:29-30`; `lib/mcc/constants.scad:425`; `knowledge/neutrik/README.md:33` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-hdmi-tx.scad:31-32`; `lib/mcc/constants.scad:423`; `knowledge/neutrik/README.md:32` |
-| M3×10 machine screw (plain, no insert) | 6 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 6 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_in` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
 
 **Note on slot count.** This SKU's port map has only 3 external ports (`ptz_tally` stays internal,
 `rotary`/`side_bolt` are `panel:"none"`). Per `.claude/knowledge/layout-patch-wall.md` §3 ("`n_slots =
-len(ext)`") and its §6 table row "compact, 3 slots (HDMI TX / SDI TX)", the panel plate is sized to
+len(ext)`") and its §6 table row "compact, 3 slots (HDMI TX / SDI TX)", the connector recess is sized to
 **3** slots by default, not padded to the 4-slot maximum — so **no `DBA-BL-B` blank is needed** unless
 a future `case.scad` variant deliberately reserves a spare 4th slot. "Max 4 D-connectors per model"
 (`CLAUDE.md`, `.claude/skills/neutrik-panel/SKILL.md` §"Multi-connector spacing") is a ceiling, not a
@@ -242,7 +242,7 @@ mandate to always populate 4.
 | Neutrik NBB75DFGB | 1 | `sdi_in` port | `lib/mcc/devices/pro-convert-sdi-tx.scad:20-21`; `lib/mcc/constants.scad:426`; `knowledge/neutrik/README.md:36` |
 | Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config | `lib/mcc/devices/pro-convert-sdi-tx.scad:26-27`; `lib/mcc/constants.scad:425`; `knowledge/neutrik/README.md:33` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-sdi-tx.scad:28-29`; `lib/mcc/constants.scad:423`; `knowledge/neutrik/README.md:32` |
-| M3×10 machine screw (plain, no insert) | 6 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 6 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 1 | `sdi_in`; bend radius 40.6 mm governs bay depth, not cable length | `knowledge/components/cables.md:63,65,123` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -256,7 +256,7 @@ mandate to always populate 4.
 | Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config | `lib/mcc/devices/pro-convert-hdmi-plus.scad:26-27`; `lib/mcc/constants.scad:425` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-hdmi-plus.scad:28-29`; `lib/mcc/constants.scad:423` |
 | Neutrik NAHDMI-W-B | 2 | `hdmi_in` + `hdmi_out` (loop-out externalized per the device file's own comment) | `lib/mcc/devices/pro-convert-hdmi-plus.scad:31-37`; `lib/mcc/constants.scad:424` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | HDMI patch cable, straight plug, 0.3 m | 2 | `hdmi_in`, `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -284,7 +284,7 @@ table's "only when `fan=true`" case.
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network (slot 1) | `lib/mcc/devices/pro-convert-sdi-plus.scad:22-23`; `lib/mcc/constants.scad:423` |
 | Neutrik NAUSB-W-B | 1 | `usb_b` port, power + USB-NET config (slot 2) | `lib/mcc/devices/pro-convert-sdi-plus.scad:20-21`; `lib/mcc/constants.scad:425` |
 | Neutrik NBB75DFGB | 2 | `sdi_out` (slot 3, loop-out) + `sdi_in` (slot 4) | `lib/mcc/devices/pro-convert-sdi-plus.scad:25-31`; `lib/mcc/constants.scad:426` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | Noctua NF-A4x10 5V | 1 | Fan bay, fitted by default on this SKU (`fan = true`) — ships with 4× NA-AV3 anti-vibration mounts, no separate screws to buy | `knowledge/components/fans.md:13-24,89-95`; `.claude/knowledge/layout-patch-wall.md` §16.2 item 4 (R5) |
 | NA-AV3 anti-vibration mounts | 4 | Ships in the box with the fan above — **no separate screws to buy**, these both mount the fan and decouple it from the shell | `knowledge/components/fans.md:89-95` (bundled scope of delivery) |
 | MTS-101 SPST ON-OFF mini toggle switch, black, panel-mount | 1 | One of the 3 Plus-family SKUs the manual fan switch ships on (rev 11, #32, D-18 — the compact family's fit is infeasible). Fully recessed beside the fan aperture on the +X wall, wired in series in the fan's +5V lead upstream of the KSD9700 below; every figure `assumed` pending M17 | `.claude/knowledge/architecture.md` §5, §10 D-18, §12 M17; `knowledge/components/switches.md` (new) |
@@ -304,7 +304,7 @@ table's "only when `fan=true`" case.
 | Neutrik NAUSB-W-B | 1 | `usb_b` (power + USB-NET config) | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:24-25`; `lib/mcc/constants.scad:425`; `knowledge/neutrik/README.md:33` |
 | Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used by the build, so the slot is built and reserved behind a blank plate instead, reusable later by swapping the blank for a connector | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:21-23`; `lib/mcc/constants.scad:673` (`MCC_PANEL_PARTS["DBA-BL-B"]`); `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad:26-27`; `lib/mcc/constants.scad:423` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -328,7 +328,7 @@ ships with every unit of this SKU.
 | Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used for peripherals on this build; instead it is internally cabled to the fan (see the fan-power row below), so the slot stays blanked and externally reusable | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:23-26`; `lib/mcc/constants.scad:673`; `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NAHDMI-W-B | 1 | `hdmi_out` port | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:27-28`; `lib/mcc/constants.scad:424` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad:32-33`; `lib/mcc/constants.scad:423` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | Noctua NF-A4x10 5V (plain 3-pin) | 1 | 40×40×10 mm case-cooling fan in the +X end wall's live cutout (`fan=true` default, `mcc_fan_cutout("NF-A4x10", grille=true)`) — additional to, and independent of, the device's own internal variable-speed fan | `knowledge/components/fans.md:13-24`; `lib/mcc/constants.scad:534-535` (`MCC_FANS`); `lib/mcc/fan.scad` |
 | M3 machine screw, ~8–10 mm (or the bundled NA-AV3 silicone anti-vibration mounts, push-fit, no screw) | 4 | Through `mcc_fan_cutout()`'s 4 clearance holes at the fan's 32 mm pitch (⌀4.3) into the fan's own threaded corners | `knowledge/components/fans.md:89-95` (NA-AV3 bundled in the NF-A4x10 5V box); `lib/mcc/constants.scad:535` (`hole_d=4.3`) |
 | MTS-101 SPST ON-OFF mini toggle switch, black, panel-mount | 1 | One of the 3 Plus-family SKUs the manual fan switch ships on (rev 11, #32, D-18 — the compact family's fit is infeasible). Fully recessed beside the fan aperture on the +X wall, wired in series in the fan's +5V lead upstream of the KSD9700 below; every figure `assumed` pending M17 | `.claude/knowledge/architecture.md` §5, §10 D-18, §12 M17; `knowledge/components/switches.md` (new) |
@@ -351,7 +351,7 @@ this SKU, same as every other current variant; no splitter hardware row here.
 | Neutrik NAUSB-W-B | 1 | `usb_b` (power + USB-NET config) | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:26-28`; `lib/mcc/constants.scad:425` |
 | Neutrik DBA-BL-B | 1 | `usb_host` port — **blanked, not fitted with NAUSB-W-B** (user decision 2026-09-09, D-14): the USB-A host port is never used by the build; slot stays built and reusable behind a blank | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:24-25`; `lib/mcc/constants.scad:673`; `.claude/knowledge/architecture.md` §5 "The DBA-BL-B blank carries the full D hole (rev 8)" |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad:29-30`; `lib/mcc/constants.scad:423` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) (the DBA-BL-B blank has the same 2-pad fixing pattern as a fitted connector) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 1 | `sdi_out` | `knowledge/components/cables.md:63,65,123` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |
 | Cat6 slim RJ45 patch cable, 0.15 m | 1 | `rj45` | `knowledge/components/cables.md:23,119` |
@@ -373,7 +373,7 @@ file's own comment) — these controls are `panel:"none"` throughout and do not 
 | Neutrik NBB75DFGB | 1 | `sdi_out` port | `lib/mcc/devices/pro-convert-for-ndi-to-aio.scad:23-24`; `lib/mcc/constants.scad:426` |
 | Neutrik NAUSB-W-B | 1 | `usb_b` port — power only, USB role beyond power is an open question per the device file's own comment | `lib/mcc/devices/pro-convert-for-ndi-to-aio.scad:26-27`; `lib/mcc/constants.scad:425` |
 | Neutrik NE8FDP-B | 1 | `rj45` port, PoE/network | `lib/mcc/devices/pro-convert-for-ndi-to-aio.scad:28-29`; `lib/mcc/constants.scad:423` |
-| M3×10 machine screw (plain, no insert) | 8 | Threads directly into the printed pad, replacing the heat-set-insert + M3×8 pair | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
+| M3×10 machine screw (plain, no insert) | 8 | Through the connector flange into the printed M3 thread in the patch wall itself (D36 — 5 mm of wall: 2 mm seat + 3 mm behind it; no pads, no inserts) | docs/plans/2026-09-09-printed-m3-threads.md §2/§5 (length `assumed`, no sourced Neutrik/flange figure — confirm against m3-thread-ladder coupon) |
 | HDMI patch cable, straight plug, 0.3 m | 1 | `hdmi_out` | `knowledge/components/cables.md:54,121` |
 | 12G-SDI BNC↔BNC mini-coax lead (Belden 4855R), 0.15 m | 1 | `sdi_out` | `knowledge/components/cables.md:63,65,123` |
 | USB 2.0 A-to-B cable, 0.15 m | 1 | `usb_b` | `knowledge/components/cables.md:79,125` |

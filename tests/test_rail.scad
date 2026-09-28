@@ -34,12 +34,23 @@ assert(MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T,
     str("T1-38: MCC_RAIL_SILL_H(", MCC_RAIL_SILL_H, ") - MCC_RAIL_DEPTH(", MCC_RAIL_DEPTH,
         ") must be >= MCC_FLOOR_T(", MCC_FLOOR_T, ")"));
 
+// --- Latch (issue #46, D34): snap-fit rules, checked from the constants so a regression fails here
+// before any render. ------------------------------------------------------------------------------
+assert(MCC_RAIL_LATCH_ENABLED, "D34: the rail latch is expected to be enabled");
+assert(MCC_RAIL_LATCH_ARM_L / MCC_RAIL_LATCH_ARM_T >= 8, "D34: latch arm L/t below 8");
+assert(1.5 * MCC_RAIL_LATCH_ARM_T * MCC_RAIL_LATCH_ENGAGE / pow(MCC_RAIL_LATCH_ARM_L, 2) <= MCC_SNAP_STRAIN_MAX,
+    "D34: latch tip strain above MCC_SNAP_STRAIN_MAX");
+assert(MCC_RAIL_LATCH_SLOT > MCC_RAIL_LATCH_ENGAGE, "D34: latch slot narrower than the nub's deflection");
+assert(MCC_RAIL_LATCH_RAMP_OUT >= MCC_RAIL_LATCH_RAMP_IN, "D34: exit ramp should be at least as steep as entry");
+assert(MCC_RAIL_END_STOP_L == 0 && MCC_RAIL_END_STOP_H == 0, "D34: the male end-stop flange is retired");
+
 // --- mcc_rail_male() / mcc_rail_female_cut() -- default (production MCC_RAIL_LEN) --------------
 translate([0, 0, 0]) mcc_rail_male();
+translate([0, -60, 0]) mcc_rail_male(plate_t = 6); // with the arm's leg through a 6 mm plate
 translate([0, 60, 0])
     difference() {
         cuboid([MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
-        mcc_rail_female_cut();
+        mcc_rail_female_cut(open_ext = 20);
     }
 
 // --- mcc_rail_male() / mcc_rail_female_cut() -- short, coupon-scale len=60 (models/coupons/
@@ -67,9 +78,11 @@ mcc_assert_floor_keepout_no_overlap(DEV, VARIANT);
 _ko = mcc_floor_keepout(DEV, VARIANT);
 _rail_rows = [for (r = _ko) if (r[4] == "mount_rail") r];
 assert(len(_rail_rows) == 1, str("expected exactly one \"mount_rail\" row, got ", len(_rail_rows)));
-assert(_rail_rows[0][0] == 0 && _rail_rows[0][1] == MCC_RAIL_Y,
-    str("mount_rail row centre=", [_rail_rows[0][0], _rail_rows[0][1]], " expected [0, ", MCC_RAIL_Y, "]"));
-assert(_rail_rows[0][3] == [MCC_RAIL_LEN, MCC_RAIL_ROOT_W],
+// D34: the groove runs from its closed end at -MCC_RAIL_LEN/2 out through the +X wall.
+_L = struct_val(mcc_case_layout(DEV, VARIANT), "L");
+assert(abs(_rail_rows[0][0] - (_L / 2 - MCC_RAIL_LEN / 2) / 2) < 1e-6 && _rail_rows[0][1] == MCC_RAIL_Y,
+    str("mount_rail row centre=", [_rail_rows[0][0], _rail_rows[0][1]]));
+assert(_rail_rows[0][3] == [_L / 2 + MCC_RAIL_LEN / 2, MCC_RAIL_ROOT_W],
     str("mount_rail row size=", _rail_rows[0][3]));
 // No "vesa_*" rows survive (D-15 -- VESA fully removed, not deprecated-but-optional).
 _vesa_rows = [for (r = _ko) if (r[4] == "vesa_ne" || r[4] == "vesa_se" || r[4] == "vesa_nw" || r[4] == "vesa_sw") r];

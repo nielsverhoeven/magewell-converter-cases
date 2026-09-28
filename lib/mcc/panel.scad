@@ -1,9 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/panel.scad
-//   L2 (layout-independent — the connector panel plate). Owns mcc_panel_cutout(), the
-//   TOP-LEVEL dispatcher for every panel connector kind (architecture.md §5 "Panel cutout
-//   dispatcher": neutrik.scad is one *provider* behind it, not the top-level abstraction).
-//   models/** must call mcc_panel_cutout(), never mcc_neutrik_* directly — that is a layering
+//   L2 (layout-independent). Owns the TOP-LEVEL dispatchers for every panel connector kind:
+//   mcc_panel_cutout() (a flat panel — coupons) and mcc_panel_wall_cut() (the case's own patch
+//   wall, D36). neutrik.scad is one *provider* behind them, not the top-level abstraction
+//   (architecture.md §5). models/** must call these, never mcc_neutrik_* directly — that is a layering
 //   deviation per architecture.md:217-219.
 //   `use`d by lib/mcc/mcc.scad.
 // Includes:
@@ -43,86 +43,23 @@ module mcc_panel_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, panel_t
     mcc_neutrik_d_cutout(part, mirror = mirror, seat_t = seat_t, panel_t = panel_t);
 }
 
-// Module: mcc_panel_plate()
+// Module: mcc_panel_wall_cut()
 // Usage:
-//   mcc_panel_plate(size, slots, [t=], [rim_t=], [rim_w=]);
+//   mcc_panel_wall_cut(part, [wall_t=], [seat_t=]);
 // Description:
-//   The bolt-in connector panel plate (architecture.md §5): a flat field at thickness `t` (the
-//   uniform flange-seat thickness) with a thicker structural rim of width `rim_w` around the
-//   border (for the 4-corner M3-into-heat-set-insert rabbet fixing), minus every slot's cutout,
-//   plus rear screw bosses per slot. Front (outward) face at Z=0 for both the field and the rim,
-//   so every connector's flange seat lands on one flush plane regardless of the local material
-//   thickness behind it.
-//   Asserts (architecture.md §9 Tier-1): every pair of slots clears the minimum D-series pitch
-//   (MCC_D_PITCH_H horizontally or MCC_D_PITCH_V vertically), every slot's flange keeps >= 4 mm
-//   web to the plate edge, and the plate fits the printable envelope.
+//   Dispatcher for a connector mounted DIRECTLY in a case wall (architecture.md §5 rev 14, D36 —
+//   there is no separate panel plate any more). Same single-provider rule as mcc_panel_cutout():
+//   every dispatchable part is a Neutrik D part, so this forwards to mcc_neutrik_d_wall_cut() (see
+//   there for the frame: wall face seen from outside, Y up, seat face at Z=0, wall toward -Z).
 // Arguments:
-//   size  = [w, h] overall plate footprint, mm.
-//   slots = list of [x, y, part, mirror] connector placements (center position, panel part
-//           number, mirror flag). Default: [].
-//   t     = field (flange-seat) thickness, mm. Default: MCC_PANEL_SEAT_T (2.0).
-//   rim_t = rim thickness, mm. Default: MCC_WALL (3.0).
-//   rim_w = rim (border) width, mm. Default: MCC_PLATE_RIM_W (6.0).
-module mcc_panel_plate(size, slots = [], t = MCC_PANEL_SEAT_T, rim_t = MCC_WALL, rim_w = MCC_PLATE_RIM_W) {
-    w = size[0];
-    h = size[1];
-
-    assert(mcc_bbox_ok([w, h, rim_t]),
-        str("mcc: panel plate ", w, "x", h, " exceeds the printable envelope"));
-
-    for (i = [0 : 1 : len(slots) - 1]) {
-        s_i    = slots[i];
-        part_i = s_i[2];
-        assert(abs(s_i[0]) + MCC_D_FLANGE[0] / 2 + MCC_D_FLANGE_EDGE_MARGIN <= w / 2,
-            str("mcc: slot ", i, " (\"", part_i, "\") flange is within ", MCC_D_FLANGE_EDGE_MARGIN, " mm of the panel edge (X)"));
-        assert(abs(s_i[1]) + MCC_D_FLANGE[1] / 2 + MCC_D_FLANGE_EDGE_MARGIN <= h / 2,
-            str("mcc: slot ", i, " (\"", part_i, "\") flange is within ", MCC_D_FLANGE_EDGE_MARGIN, " mm of the panel edge (Y)"));
-        for (j = [i + 1 : 1 : len(slots) - 1]) {
-            s_j = slots[j];
-            dx = abs(s_j[0] - s_i[0]);
-            dy = abs(s_j[1] - s_i[1]);
-            assert(dx >= MCC_D_PITCH_H || dy >= MCC_D_PITCH_V,
-                str("mcc: slots ", i, " and ", j, " are closer than the minimum D-series pitch"));
-        }
-    }
-
-    difference() {
-        union() {
-            // Field footprint is shrunk by MCC_EPS on every edge relative to the rim's own outer
-            // silhouette (immediately below) — both would otherwise share an EXACTLY coincident
-            // vertical face over their overlapping Z range (the field sits fully within the rim's
-            // Z run), which is a known Manifold/STL-export degeneracy on this pinned OpenSCAD
-            // build (2025.09.07): two independently-extruded solids meeting at an exact shared
-            // planar face reliably produces a spurious disconnected zero-volume mesh sliver along
-            // that edge (`build.py check`'s `n_parts>1`) — see shell.scad's own module comments
-            // for the fuller writeup of this failure class, first diagnosed there. The field is
-            // physically identical either way (a few hundredths of a mm is far under any print
-            // tolerance) since the rim fully covers the outermost rim_w border regardless.
-            translate([0, 0, -t])
-                linear_extrude(height = t)
-                    square([w - 2 * MCC_EPS, h - 2 * MCC_EPS], center = true);
-            translate([0, 0, -rim_t])
-                linear_extrude(height = rim_t)
-                    difference() {
-                        square([w, h], center = true);
-                        square([w - 2 * rim_w, h - 2 * rim_w], center = true);
-                    }
-        }
-
-        for (cx = [-1, 1]) for (cy = [-1, 1])
-            translate([cx * (w / 2 - rim_w / 2), cy * (h / 2 - rim_w / 2), -rim_t / 2])
-                cyl(h = rim_t + 2 * MCC_EPS, d = MCC_M3_CLR_D, circum = true, $fn = 64);
-
-        for (s = slots)
-            translate([s[0], s[1], -t])
-                mcc_panel_cutout(s[2], mirror = s[3], seat_t = t, panel_t = t);
-    }
-
-    // Every dispatchable part is a Neutrik D part (§ mcc_panel_cutout() above), so every slot gets
-    // the same rear screw bosses.
-    for (s = slots)
-        translate([s[0], s[1], -t])
-            mcc_neutrik_d_bosses(s[2], mirror = s[3]);
+//   part   = panel part number, key into MCC_PANEL_PARTS (constants.scad).
+//   wall_t = total wall thickness at the connector, mm.
+//   seat_t = flange-seat thickness, mm. Default: MCC_PANEL_SEAT_T.
+module mcc_panel_wall_cut(part, wall_t = MCC_PANEL_SEAT_T + MCC_WALL, seat_t = MCC_PANEL_SEAT_T) {
+    assert(search([part], MCC_PANEL_PARTS)[0] != [],
+        str("mcc: mcc_panel_wall_cut() got unknown/unsupported panel part \"", part,
+            "\" — must be a key of MCC_PANEL_PARTS (Neutrik D parts + \"DBA-BL-B\")"));
+    mcc_neutrik_d_wall_cut(part, wall_t = wall_t, seat_t = seat_t);
 }
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

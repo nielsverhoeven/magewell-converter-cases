@@ -49,11 +49,10 @@ real structure, in order:
 2. **`$fa`/`$fs`** — the one and only place `$fn`-adjacent globals are set: `$fa = 1; $fs = 0.4;`.
    Never a global `$fn`.
 3. **`part`** — `part = "base";`, overridden via `-D part="..."`. Valid values:
-   `"base"`, `"lid"`, `"panel"` (the three `scripts/build.py` actually renders/checks/goldens —
-   `discover_models()` hardcodes `parts=["base","lid"]` plus `"panel"` iff the literal substring
-   `part == "panel"` appears in the file, so **do not rename or remove that branch**), plus four
-   preview-only branches never picked up by `build.py`: `"assembly"`, `"panel_placed"`,
-   `"ghost_device"`, `"ghost_plugs"`.
+   `"base"`, `"lid"` (the two `scripts/build.py` renders/checks/goldens — `discover_models()`
+   hardcodes `parts=["base","lid"]`; there is no `"panel"` part since D36, the connectors are cut
+   into the base's patch wall), plus three preview-only branches never picked up by `build.py`:
+   `"assembly"`, `"ghost_device"`, `"ghost_plugs"`.
 4. **`explode`** — `explode = 0;`, a Z-lift in mm applied to the lid only when
    `part == "assembly"`. Preview aid only, no effect on exported parts.
 5. **Variant config (`cfg`)** — case-level options ONLY. **There is no `external_ports` key.** An
@@ -78,25 +77,17 @@ real structure, in order:
    (default true) and `fan_y` (default the device's own Y centreline) — read `mcc_shell_base()`'s
    own doc comment in `shell.scad` for the authoritative list before assuming a key exists).
 6. **`dev`** — `dev = MCC_DEV_<SLUG>;`, the device record constant from your device data file.
-7. **`_mcc_case_slot_list(dev, cfg)`** — a small pure **function** (data assembly, not geometry —
-   legitimate per the stop-and-report gate above) that turns `mcc_slot_assignment(dev)` into the
-   `[x, y, part, mirror]` list `mcc_panel_plate()` expects. Copy it verbatim; it has no per-device
-   logic.
+7. *(retired with D36: `_mcc_case_slot_list()` fed the panel plate; the base now reads the slot
+   set itself.)*
 8. **`L_dims` + two `echo()`s** — `mcc_case_dims(dev, variant)` plus an echo of `L`/`W`/`H` and of
    `mcc_slot_assignment(dev)`. Keep both; they are the cheapest sanity check available and every
    PR's render log should show them.
 9. **`_mcc_case_at_device(layout)`** — places `children()` at the device's assembled position
    (`x_dev_c`, `y_dev_c`, `z_dev_lo + dev_h/2`). Copy verbatim.
-10. **`_mcc_case_panel_placed(layout)`** — places the panel plate at its assembled position in the
-    patch wall (`rotate([-90,0,0])`, front face at the bezel-recessed plane). Copy verbatim — this
-    is exactly the module whose absence caused deviation D9 (the rejected `hull()`ed aperture) and
-    ruling 2026-09-08c C1 (the mirrored boss-relief positions) to go unnoticed for as long as they
-    did; getting its placement right is why the elevation preview below is mandatory.
+10. *(retired with D36: `_mcc_case_panel_placed()` placed the panel plate.)*
 11. **The `if (part == ...)` chain** — `"base"` → `mcc_shell_base(dev, cfg)`; `"lid"` →
-    `mcc_shell_lid(dev, cfg)`; `"panel"` → `mcc_panel_plate(size = mcc_panel_plate_dims(dev), slots
-    = _mcc_case_slot_list(dev, variant))`; `"assembly"` → base + lid (exploded) + panel_placed +
-    ghost, colour-coded, **not exported by `build.py`** (invisible to `render --all`); `"panel_placed"`
-    → the plate alone at its assembled position (web-viewer convenience); `"ghost_device"` /
+    `mcc_shell_lid(dev, cfg)`; `"assembly"` → base + lid (exploded) + ghost, colour-coded, **not
+    exported by `build.py`** (invisible to `render --all`); `"ghost_device"` /
     `"ghost_plugs"` → solid (non-`%`) device-bbox / plug-envelope exports for a web viewer, also
     never picked up by `build.py`. Copy the whole chain; do not add new geometry inside any branch
     beyond calling these L2 modules.
@@ -109,8 +100,6 @@ real structure, in order:
 | `mcc_case_layout` | `layout.scad` | `(dev, cfg)` → struct (L/W/H, every derived position — L1, pure function) |
 | `mcc_case_dims` | `layout.scad` | `(dev, cfg)` → `[L, W, H]` |
 | `mcc_slot_assignment` | `layout.scad` | `(dev)` → list of `[["slot",i],["port_id",id],["part",part]]` |
-| `mcc_panel_plate_dims` | `layout.scad` | `(dev)` → `[plate_l, MCC_PLATE_H]` |
-| `mcc_panel_plate` | `panel.scad` | `(size, slots=[], t=, rim_t=, rim_w=)` → module, the flat printed plate |
 | `mcc_ghost` | `ghost.scad` | `(dev, show=)` → module, `%`-modified device+plug visualisation |
 
 There is no `mcc_shell(family=, device=, variant=, half=)` and no `mcc_panel(device=, variant=,
@@ -135,7 +124,7 @@ at stale muscle memory from that draft; use the table above instead.
    - The `variant` config's `fan`/`splitter` defaults, only if your device's BOM genuinely differs
      from `false`/`false` — do not flip either just to "try it"; see the escalation note below.
    - Leave every module reference, every function call, the whole `if (part == ...)` chain, and
-     `_mcc_case_slot_list`/`_mcc_case_at_device`/`_mcc_case_panel_placed` untouched.
+     `_mcc_case_at_device` untouched.
 4. Render:
    ```
    .venv\Scripts\python scripts\build.py render <slug>

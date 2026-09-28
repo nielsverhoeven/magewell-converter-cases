@@ -8,8 +8,12 @@ One build implementation, two entry points, per `.claude/knowledge/architecture.
   activates `.venv` if present and forwards every argument unchanged. It must never gain logic
   of its own — if you find yourself editing `render.ps1` to change behaviour, that behaviour
   belongs in `build.py` instead.
-- `mesh_to_step.py` — STL → STEP conversion (`cadquery-ocp` or FreeCAD `freecadcmd` backend),
-  used by `build.py step`. Can also be run standalone for one file — see its own `--help`.
+- `csg_to_step.py` — the exact STEP path (D39): rebuilds OpenSCAD's `<part>.csg` tree as an
+  OpenCascade B-rep, so holes and roundings are real cylinders/circles, and cross-checks the volume
+  against the rendered mesh. Used by `build.py step`/`ci`; standalone: `csg_to_step.py part.csg
+  part.step --mesh part.model.stl`.
+- `mesh_to_step.py` — STL → faceted STEP (`cadquery-ocp` or FreeCAD `freecadcmd` backend), now only
+  the fallback for a part `csg_to_step.py` cannot convert (e.g. an engraved `text()` label).
 - `release_version.py` — computes the next `vX.Y.Z` from Conventional Commits since the last
   `v*` tag. Used by `.github/workflows/release.yml`; see "Release tooling" below.
 - `package_release.py` — builds the per-device, coupon, and bracket release zips from `exports/`.
@@ -69,6 +73,7 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 | `slicer-check` | Slicer gate / ground truth: slice every rendered `<part>.3mf` headlessly with Bambu Studio's CLI (`--slice 0`; `MCC_BAMBU_STUDIO` overrides the path) and fail on any `warning_message` in its `result.json` ("floating regions", "floating cantilever", exclusion area, ...). `--jobs N` slices in parallel; a hung CLI process is retried once; results also go to the GitHub job summary. Skips with a notice when Bambu Studio is not installed, unless `--require` (what CI uses, on the pinned AppImage from `.github/actions/setup-bambu-studio`). |
 | `ci --group k/n [--jobs 3]` | What the PR gate runs (render.yml): the k-th of n cost-balanced part groups, each part as its own pipeline render → check → golden → Bambu slicer gate → STEP, `--jobs` parts in flight so slicing/STEP overlap the next OpenSCAD render. Refuses to run without Bambu Studio or a STEP backend (`--no-slice`/`--no-step` for local debugging only). `ci` alone (= `--group 1/1`) runs everything locally. |
 | `slicer_probe.py zbisect\|box\|critical <stl>` | (separate script, run from `scripts/`) Locate a Bambu Studio warning on one part: Z bisection, box clipping, or critical-regions-only support probe. See the `bambu-studio` skill §3. |
+| `rail_fit.py [<slug>]` | (separate script, run from `scripts/`) Virtual insertion sweep of the male mount rail into a rendered `base.model.stl`: asserts the end stop blocks over-travel, zero overlap when fully mated, and that only the latch nub touches the groove while sliding (architecture.md D34). Run after any change to `rail.scad`, `mounts.scad` or a case's floor. |
 | `review` | Write `exports/review.3mf`: every rendered design in one Bambu Studio project (each model on its own plates, coupons/brackets packed) — open it and *Slice all* to review the whole set. Not committed; released as `review-<version>.3mf`. |
 | `all` | `smoke` → `render --all` → `check --all` → `golden` → `review`, in order. What CI runs on every push/PR. |
 | `all --release` | Same, with the release warning gate on (fails on any `WARNING: unmeasured` port echoed at render time). |

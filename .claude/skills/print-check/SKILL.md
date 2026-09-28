@@ -70,8 +70,7 @@ turning by hand, that is a bug in the pose table, not a slicer step.
 
 | Part | Orientation | Why |
 |---|---|---|
-| Connector panel plate | **Face-down, flat on the bed** | The ⌀23.8/24.2 mm holes print as true circles with no bridging; the flange seat is a true bed-flat surface. The same hole cut vertically is a 24 mm bridge that droops at the top (architecture.md §5 point 2). |
-| Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The patch-wall rabbet is open to the top of the base wall; the top of the panel frame is a lip on the lid, which stands upright in the lid's pose (architecture.md D32 — the old 6 mm base-side bezel lip was an unprintable cantilever). |
+| Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The connectors sit straight in the base's standing patch wall (D36, no panel plate): their holes are truncated teardrops with one flat ≤10 mm roof bridge, the bezel recess roof is chamfered ~50°, and the connector screws thread into horizontal printed M3 threads — check those on the standing `neutrik-tile` coupon first. |
 | Any part with a boss/insert hole | Hole axis vertical (printing top-down through the hole), not horizontal | A horizontal insert hole is a small bridge/overhang per hole and prints out-of-round; a vertical hole prints as a clean circular wall. |
 | `models/brackets/tv-bracket.scad` | Flat, either face down — but **mount with the plate's own +Y axis up** (not a print-orientation choice; see `models/brackets/README.md` "Orientation") so the mated case hangs with its patch/cable wall down, not the fan/vent side against the TV. |
 | `models/brackets/arch-tv-bracket.scad` | `arm`: **TV face down**; `centre`: **flat face down, rail up**. Mount with the **arch up** (UP arrow on the centre); patch wall then hangs down. **Do not print for use before M15 (rail-latch), M18 (TV measurements) and R38 (rail entry/interference, issue #48) are closed** (`models/brackets/README.md`). |
@@ -152,7 +151,7 @@ Before slicing for real, in Bambu Studio:
 - Use the slicer's built-in overhang/support painting view to visually confirm the ≤45° self-
   supporting claim for any new geometry before trusting it blindly — a computed angle in OpenSCAD and
   what the slicer's support algorithm considers "needs support" can disagree at the margin.
-- If the plate preview shows supports being auto-generated anywhere on the panel plate or the shell's
+- If the plate preview shows supports being auto-generated anywhere on the patch wall or the shell's
   outer faces, treat that as a design smell, not just a setting to turn off — supports on those faces
   usually mean an assumption in this skill's §3 orientation table doesn't hold for the specific part.
 
@@ -165,9 +164,10 @@ Before slicing for real, in Bambu Studio:
 - [ ] Bbox fits 256 mm cube minus margin, confirmed in-slicer at the actual print orientation
 - [ ] Orientation matches the table in §3 for this part type
 - [ ] No unsupported span >10 mm; all roofs ≤45°
-- [ ] For a case base: a head-on orthographic elevation of the patch wall from OUTSIDE (assembly
-      with `panel_placed`, `--projection=o`, camera along −Y) shows exactly round D holes with their
-      two screw holes and no window outline around them (architecture.md §13 D11)
+- [ ] For a case base: a head-on orthographic elevation of the patch wall from OUTSIDE (`base`,
+      `--projection=o`, camera along −Y) shows each D hole with its teardrop cap hidden inside the
+      26 × 31 flange outline, its two threaded holes, and nothing standing inside the hole
+      (architecture.md §5 rev 14, D36)
 - [ ] Slicer profile matches §4 (enclosure on, 260°/105-110°, 5 walls, 3 mm walls, brim)
 - [ ] Relevant coupons (§6) already printed and measured back into `constants.scad`, if this is a
       full case rather than a coupon itself

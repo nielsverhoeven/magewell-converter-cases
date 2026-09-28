@@ -12,6 +12,34 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Changed (modeller feedback, 2026-09-28) — MAJOR: printed panels/bases are not interchangeable
+
+- **No separate connector panel** (architecture.md D36): the connectors mount straight into the
+  base's patch wall — 3 mm bezel recess, 2 mm flange seat with a teardropped hole, and printed M3
+  threads in the wall itself. The panel part, its rabbet, the 4 plate-retention inserts/screws and
+  the lid's patch-wall lip are gone. This also removes the "screw pillars in the D opening": the
+  plate's rear thread pads overlapped every D hole by ~1 mm. `neutrik-tile` is now a standing
+  section of that wall.
+- **No floor insert** (D35): the case's own 1/4"-20 floor insert boss is off in every variant; the
+  side bolt is the only screw.
+- **No floor-pad island** (D37): the unexplained 40 × 40 mm square in the cradle was left over from
+  the floor EPDM pad that moved to the side-bolt boss long ago.
+- **Lid-boss webs** (D38) are as wide as the boss and merge into it; they used to touch it only
+  along a tangent line.
+- Material: base + lid ≈ 262 g (was ≈ 272 g with the panel).
+- **STEP files carry real circles** (D39): the STEP is rebuilt from OpenSCAD's CSG tree
+  (`scripts/csg_to_step.py`), so holes and roundings are true cylinders/arcs in CAD instead of
+  dozens of flat facets. The faceted mesh converter remains only as a reported fallback.
+
+### Fixed (mount rail, issue #46)
+
+- **The mount rail could not be assembled**: the case groove was closed at both ends and the
+  bracket rail's end-stop flange would have hit the case floor. The groove now runs out through the
+  case's +X wall (closed −X end = end stop, flange retired), and the latch is redesigned as a
+  printable in-plane snap arm cut from the rail's flank that snaps into a notch in the groove
+  (architecture.md D34). Goldens of every base, the tv-bracket, the arch-tv-bracket centre and the
+  rail-latch coupon change accordingly.
+
 ### Added (agent workflow)
 
 - `bambu-studio` skill + `scripts/slicer_probe.py zbisect|box|critical`: locate a Bambu Studio
