@@ -1,7 +1,8 @@
 name: render
 
 # Renders every discovered coupon/bracket/model, runs the 4-tier test suite (smoke -> render -> mesh
-# checks -> goldens), converts every part to STEP, and uploads the results. On a v* tag it also
+# checks -> goldens), slices every part with the pinned Bambu Studio CLI (slicer gate — fails on any
+# slicer warning), converts every part to STEP, and uploads the results. On a v* tag it also
 # runs the release gate (fails on any WARNING: unmeasured port). Releases themselves are no longer
 # created here — release.yml (triggered on push to main) owns tagging and GitHub Releases; this
 # workflow is CI/testing only (issue #10). See .claude/knowledge/architecture.md §8 (export
@@ -26,7 +27,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout (with BOSL2 submodule)
         uses: actions/checkout@v4
@@ -68,6 +69,16 @@ jobs:
           else
             python scripts/build.py all
           fi
+
+      - name: Setup Bambu Studio (pinned Linux AppImage, headless)
+        uses: ./.github/actions/setup-bambu-studio
+
+      - name: Bambu Studio slicer gate (every part must slice without a slicer warning)
+        # Slices every exported <part>.3mf with the real slicer (the same version the project files
+        # are written for) and fails on any warning_message — "floating regions", "floating
+        # cantilever", exclusion area, ... `check`'s printability gate is only an approximation;
+        # this is the ground truth (architecture.md §8 rev 13). --require: never skip silently.
+        run: python scripts/build.py slicer-check --require --jobs 3
 
       - name: STEP export (every discovered coupon/bracket/model)
         run: python scripts/build.py step --all
