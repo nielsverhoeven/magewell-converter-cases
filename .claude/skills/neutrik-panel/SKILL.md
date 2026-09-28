@@ -1,6 +1,6 @@
 ---
 name: neutrik-panel
-description: Place a Neutrik D-series connector — straight in the case's patch wall (teardropped seat hole + window, printed M3 threads in the wall, no screw pillars) or in a flat coupon panel — with spacing/depth/web asserts; use whenever a model needs a connector cutout — always through mcc_panel_wall_cut()/mcc_panel_cutout(), never by calling the Neutrik provider module directly.
+description: Place a Neutrik D-series connector — straight in the case's patch wall (perfectly round seat hole + window, plain ⌀2.5 tap-drill fixing bores in the wall — no printed thread, no screw pillars) or in a flat coupon panel — with spacing/depth/web asserts; use whenever a model needs a connector cutout — always through mcc_panel_wall_cut()/mcc_panel_cutout(), never by calling the Neutrik provider module directly.
 ---
 
 # neutrik-panel
@@ -73,7 +73,7 @@ Flange keep-out: reserve the full **26 × 31 mm** flange (`MCC_D_FLANGE`), corne
 (`MCC_D_FLANGE_R`), as flat unobstructed panel around every cutout — this is what the ≥4 mm web
 assert (below) is protecting.
 
-## Seat, fixing and printability — connectors straight in the patch wall (architecture.md §5 rev 14, D36)
+## Seat, fixing and printability — connectors straight in the patch wall (architecture.md §5 rev 15, D36/D40/D41)
 
 There is **no separate connector panel** (user decision 2026-09-28). The connectors mount straight
 into the base's 8 mm patch wall: a 3 mm bezel recess (`_mcc_patch_wall_recess()`), then 5 mm of
@@ -83,37 +83,27 @@ wall that `mcc_panel_wall_cut()` → `mcc_neutrik_d_wall_cut()` cuts per slot. T
 - **Seat thickness**: `MCC_PANEL_SEAT_T = 2.0 mm` — the safe common denominator across the family
   (HDMI caps at 2 mm, `knowledge/neutrik/d-series-cutout.md:90`). Behind it a slightly larger body
   window runs through the remaining 3 mm.
-- **Holes are truncated teardrops** pointing up, both capped at the window's `cap_h` so the roof
-  over the opening is ONE flat bridge through the whole wall (≤ `MCC_APERTURE_BRIDGE_MAX`). A seat
-  hole capped lower than the window leaves a 2 mm strip open on both faces — Bambu reads it as a
-  floating cantilever. Everything the teardrop adds lies inside the 26 × 31 flange.
-- **Screw fixing**: the connector's two screws thread into a **printed M3×0.5 thread in the wall
-  itself**, through all 5 mm (9 turns). **No pads/pillars behind the wall** — the old plate's rear
-  pads (⌀8.28 at 15.3 mm from the centre) reached ~1 mm into the ⌀24.3 hole, which the modeller
-  rejected, and standing proud of a vertical wall they would be overhangs. T1-48 asserts ≥
-  `MCC_WALL_THREAD_WEB_MIN` (1.2 mm) of wall between each thread and either opening — the
-  tightest web in the wall. The thread axis is now **horizontal** in the print: verify on the
-  `neutrik-tile` coupon (a standing wall section) before the first case. Never call BOSL2
-  `screw_hole()` directly from `models/**`.
-  - **`$fn` policy exception, scoped to the thread bore only** (`architecture.md` §3, rev 10): the
-    thread bore is `$fn=32`, not the repo's usual `$fn≥64` minimum — BOSL2 `screw_hole()` accepts no
-    `circum` argument, so the usual circumscribe mechanism is unavailable, and the measured cost of
-    `$fn=64` on a real thread is ~26× the render time and ~38× the STL size of a plain bore (~13×/
-    ~19× at `$fn=32`) — see `architecture.md` §3 for the full citation. **The pad's own outer
-    cylinder keeps `$fn=64` + `circum=true`** — this exception never extends past the thread bore.
-  - **`MCC_THREAD_M3_SLOP` (default 0.05) is the load-bearing tuning constant, not `MCC_HOLE_COMP`.**
-    BOSL2 grows an internal thread by `4·$slop` in *diameter* (`lib/BOSL2/screws.scad:753`) — a
-    plausible-looking but too-large `$slop` silently erases the entire M3×0.5 thread (only 0.2705 mm
-    of nominal radial engagement). Calibrate with `models/coupons/m3-thread-ladder.scad`
-    (rungs `[0.02, 0.035, 0.05, 0.065, 0.08]`) before trusting this default — acceptance is **≥5
-    insert/remove cycles per pad**, not one successful seat (R28), because a connector gets
-    unscrewed for cable service and repeat-cycle stripping is exactly the failure mode a heat-set
-    insert existed to prevent.
-  - **`MCC_THREAD_FAST` (default `false`, override with `-D MCC_THREAD_FAST=true`)** substitutes a
-    plain `MCC_M3_CLR_D` clearance bore for the real thread — fast dev-iteration renders and the
-    interactive case-viewer artifact only (same `MCC_SHOW_GHOST` precedent: default `false`/safe,
-    opt in via `-D`). **Never** for a release, coupon, or print export — goldens and CI always use
-    the real thread.
+- **Holes are perfectly round** (D40, user decision 2026-09-28): the seat hole
+  (`mcc_cutout_d(part)`) and the body window behind it (`mcc_aperture_window(part)`) are plain
+  `$fn = 96` circles — true circles in the STL, true cylinders in the exact STEP. The wall prints
+  standing, so the top of each hole is a round arch: the Bambu slicer gate passes it, and the
+  `neutrik-tile` coupon judges the print quality of that arch (architecture.md R39, M19). **Never
+  reintroduce a teardrop, cap or bridge** — D36's teardrop was reverted by a user decision.
+- **Screw fixing** (D41, user decision 2026-09-28): the connector's two screws go into a **plain
+  ⌀2.5 mm bore** (`MCC_FIXING_BORE_D`, the ISO M3×0.5 tap-drill size) straight through the 5 mm
+  wall — **no printed thread**, no chamfer, no pads/pillars. The external CAD specialist models the
+  M3×0.5 thread on the exact STEP; how a *printed* case gets its thread is an open user question
+  (architecture.md §12 Q20). T1-61 asserts ≥ `MCC_WALL_BORE_WEB_MIN` (1.2 mm) of wall between each
+  bore and either opening — the tightest web in the wall.
+  - **`$fn`** (architecture.md §3 rev 15): the bore is `cyl(d = MCC_FIXING_BORE_D, $fn = 64)` at its
+    **nominal** diameter, **without** `circum = true` — the exact STEP copies the CSG radius, and
+    `circum` would turn ⌀2.5 into ⌀2.503 in the specialist's CAD. The old `$fn = 32` thread
+    exception is retired.
+  - **`MCC_FIXING_BORE_D` is a user decision, not a tuning constant.** Do not change it, add
+    `MCC_HOLE_COMP` to it, or chamfer it to "help the print" — report `neutrik-tile` results (M19)
+    to the teamlead instead.
+  - Never call BOSL2 `screw_hole()` (or any thread generator) for this feature: a thread is a
+    polyhedron and arrives faceted in the exact STEP.
 - **Never add material to the connector's side of the seat plane or inside the hole cylinder** —
   cut the openings *after* anything added nearby (the plate-era bug was pads unioned after the
   hole was cut).
@@ -156,11 +146,7 @@ numbers below are an engineering recommendation derived from the flange size, al
 | Each flange fits on the panel with ≥4 mm web to the frame | 26×31 mm + margin ≤ available panel area |
 | Panel seat thickness | ≤ `mcc_panel_max_t(part)` |
 | Clear depth behind the cutout | ≥ `mcc_bay_depth(part)` |
-| Wall web around each connector thread (T1-48, D36) | distance from the thread axis to the seat hole / window outline − (major_d + 4·$slop)/2 ≥ `MCC_WALL_THREAD_WEB_MIN` (1.2) |
-| Teardrop cap bridges (T1-34a) | flat width of both teardrops ≤ `MCC_APERTURE_BRIDGE_MAX` (10) |
-| Connector-fixing thread engagement (T1-42b) | `(wall_t − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH` ≥ `MCC_THREAD_ENGAGE_MIN_TURNS` (3); 9 turns in the 5 mm wall |
-| Thread pad wall (T1-42a — `mcc_thread_pad()`, the `m3-thread-ladder` coupon only) | `(pad_d − (major_d + 4·$slop))/2` ≥ `MCC_THREAD_WALL_MIN` (2.0) |
-| Connector-fixing residual radial thread engagement vs `$slop` (T1-42c, rev 10 — the one that would have caught a too-large `$slop`) | `0.5·(major_d − minor_d) − 2·$slop` ≥ `MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135) |
+| Wall web around each fixing bore (T1-61; D36 filed it as "T1-48", an id `arch-tv-bracket` already owned — D42) | distance from the bore axis to the seat-hole / window circle − `MCC_FIXING_BORE_D`/2 ≥ `MCC_WALL_BORE_WEB_MIN` (1.2) |
 
 ## Coupons — how the placeholder numbers get replaced
 
@@ -169,19 +155,15 @@ numbers, and neither has been printed yet — do not treat any `assumed`-confide
 `MCC_PANEL_PARTS` as final until its coupon reports back:
 
 - **`neutrik-tile`** (`models/coupons/neutrik-tile.scad`) — a 40×45 mm section of the patch wall
-  (5 mm, printed standing on a foot) with one connector cut exactly as in the case (D36). Verifies
-  a real connector fits, seats flush and screws into the horizontal printed threads; this is what
-  calibrates `MCC_HOLE_COMP` for real.
+  (5 mm, printed standing on a foot) with one connector cut exactly as in the case (D36/D40/D41).
+  Verifies a real connector passes the round hole's printed arch and seats flush, that the two
+  ⌀2.5 fixing bores line up and are round, and — once architecture.md §12 Q20 picks a threading
+  route — that the thread holds (M19); this is what calibrates `MCC_HOLE_COMP` for real.
 - **`depth-mockup`** (`models/coupons/depth-mockup.scad`, not yet written) — holds one panel
   connector at a set distance from a mock device port face so the real patch cable can be tried. This
   is the *only* way to replace the `plug_len`/`bend` placeholders in `MCC_PANEL_PARTS` (currently
   `TODO(teamlead)`-flagged, `confidence:"assumed"`, per the comment block above the table in
   `constants.scad`).
-- **`m3-thread-ladder`** (`models/coupons/m3-thread-ladder.scad`, new rev 10, GitHub issue #30) — 5
-  printed M3 thread pads at production `pad_d`/`pad_h`/`$fn` (built from the same `mcc_thread_pad()`
-  the connector-fixing boss module calls), sweeping `$slop` across `[0.02, 0.035, 0.05, 0.065, 0.08]`.
-  Calibrates `MCC_THREAD_M3_SLOP` (default 0.05, `assumed`) — the only way to replace this placeholder
-  is a real M3 machine screw threaded and unthreaded ≥5 times per pad (R28).
 
 **Writing a measured result back**: edit the relevant row in `lib/mcc/constants.scad`'s
 `MCC_PANEL_PARTS` (or the constant it feeds), replace the value, and update the comment to name the

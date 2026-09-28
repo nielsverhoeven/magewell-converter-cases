@@ -148,6 +148,12 @@ MCC_M8_CLR_D = 9.0;  // generic M8 clearance hole, mm. assumed — ISO-medium M8
                      // Wikipedia). Reused for both bolt sizes rather than adding a third clearance
                      // constant that would only drift from this one.
 
+MCC_M3_MAJOR_D = 3.0; // M3 nominal major diameter, mm. Fixed mechanical standard (ISO metric
+                       // coarse), same footing as MCC_TRIPOD_MAJOR_D above. Was
+                       // MCC_THREAD_M3_MAJOR_D in the retired "Printed M3 threads" section
+                       // (architecture.md §13 D41). Only consumer: models/brackets/arch-tv-bracket.scad
+                       // (its T1-57 M3-engagement assert).
+
 // -----------------------------------------------------------------------------------------
 // Section: Captive side bolt (D-09) — device retention through the far (-Y) wall
 // .claude/knowledge/layout-patch-wall.md §7.1 / §11. A captive 1/4"-20 slotted screw runs through
@@ -302,25 +308,17 @@ MCC_PANEL_BEZEL_T = 3.0; // proud sacrificial-bezel layer of the patch-wall Y st
                           // §15 addendum "the proud sacrificial-bezel layer of MCC_T_PATCH; needed
                           // explicitly now that the rabbet is stepped (§2.5)".
 
-// Rev 6 (2026-09-08) aperture-shape constants — layout-patch-wall.md §11 rev-6 addendum / §2.5 /
-// §15 ruling 2026-09-08b. All five/six are print-process figures, `assumed` (not sourced
-// dimensions); none of them changes L/W/H, the plate size, the slot pitch or any fixing position —
-// this ruling is shape-and-bore-only. Deliberately NOT added here: MCC_APERTURE_TOP_OPEN -- the
-// top-open (U-notch) aperture is rejected, not parameterised (§15 ruling 2026-09-08b).
-MCC_APERTURE_BRIDGE_MAX = 10.0; // max unsupported horizontal span anywhere in the patch-wall
-                          // aperture, mm — the one place architecture.md §5's "no unsupported
-                          // horizontal span over 10 mm anywhere in the shell" becomes a number.
-                          // Used by T1-34a (window apex flat-bridge width w_flat).
-MCC_APERTURE_CAP_RISE = 0.4; // assumed -- how far the truncated-teardrop cap sits above the body
-                          // circle's own top, mm: cap_h = d_win/2 + MCC_APERTURE_CAP_RISE. Chosen as
-                          // the smallest rise that still hides the cap behind the plate
-                          // (cap_h > mcc_cutout_d(part)/2, margin 0.7 mm) while keeping w_flat under
-                          // MCC_APERTURE_BRIDGE_MAX. Calibrate with the neutrik-tile coupon.
-MCC_WALL_THREAD_WEB_MIN = 1.2; // assumed -- minimum wall between a connector's printed M3 thread
-                          // (slopped major diameter) and the seat hole / body window beside it, mm
-                          // (D36, T1-48): three 0.4 mm perimeters. The screws sit 15.3 mm from the
-                          // connector centre on a 24 mm hole, so this is the tightest web in the
-                          // patch wall; only a sliver of each thread's circumference is this thin.
+// Patch-wall connector-cut constants (rev-6 aperture ruling, re-scoped by D36/D40/D41 --
+// architecture.md §5 rev 15). The seat hole and body window are PLAIN CIRCLES (D40, user decision
+// 2026-09-28: "perfectly round"), so the teardrop constants MCC_APERTURE_BRIDGE_MAX and
+// MCC_APERTURE_CAP_RISE are retired, not parameterised. Deliberately NOT added here:
+// MCC_APERTURE_TOP_OPEN -- the top-open (U-notch) aperture is rejected (layout-patch-wall.md §15
+// ruling 2026-09-08b).
+MCC_WALL_BORE_WEB_MIN = 1.2; // assumed -- minimum wall between a connector's fixing bore and the
+                          // seat hole / body window beside it, mm: three 0.4 mm perimeters. T1-61
+                          // (filed as "T1-48" and named MCC_WALL_THREAD_WEB_MIN under D36; renamed
+                          // by D41, renumbered by D42). The bores sit 15.3 mm from the connector
+                          // centre on a ~24 mm hole, so this is the tightest web in the patch wall.
 MCC_APERTURE_LIP_WEB_MIN = 2.0; // minimum lip material between any part of a window and the plate's
                           // own edge, mm. knowledge/design/fdm-rugged-enclosure-guidelines.md:127.
                           // T1-34c.
@@ -329,85 +327,18 @@ MCC_INSERT_BORE_EXTRA = 0.5; // assumed -- extra bore depth past a heat-set inse
                           // the old connector bosses (deviation D10 / T1-35).
 
 // -----------------------------------------------------------------------------------------
-// Section: Printed M3 threads (connector fixing, GitHub issue #30) -- the connector's own two
-// screw holes (MCC_D_SCREW_PITCH diagonal) thread directly into a printed pad on the panel
-// plate's rear (architecture.md §5 "Connector fixing" bullet 3, rev 10, 2026-09-09). NOT the
-// plate's own 4 retention bosses in shell.scad -- those keep MCC_INSERT_M3 heat-set inserts,
-// out of scope for this change (docs/plans/2026-09-09-printed-m3-threads.md §0).
+// Section: Connector-fixing bore (architecture.md §5 rev 15, D41) -- the connector's own two screw
+// holes (MCC_D_SCREW_PITCH diagonal) are a PLAIN, UNTHREADED bore straight through the patch wall
+// (MCC_PANEL_SEAT_T + MCC_WALL = 5 mm). User decision 2026-09-28: no printed thread ("the thread
+// with those little triangles is really bad"); the external CAD specialist models the M3x0.5
+// thread on the exact STEP. How a PRINTED case gets its thread is open (architecture.md §12 Q20).
 // -----------------------------------------------------------------------------------------
 
-MCC_THREAD_M3_MAJOR_D = 3.0;   // M3 nominal major diameter, mm. Fixed mechanical standard (ISO
-                                // metric coarse), same footing as MCC_TRIPOD_MAJOR_D above.
-MCC_THREAD_M3_MINOR_D = 2.459; // M3x0.5 minor (root) diameter, mm. ISO 68-1 standard figure --
-                                // fixed mechanical standard, not project-sourced. Used only by
-                                // T1-42c (residual radial thread engagement vs $slop).
-MCC_THREAD_M3_PITCH   = 0.5;   // M3 coarse pitch, mm. ISO metric standard. BOSL2 screw_hole()
-                                // resolves this itself from the "M3" spec string; named here only
-                                // for the turns-count assert (T1-42b).
-
-MCC_THREAD_M3_SLOP = 0.05; // radial print-compensation passed as BOSL2's $slop, mm. Architect
-                            // verdict B1 (architecture.md rev 10; docs/plans/2026-09-09-printed-
-                            // m3-threads.md §9): BOSL2 enlarges an internal thread by 4*$slop in
-                            // DIAMETER (lib/BOSL2/screws.scad:753, threading.scad:179), i.e.
-                            // 2*$slop per side, against only 0.2705 mm of M3x0.5 radial thread
-                            // engagement (0.5*(MAJOR_D - MINOR_D)) -- the plan's original 0.15
-                            // erased the entire thread (T1-42c: 0.2705 - 2*0.15 = -0.0295 < 0).
-                            // 0.05 is BOSL2's own tested figure (screws.scad:767). `assumed`
-                            // until calibrated against a physical print -- calibrate with the
-                            // m3-thread-ladder coupon (rungs [0.02, 0.035, 0.05, 0.065, 0.08],
-                            // R28/M16) before trusting this value; update this comment with the
-                            // measured value + coupon name + date once printed, same convention
-                            // as every other *_CLR_* constant in this file.
-
-MCC_THREAD_M3_PAD_D = 8.28; // connector-fixing pad outer diameter, mm. Pinned EQUAL to the
-                             // pre-#30 heat-set boss OD (MCC_BOSS_MIN_RATIO(1.8) *
-                             // MCC_INSERT_M3 od(4.6) = 8.28) so the wall-aperture boss-relief
-                             // circles (d_rel = MCC_THREAD_M3_PAD_D + 2*MCC_CLR_SLIDE = 8.88,
-                             // layout-patch-wall.md §2.5) and every T1-34a/b number are
-                             // numerically UNCHANGED by this ticket -- no shell.scad wall-window
-                             // geometry moves (layout.scad:189, architect verdict B4). Do not
-                             // derive this from MCC_INSERT_M3 any more (that struct is being
-                             // dropped from this boss's own logic) -- it is a bare literal
-                             // specifically so a future edit to MCC_INSERT_M3 (still live for the
-                             // plate-fixing bosses) cannot silently move the wall aperture via
-                             // this file.
-MCC_THREAD_M3_PAD_H = 7.0;  // connector-fixing pad depth, mm. Numerically unchanged from the old
-                             // connector-boss boss_h default (architecture.md §5 "~7 mm
-                             // total"). Minus MCC_THREAD_M3_CHAMFER, gives 6.5 mm / 13 full turns
-                             // of engagement at MCC_THREAD_M3_PITCH -- above both the ticket's
-                             // >=3-turn floor (T1-42b) and the sourced 2.0-2.5x-diameter
-                             // (6.0-7.5mm) FDM best-practice engagement (Sovol3D, plan §2).
-MCC_THREAD_M3_CHAMFER = 0.5; // lead-in chamfer depth at the pad's screw-entry face, mm. Architect
-                              // verdict B3: BOSL2's own screw()/screw_hole() bevel size defaults
-                              // to `bevelsize = pitch` (lib/BOSL2/screws.scad:995), i.e. 0.5 for
-                              // M3x0.5 -- SOURCED, not the plan's original `assumed` 1.0.
-MCC_THREAD_WALL_MIN = 2.0;   // minimum solid wall around the M3 major diameter (+ slop), mm.
-                              // Reuses this repo's existing minimum-wall-around-a-bore convention
-                              // (same value as mcc_heat_set_boss()'s own wall assert,
-                              // fasteners.scad, and MCC_APERTURE_LIP_WEB_MIN above) --
-                              // corroborated independently by
-                              // fdm-rugged-enclosure-guidelines.md:125 ("~2.0mm... good starting
-                              // reference"). T1-42a.
-MCC_THREAD_ENGAGE_MIN_TURNS = 3;      // minimum full engaged thread turns, ticket acceptance
-                                       // criterion. T1-42b.
-MCC_THREAD_ENGAGE_MIN_RADIAL = 0.135; // minimum residual radial thread engagement after $slop, mm
-                                       // -- 50% of M3x0.5's nominal 0.2705 mm radial engagement
-                                       // (0.5*(MCC_THREAD_M3_MAJOR_D - MCC_THREAD_M3_MINOR_D)).
-                                       // T1-42c, architecture.md rev 10 -- the assert that would
-                                       // have caught the plan's original defective $slop=0.15
-                                       // before the printer did.
-
-MCC_THREAD_FAST = false; // when true (-D MCC_THREAD_FAST=true only -- NEVER the default), the
-                          // connector-fixing pads get a cheap plain MCC_M3_CLR_D clearance bore
-                          // instead of the real BOSL2 thread=true bore -- fast dev-iteration
-                          // renders and the interactive case-viewer artifact only. Architect
-                          // verdict B6: same MCC_SHOW_GHOST precedent (constants.scad variable,
-                          // default false, opt IN via -D -- not a scripts/build.py flag) so the
-                          // fast path self-documents in every export manifest's -D set. The
-                          // default (false) is always the real thread, so goldens, CI `render`/
-                          // `check`, and every release/coupon export use it automatically -- a
-                          // stray fast-path render fails the golden. NEVER set true for a
-                          // release/coupon/print export.
+MCC_FIXING_BORE_D = 2.5; // fixing-bore diameter, mm: the ISO metric M3x0.5 tap-drill size. User
+                          // decision 2026-09-28 (architecture.md §13 D41). Modelled at this
+                          // NOMINAL diameter -- no circum=true, no MCC_HOLE_COMP, no chamfer: it is a
+                          // CAD input and the exact STEP must carry exactly 2.5 (architecture.md §3
+                          // rev 15). Printed size/roundness not yet measured: neutrik-tile, M19.
 
 MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL;
                           // total patch-wall Y stack at the panel band, mm. DERIVED —

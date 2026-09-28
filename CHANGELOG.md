@@ -30,6 +30,13 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 - **STEP files carry real circles** (D39): the STEP is rebuilt from OpenSCAD's CSG tree
   (`scripts/csg_to_step.py`), so holes and roundings are true cylinders/arcs in CAD instead of
   dozens of flat facets. The faceted mesh converter remains only as a reported fallback.
+- **Perfectly round connector holes** (architecture.md D40): the D-connector seat hole and window in
+  the patch wall are plain circles again (D36's teardrops are gone) — in the model, the STL and the
+  STEP.
+- **No printed thread** (D41): each connector's two screw holes are a plain Ø2.5 mm M3×0.5 tap-drill
+  bore; the thread is modelled in CAD from the STEP. The `m3-thread-ladder` coupon is retired. How a
+  printed case gets its thread is still open (architecture.md §12 Q20).
+- CI: a case part whose STEP falls back to the faceted converter now fails `build.py ci`.
 
 ### Fixed (mount rail, issue #46)
 

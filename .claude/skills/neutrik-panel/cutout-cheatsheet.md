@@ -43,7 +43,7 @@ All rows sourced in `lib/mcc/constants.scad`'s `MCC_PANEL_PARTS` comment block; 
 
 - Panel seat thickness: **2.0 mm** everywhere (the safe common denominator, even for etherCON which
   officially tolerates up to 4 mm).
-- Fixing: rear bosses + M3 heat-set insert (5.7 mm). Never self-tapping into 2 mm ASA.
+- Fixing (D41): a plain ⌀2.5 mm M3×0.5 tap-drill bore straight through the 5 mm patch wall at each screw position — no printed thread, no bosses, no inserts; how a printed case gets its thread is open (architecture.md §12 Q20).
 - Max 4 D-connectors per model.
 - Spacing: ≥32 mm horizontal / ≥36 mm vertical center-to-center (`MCC_D_PITCH_H`/`MCC_D_PITCH_V`).
 - Entry point: `mcc_panel_cutout(kind, ...)` only — never `mcc_neutrik_*` from `models/**`.

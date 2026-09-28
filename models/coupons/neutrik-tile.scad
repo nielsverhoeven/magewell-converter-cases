@@ -2,10 +2,11 @@
 // models/coupons/neutrik-tile.scad
 //   Tier-4 physical coupon (architecture.md §9). A 40 x 45 mm section of the patch wall, printed
 //   STANDING exactly like the case wall, with one Neutrik D-series connector cut straight into it
-//   (D36: no panel plate — teardropped seat hole + body window and two printed M3 threads through
-//   the MCC_PANEL_SEAT_T + MCC_WALL of wall behind the bezel recess), on a foot so it stands on the
-//   bed. Verifies a real connector fits, seats flush and screws down, and that the horizontal
-//   printed M3 threads hold, before any full case is printed.
+//   (D36: no panel plate — a perfectly round seat hole + body window (D40) and two plain ⌀2.5 mm
+//   M3x0.5 tap-drill bores (D41, no printed thread) through the MCC_PANEL_SEAT_T + MCC_WALL of wall
+//   behind the bezel recess), on a foot so it stands on the bed. Verifies a real connector passes
+//   the round hole's printed arch and seats flush, and that the bores line up and are round, before
+//   any full case is printed (architecture.md R39/M19).
 //
 // Render:
 //   openscad --backend=Manifold -o out/neutrik-tile.stl models/coupons/neutrik-tile.scad

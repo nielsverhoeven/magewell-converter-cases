@@ -84,12 +84,17 @@ geometry) is a deviation — stop and report it, don't quietly work around it.
   effectively ~24.08 mm — real, because the Neutrik flange only overlaps the hole by ~0.9 mm per
   side (`knowledge/neutrik/d-series-cutout.md:43`). Getting this backwards produces a hole that looks
   right in the OpenSCAD preview and doesn't fit the connector.
+- **Exception — holes that are CAD inputs** (architecture.md §3 rev 15, D41): the exact STEP copies
+  each primitive's radius, and `circum = true` enlarges it to `r / cos(180/$fn)`. The connector
+  fixing bore (`MCC_FIXING_BORE_D`, a tap-drill hole the CAD specialist threads) is therefore
+  `cyl(d = MCC_FIXING_BORE_D, $fn = 64)` at its nominal size — **no** `circum`, **no**
+  `MCC_HOLE_COMP`, no chamfer.
 
 ## BOSL2 idioms to prefer
 
 - `cuboid(size, rounding=r, edges=...)` over hand-rolled `hull()` of spheres/cylinders for rounded
   boxes.
-- `cyl(h=, d=, circum=true, $fn=64)` for any functional round hole (see `$fn` policy above);
+- `cyl(h=, d=, circum=true, $fn=64)` for any functional clearance hole (see `$fn` policy above — CAD-input bores excepted);
   `cyl(..., anchor=BOTTOM)` etc. rather than manual `translate` centring.
 - `attach()` / `position()` / `orient()` / `anchor=` for placing one part relative to another,
   instead of hand-computed `translate([x,y,z])` — this is what lets a device's port `face` unit

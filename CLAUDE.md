@@ -69,15 +69,17 @@ Two knowledge trees, do not merge them:
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
   behind a shell bezel. **The connectors mount straight into the patch wall** (user decision
   2026-09-28, D36 — no separate panel plate): a 3 mm bezel recess, a 2 mm flange seat with a
-  teardropped hole, and printed M3 threads in the wall itself — no screw pillars (architecture.md
-  §5 rev 14). Never call the Neutrik provider directly from `models/**`.
+  **perfectly round** hole (D40), and a **plain Ø2.5 mm M3×0.5 tap-drill bore** per screw through the
+  wall itself — **no printed thread** (D41; the CAD specialist models the thread on the STEP; how a
+  printed case gets its thread is open, architecture.md §12 Q20) — no screw pillars
+  (architecture.md §5 rev 15). Never call the Neutrik provider directly from `models/**`.
 
 ## Non-negotiables
 
 - **Never invent a dimension.** Cite `knowledge/<file>.md:<line>`, or write `unknown` / `assumed`.
 - Every port position carries a `confidence` field (`measured|drawing|manual|photo|assumed`).
 - Always the black `-B` Neutrik variant — no exceptions, no "just for the prototype."
-- No `$fn` set globally — see `openscad-authoring`. Functional holes get local `$fn≥64` + `circum=true`.
+- No `$fn` set globally — see `openscad-authoring`. Functional clearance holes get local `$fn≥64` + `circum=true` (or a diameter that already carries `MCC_HOLE_COMP`); a hole that is a CAD input — the connector's Ø2.5 tap-drill bore — is modelled at its nominal diameter, no `circum` (architecture.md §3 rev 15).
 - STL/3MF are **never** committed — `exports/` is gitignored; CI renders on tag. Small text goldens
   (`tests/golden/*.json`) *are* committed. That includes the Bambu review project: only its
   generator (`build.py review`) lives in git (user decision 2026-09-27).
@@ -131,7 +133,7 @@ Studio project; every part (8 cases as base + lid, coupons, `tv-bracket`, `arch-
 six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions since — the
 connectors mount straight into the patch wall, no panel part (D36), no floor insert (D35), no
 floor-pad island (D37), boss-wide lid-boss webs (D38), `tv-bracket` has no ribs (D31), the rail
-latch redesign (D34) — are in architecture.md §13. Slicer rules and the
+latch redesign (D34), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore instead of a printed thread (D41) — are in architecture.md §13. Slicer rules and the
 debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio` skill.
 
 **All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,
