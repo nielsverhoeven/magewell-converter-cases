@@ -1020,9 +1020,13 @@ rendered STL only), and nothing carried a printer/filament/process. The export c
   it — Bambu's "floating regions") or *cantilever* (an overhang whose far edge lies > 3 mm from where
   it attaches to the layer below — Bambu's "floating cantilever", same 3 mm limit). It is an
   approximation of the slicer, so the ground truth is `build.py slicer-check`: every `<part>.3mf`
-  sliced headlessly by the locally installed Bambu Studio (CLI), failing on any `warning_message`
-  in its `result.json`. CI has no slicer and runs only the approximation; run `slicer-check` locally
-  before any print-facing PR. >45° overhang areas are reported with `check --verbose`, not failed.
+  sliced headlessly by Bambu Studio's own CLI, failing on any `warning_message` in its
+  `result.json`. **CI runs it as a gate** on every part (`build.py ci`, render.yml: six
+  cost-balanced parallel part groups ("Validate parts — group k of 6"), each pipelining render → check → golden → slicer → STEP, plus a
+  parallel smoke job; the aggregator job `render` is the required check) on the pinned Linux AppImage from
+  `.github/actions/setup-bambu-studio` — the same Bambu Studio version the project files and the
+  settings dump are made for; bump the AppImage pin, `bambu_project.BAMBU_VERSION` and the dump
+  together. >45° overhang areas are reported with `check --verbose`, not failed.
 - The Bambu project settings come from a GUI-saved X1C + Bambu ASA preset dump
   (`scripts/bambu/x1c-0.4-asa.project_settings.json`, Bambu Studio 02.08.02.61) with the overrides
   in `scripts/bambu_project.py PROCESS_OVERRIDES`, recorded in `different_settings_to_system` the

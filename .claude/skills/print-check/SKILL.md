@@ -20,8 +20,8 @@ All three must pass before you even open Bambu Studio. `check` includes the **pr
 (`scripts/printability.py`): it slices every print-pose STL at 0.2 mm and fails on any floating
 island — the exact condition behind Bambu Studio's "It seems object X has floating regions" warning
 (architecture.md §8 rev 13, deviations D26–D33) plus Bambu's 3 mm "floating cantilever" rule. The
-ground truth is `python scripts/build.py slicer-check` — every part sliced headlessly by the local
-Bambu Studio, failing on any slicer warning. Then `python scripts/build.py review` and open
+ground truth is `python scripts/build.py slicer-check` — every part sliced headlessly by Bambu
+Studio's CLI, failing on any slicer warning; CI runs the same gate on every PR. Then `python scripts/build.py review` and open
 `exports/review.3mf` to see every design on its plates in one go. `render` failing means the geometry is broken
 — fix that first, nothing below matters yet. `check` failing (non-watertight, inconsistent winding,
 `len(split()) != 1`) means the mesh has a real defect the slicer will either silently repair badly or

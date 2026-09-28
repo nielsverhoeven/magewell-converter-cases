@@ -92,8 +92,9 @@ python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire, non-
 python scripts/build.py check         # mesh checks (watertight, winding, single shell) + no floating islands
 python scripts/build.py golden        # diff tests/golden/*.json, --update to refresh
 python scripts/build.py review        # exports/review.3mf: every design in one Bambu Studio project
-python scripts/build.py slicer-check  # local only: slice every part with Bambu Studio's CLI, fail on any warning
+python scripts/build.py slicer-check  # slice every part with Bambu Studio's CLI, fail on any warning (CI gate too)
 python scripts/build.py all           # smoke + render + check + golden + review
+python scripts/build.py ci            # the PR gate per part: render+check+golden+Bambu slicer+STEP (CI: --group k/6)
 ```
 
 ## Which skill for what

@@ -662,60 +662,210 @@ def find_bambu_studio() -> Path | None:
     return Path(which) if which else None
 
 
+# -----------------------------------------------------------------------------------------
+# ci  (the PR gate, split into parallel part groups + pipelined — .github/workflows/render.yml)
+# -----------------------------------------------------------------------------------------
+
+def _unit_cost(target: Target, part: str) -> float:
+    """Relative CI cost of one part (render + check + slice + STEP), for balancing part groups. Rough
+    wall-clock weights measured on ubuntu-latest (2026-09-28): case bases dominate, thread-bearing
+    panels are next, coupons are cheap."""
+
+    if target.kind == "model":
+        return {"base": 10.0, "base_fan": 10.0, "panel": 6.0, "lid": 4.0}.get(part, 6.0)
+    if target.kind == "bracket":
+        return 5.0
+    return 2.0
+
+
+def group_units(n_groups: int, index: int) -> list[tuple[Target, str]]:
+    """Deterministic longest-processing-time split of every (target, part) into n_groups part
+    groups of similar cost; returns group `index` (1-based), heaviest parts first so they start earliest."""
+
+    units = [(t, p) for t in discover_all() for p in t.parts]
+    units.sort(key=lambda u: (-_unit_cost(*u), u[0].name, u[1]))
+    loads = [0.0] * n_groups
+    groups: list[list[tuple[Target, str]]] = [[] for _ in range(n_groups)]
+    for u in units:
+        i = loads.index(min(loads))
+        groups[i].append(u)
+        loads[i] += _unit_cost(*u)
+    return groups[index - 1]
+
+
+def golden_check_part(target: Target, part: str) -> list[str]:
+    """[] when the part's render summary matches its committed golden, else the mismatches."""
+
+    summary_path = target.export_dir / f"{part}.summary.json"
+    gpath = golden_path(target.name, part)
+    if not summary_path.exists():
+        return [f"no summary at {summary_path.relative_to(REPO_ROOT)}"]
+    if not gpath.exists():
+        return [f"missing golden {gpath.relative_to(REPO_ROOT)}"]
+    current = _golden_payload(json.loads(summary_path.read_text(encoding="utf-8")))
+    return _compare_golden(current, json.loads(gpath.read_text(encoding="utf-8")))
+
+
+def cmd_ci(args: argparse.Namespace) -> int:
+    """One CI part group: for every (target, part) in the group, as its own pipeline — render (OpenSCAD)
+    -> check (mesh + printability) -> golden -> slicer gate (Bambu Studio) -> STEP — with
+    `--jobs` parts in flight at once, so one part's slicing/STEP overlaps the next part's OpenSCAD
+    render. Every gate still runs on every part; only the scheduling changed."""
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    exe = find_openscad()
+    bambu = find_bambu_studio()
+    if bambu is None and not args.no_slice:
+        print("error: Bambu Studio not found (set MCC_BAMBU_STUDIO) — the CI slicer gate cannot be skipped")
+        return 1
+    step_backend, step_detail = mesh_to_step.backend_available()
+    if step_backend is None and not args.no_step:
+        print(f"error: no STEP backend ({step_detail})")
+        return 1
+    k, n = (int(x) for x in args.group.split("/"))
+    if not 1 <= k <= n:
+        raise SystemExit(f"error: --group {args.group}: expected k/n with 1 <= k <= n")
+    units = group_units(n, k)
+    print(f"part group {k} of {n}: {len(units)} parts, {args.jobs} in flight: " + ", ".join(f"{t.name}:{p}" for t, p in units), flush=True)
+
+    def _pipeline(unit: tuple[Target, str]) -> tuple[str, list[str], dict]:
+        target, part = unit
+        label = f"{target.name}:{part}"
+        errors: list[str] = []
+        stats: dict = {}
+        r = render_part(target, part, "both", {}, args.release, exe)
+        if not r.ok:
+            return label, [f"render: {r.error}"], stats
+        c = check_mesh(target.export_dir / f"{part}.stl")
+        if not c.ok:
+            errors.append("check: " + (c.error or
+                f"watertight={c.watertight} winding={c.winding_consistent} parts={c.n_parts} "
+                f"bbox_ok={c.bbox_ok} islands={len(c.printability.islands) if c.printability else '?'} "
+                f"cantilevers={len(c.printability.cantilevers) if c.printability else '?'}"))
+        errors += [f"golden: {m}" for m in golden_check_part(target, part)]
+        if not args.no_slice:
+            ok, warnings = slicer_check_project(bambu, target.export_dir / f"{part}.3mf", stats)
+            if not ok or warnings:
+                errors += [f"slicer: {w}" for w in (warnings or ["slicing failed"])]
+        if not args.no_step:
+            proc = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("mesh_to_step.py")),
+                 str(target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"),
+                 str(target.export_dir / f"{part}.step"), "--product", f"{target.name}/{part}"],
+                capture_output=True, text=True, check=False)
+            if proc.returncode != 0:
+                errors.append("step: " + ((proc.stderr or proc.stdout).strip().splitlines() or ["failed"])[-1])
+        print(f"   done {label}: {'ok' if not errors else 'FAIL'}", flush=True)
+        return label, errors, stats
+
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        rows = list(pool.map(_pipeline, units))
+
+    print(f"\nci part group {k} of {n} results:")
+    width = max((len(r[0]) for r in rows), default=10)
+    for label, errors, stats in rows:
+        extra = f"  {stats['grams']:7.1f} g  {stats['seconds'] / 3600:5.2f} h" if "grams" in stats else ""
+        print(f"  [{'PASS' if not errors else 'FAIL'}] {label.ljust(width)}{extra}")
+        for e in errors:
+            print(f"           {e}")
+    n_ok = sum(not r[1] for r in rows)
+    print(f"  {n_ok}/{len(rows)} passed")
+
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        lines = [f"## Part group {k} of {n} — OpenSCAD render · checks · golden · Bambu Studio slice · STEP", "",
+                 f"**{n_ok}/{len(rows)} parts pass every gate**", "",
+                 "| Part | Result | Filament | Print time | Problems |", "|---|---|---|---|---|"]
+        for label, errors, stats in rows:
+            g = f"{stats['grams']:.1f} g" if "grams" in stats else ""
+            h = f"{stats['seconds'] / 3600:.2f} h" if "seconds" in stats else ""
+            lines.append(f"| `{label}` | {'✅' if not errors else '❌'} | {g} | {h} | {'<br>'.join(errors)} |")
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    return 0 if n_ok == len(rows) else 1
+
+
+SLICE_TIMEOUT_S = 900   # one Bambu Studio CLI slice; the CLI occasionally hangs — retried once
+
+
 def slicer_check_project(exe: Path, project: Path, stats: dict | None = None) -> tuple[bool, list[str]]:
     """Slice every plate of a project headlessly with Bambu Studio's own CLI and return
     (sliced_ok, warning messages). This is the ground truth the printability gate approximates.
-    If `stats` is given it is filled with {"grams": total filament, "seconds": total print time}."""
+    If `stats` is given it is filled with {"grams": total filament, "seconds": total print time}.
+    A hung or crashed slicer process is retried once before it counts as a failure."""
 
     import tempfile
 
-    with tempfile.TemporaryDirectory(prefix="mcc_slice_") as tmp:
-        try:
-            proc = subprocess.run(
-                [str(exe), "--slice", "0", "--outputdir", tmp, str(project.resolve())],
-                capture_output=True, text=True, check=False, timeout=900,
-                cwd=tmp,  # the CLI also drops a result.json in its working directory
-            )
-        except subprocess.TimeoutExpired:
-            return False, ["Bambu Studio CLI did not finish within 900 s (hung slicer process)"]
-        result_path = Path(tmp) / "result.json"
-        if not result_path.is_file():
-            return False, [f"no result.json (exit {proc.returncode})"]
-        result = json.loads(result_path.read_text(encoding="utf-8"))
-    plates = result.get("sliced_plates", [])
-    warnings = [p["warning_message"] for p in plates if p.get("warning_message")]
-    if stats is not None:
-        stats["grams"] = sum(f.get("total_used_g", 0.0) for p in plates for f in p.get("filaments", []))
-        stats["seconds"] = sum(p.get("total_predication", 0.0) for p in plates)
-    ok = result.get("return_code", 1) == 0
-    if not ok:
-        warnings.insert(0, result.get("error_string", "slicing failed"))
-    return ok, warnings
+    last_error = "slicing failed"
+    for _attempt in range(2):
+        with tempfile.TemporaryDirectory(prefix="mcc_slice_") as tmp:
+            try:
+                proc = subprocess.run(
+                    [str(exe), "--slice", "0", "--outputdir", tmp, str(project.resolve())],
+                    capture_output=True, text=True, check=False, timeout=SLICE_TIMEOUT_S,
+                    cwd=tmp,  # the CLI also drops a result.json in its working directory
+                )
+            except subprocess.TimeoutExpired:
+                last_error = f"Bambu Studio CLI did not finish within {SLICE_TIMEOUT_S} s (hung slicer process)"
+                continue
+            result_path = Path(tmp) / "result.json"
+            if not result_path.is_file():
+                tail = ((proc.stderr or "") + (proc.stdout or "")).strip().splitlines()[-5:]
+                last_error = f"no result.json (exit {proc.returncode}): " + " | ".join(tail)
+                continue
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+        plates = result.get("sliced_plates", [])
+        warnings = [p["warning_message"] for p in plates if p.get("warning_message")]
+        if stats is not None:
+            stats["grams"] = sum(f.get("total_used_g", 0.0) for p in plates for f in p.get("filaments", []))
+            stats["seconds"] = sum(p.get("total_predication", 0.0) for p in plates)
+        ok = result.get("return_code", 1) == 0
+        if not ok:
+            warnings.insert(0, result.get("error_string", "slicing failed"))
+        return ok, warnings
+    return False, [last_error]
 
 
 def cmd_slicer_check(args: argparse.Namespace) -> int:
-    """Local-only Tier-3 companion: slice every rendered <part>.3mf with the installed Bambu Studio
-    (CLI, no GUI) and fail on any slicer warning ("floating regions", "floating cantilever",
-    "too close to exclusion area", ...). Skipped with a notice when Bambu Studio is not installed —
-    CI has no slicer; `check`'s printability gate is the CI-side approximation."""
+    """Tier-3 slicer gate: slice every rendered <part>.3mf with Bambu Studio's CLI (no GUI) and fail
+    on any slicer warning ("floating regions", "floating cantilever", "too close to exclusion
+    area", ...). CI runs it with --require on the pinned Linux AppImage
+    (.github/actions/setup-bambu-studio); locally it skips with a notice when Bambu Studio is not
+    installed, unless --require is given."""
+
+    from concurrent.futures import ThreadPoolExecutor
 
     exe = find_bambu_studio()
     if exe is None:
+        if args.require:
+            print("error: Bambu Studio not found (set MCC_BAMBU_STUDIO) and --require was given")
+            return 1
         print("Bambu Studio not found (set MCC_BAMBU_STUDIO) — slicer-check skipped")
         return 0
+    print(f"Bambu Studio: {exe}")
     targets = resolve_targets(args.targets, None) if args.targets else discover_all()
-    rows: list[tuple[str, bool, list[str], dict]] = []
+    jobs: list[tuple[str, Path]] = []
+    missing: list[str] = []
     for target in targets:
         for part in target.parts:
             project = target.export_dir / f"{part}.3mf"
             label = f"{target.name}:{part}"
-            if not project.is_file():
-                rows.append((label, False, ["not rendered — run `render` first"], {}))
-                continue
-            print(f"-> slice {label}", flush=True)
-            stats: dict = {}
-            ok, warnings = slicer_check_project(exe, project, stats)
-            rows.append((label, ok and not warnings, warnings, stats))
+            if project.is_file():
+                jobs.append((label, project))
+            else:
+                missing.append(label)
+
+    def _one(job: tuple[str, Path]) -> tuple[str, bool, list[str], dict]:
+        label, project = job
+        stats: dict = {}
+        ok, warnings = slicer_check_project(exe, project, stats)
+        print(f"   sliced {label}: {'ok' if ok and not warnings else 'FAIL'}", flush=True)
+        return label, ok and not warnings, warnings, stats
+
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        rows = list(pool.map(_one, jobs))
+    rows += [(label, False, ["not rendered — run `render` first"], {}) for label in missing]
 
     print("\nslicer-check results (Bambu Studio CLI):")
     width = max((len(r[0]) for r in rows), default=10)
@@ -726,6 +876,17 @@ def cmd_slicer_check(args: argparse.Namespace) -> int:
             print(f"           {w}")
     n_ok = sum(r[1] for r in rows)
     print(f"  {n_ok}/{len(rows)} passed")
+
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        lines = ["## Bambu Studio slicer gate", "", f"**{n_ok}/{len(rows)} parts slice without warnings**", "",
+                 "| Part | Result | Filament | Print time | Slicer message |", "|---|---|---|---|---|"]
+        for label, ok, warnings, stats in rows:
+            g = f"{stats['grams']:.1f} g" if "grams" in stats else ""
+            h = f"{stats['seconds'] / 3600:.2f} h" if "seconds" in stats else ""
+            lines.append(f"| `{label}` | {'✅' if ok else '❌'} | {g} | {h} | {'<br>'.join(warnings)} |")
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
     return 0 if n_ok == len(rows) else 1
 
 
@@ -1313,8 +1474,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_review.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
     p_review.set_defaults(func=cmd_review)
 
-    p_slice = sub.add_parser("slicer-check", help="slice every rendered <part>.3mf with the local Bambu Studio CLI; fail on any slicer warning")
+    p_ci = sub.add_parser("ci", help="validate one part group: render -> check -> golden -> Bambu slicer gate -> STEP, pipelined per part")
+    p_ci.add_argument("--group", default="1/1", help="k/n — validate the k-th of n cost-balanced part groups (default 1/1 = every part)")
+    p_ci.add_argument("--jobs", type=int, default=3, help="parts in flight at once (default 3)")
+    p_ci.add_argument("--release", action="store_true", help="fail if OpenSCAD emits 'WARNING: unmeasured'")
+    p_ci.add_argument("--no-slice", action="store_true", help="skip the Bambu Studio slicer gate (local debugging only)")
+    p_ci.add_argument("--no-step", action="store_true", help="skip STEP conversion (local debugging only)")
+    p_ci.set_defaults(func=cmd_ci)
+
+    p_slice = sub.add_parser("slicer-check", help="slice every rendered <part>.3mf with Bambu Studio's CLI; fail on any slicer warning")
     p_slice.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
+    p_slice.add_argument("--require", action="store_true",
+                         help="fail instead of skipping when Bambu Studio is not installed (CI)")
+    p_slice.add_argument("--jobs", type=int, default=1, help="slice this many parts in parallel")
     p_slice.set_defaults(func=cmd_slicer_check)
 
     p_smoke = sub.add_parser("smoke", help="Tier 2: run every tests/test_*.scad with -o *.csg")

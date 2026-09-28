@@ -1,12 +1,22 @@
 name: render
 
-# Renders every discovered coupon/bracket/model, runs the 4-tier test suite (smoke -> render -> mesh
-# checks -> goldens), converts every part to STEP, and uploads the results. On a v* tag it also
-# runs the release gate (fails on any WARNING: unmeasured port). Releases themselves are no longer
-# created here — release.yml (triggered on push to main) owns tagging and GitHub Releases; this
-# workflow is CI/testing only (issue #10). See .claude/knowledge/architecture.md §8 (export
-# policy) and §9 (test policy), and scripts/README.md for the underlying scripts/build.py command
-# shapes.
+# The PR gate. Every discovered coupon/bracket/model part goes through the full chain —
+# render (OpenSCAD) -> mesh + printability check -> golden -> Bambu Studio slicer gate -> STEP —
+# and any failure blocks the PR (architecture.md §8 rev 13, §9). To keep that fast the work is
+# split over parallel runners and pipelined inside each one:
+#
+#   "OpenSCAD asserts (smoke tests)"   Tier-2 headless asserts (tests/test_*.scad), in parallel
+#                                       with the part groups.
+#   "Validate parts — group k of 6 …"  `build.py ci --group k/6`: a cost-balanced sixth of all parts
+#                                       (heaviest first); per runner 3 parts are in flight, each
+#                                       through OpenSCAD render -> checks -> golden -> Bambu Studio
+#                                       slice -> STEP, so slicing overlaps the next part's render.
+#   "render"                            aggregator — green only when the asserts and all six part
+#                                       groups are green. Its name is the required status check on
+#                                       protected `main`, so it must stay `render`.
+#
+# On a v* tag the part groups also run the release gate (fail on any WARNING: unmeasured port).
+# Releases themselves are created by release.yml. See scripts/README.md for build.py.
 
 on:
   push:
@@ -24,9 +34,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  render:
+  smoke:
+    name: OpenSCAD asserts (smoke tests)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - name: Checkout (with BOSL2 submodule)
         uses: actions/checkout@v4
@@ -48,11 +59,39 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
 
       - name: Install Python dependencies
-        # requirements-step.txt (cadquery-ocp) is installed unconditionally here, not just in
-        # release.yml, so `build.py step --all` below can fail the PR on a broken STEP conversion
-        # (issue #10 PR-gate requirement) rather than only being checked at release time.
+        run: python -m pip install -r requirements.txt
+
+      - name: Setup OpenSCAD
+        uses: ./.github/actions/setup-openscad
+
+      - name: Smoke tests (Tier 2)
+        run: python scripts/build.py smoke
+
+  validate:
+    name: Validate parts — group ${{ matrix.group }} of 6 (OpenSCAD render · checks · Bambu Studio slice · STEP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3, 4, 5, 6]
+    steps:
+      - name: Checkout (with BOSL2 submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install Python dependencies
+        # requirements-step.txt (cadquery-ocp) so every part's STEP conversion is part of the gate.
         run: |
           python -m pip install -r requirements.txt
           python -m pip install -r requirements-step.txt
@@ -60,21 +99,32 @@ jobs:
       - name: Setup OpenSCAD
         uses: ./.github/actions/setup-openscad
 
-      - name: Build (smoke -> render --all -> check --all -> golden -> review)
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            python scripts/build.py all --release
-          else
-            python scripts/build.py all
-          fi
+      - name: Setup Bambu Studio (pinned Linux AppImage, headless)
+        uses: ./.github/actions/setup-bambu-studio
 
-      - name: STEP export (every discovered coupon/bracket/model)
-        run: python scripts/build.py step --all
+      - name: OpenSCAD render -> mesh/printability checks -> golden -> Bambu Studio slice -> STEP (group ${{ matrix.group }} of 6)
+        # The slicer gate slices every part's <part>.3mf with the same Bambu Studio version the
+        # project files are written for and fails on any warning_message ("floating regions",
+        # "floating cantilever", exclusion area, ...). Nothing is skipped: `ci` refuses to run
+        # without Bambu Studio or a STEP backend.
+        run: python scripts/build.py ci --group ${{ matrix.group }}/6 --jobs 3 ${{ startsWith(github.ref, 'refs/tags/v') && '--release' || '' }}
 
       - name: Upload exports
         uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
-          name: exports
+          name: exports-part-group-${{ matrix.group }}
           path: exports/**
           if-no-files-found: warn
+
+  render:
+    # Aggregator = the required status check (keep the name `render`). Fails unless the OpenSCAD
+    # asserts and all six part groups succeeded.
+    runs-on: ubuntu-latest
+    needs: [smoke, validate]
+    if: ${{ always() }}
+    steps:
+      - name: All gates green? (OpenSCAD asserts + all 6 part groups)
+        run: |
+          echo "OpenSCAD asserts: ${{ needs.smoke.result }}  part groups: ${{ needs.validate.result }}"
+          test "${{ needs.smoke.result }}" = "success" && test "${{ needs.validate.result }}" = "success"
