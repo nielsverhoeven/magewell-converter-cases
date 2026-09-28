@@ -1,14 +1,14 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/mounts.scad
-//   L2. Every case-floor feature except the case's own 1/4"-20 insert boss and the compliant-pad
-//   pocket (those two live in cradle.scad, T1-32/§7 — installed from the underside, unioned into
-//   the deck hollow). Owns: the tool-less dovetail mount rail (D-15, rev 9, issue #25 — replaces
-//   VESA), the Fishtail M4 reservation (reserve-only, pitch unknown — M7), strap slots (displaced
-//   off the reserved splitter bay per §7.1 correction 1), the splitter tie-down
-//   (mcc_splitter_tiedown(orient="edge")), and a minimal stacking-profile recess.
+//   L2. Every case-floor feature except the case's own opt-in 1/4"-20 insert boss (cradle.scad, T1-32 —
+//   installed from the underside into the deck hollow; since D44 only with ["rail", false], T1-63).
+//   Owns: the tool-less dovetail mount rail (D-15, rev 9, issue #25 — replaces VESA; widened, flush and
+//   >= 0.5 mm-clearance since D44), strap slots (displaced off the reserved splitter bay per §7.1
+//   correction 1), the splitter tie-down (mcc_splitter_tiedown(orient="edge")), and a minimal
+//   stacking-profile recess.
 //   Positions come from mcc_floor_keepout() (layout.scad) so this file never re-derives them; this
 //   file also owns the D16 pairwise non-overlap assert over that same list (architecture.md §6,
-//   §13 D16 — exempting the concentric "case_tripod_insert"/"fishtail_reserve" pair, D19).
+//   §13 D16 — no exemptions since D44).
 //   `use`d only by lib/mcc/shell.scad (the L2 composition root) — never by cradle.scad/panel.scad/
 //   vents.scad, which must not `use` each other.
 // Includes:
@@ -146,11 +146,9 @@ function _mcc_floor_feature_overlap(a, b) =
 // Description:
 //   D16 (architecture.md §13, fixed by issue #25): asserts every pairwise combination of
 //   mcc_floor_keepout(dev, cfg)'s own rows does not overlap (per _mcc_floor_feature_overlap()
-//   above), EXCEPT the "case_tripod_insert"/"fishtail_reserve" pair, which is deliberately
-//   concentric at floor_center (D19, architecture.md §13, layout-patch-wall.md §17.2 R3) -- a
-//   reserve-only band may coincide with the feature it is anchored on; two features that BOTH cut
-//   real geometry may not. Called once from mcc_shell_base() alongside the rest of this file's
-//   floor-feature calls.
+//   above). No exemptions since D44 (2026-09-28): the concentric "case_tripod_insert"/
+//   "fishtail_reserve" pair D19 exempted no longer exists. Called once from mcc_shell_base()
+//   alongside the rest of this file's floor-feature calls.
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list.
@@ -159,11 +157,9 @@ module mcc_assert_floor_keepout_no_overlap(dev, cfg) {
     n = len(rows);
     for (i = [0:1:n - 2])
         for (j = [i + 1:1:n - 1])
-            if (!((rows[i][4] == "case_tripod_insert" && rows[j][4] == "fishtail_reserve")
-               || (rows[i][4] == "fishtail_reserve" && rows[j][4] == "case_tripod_insert")))
-                assert(!_mcc_floor_feature_overlap(rows[i], rows[j]),
-                    str("mcc: floor features \"", rows[i][4], "\" and \"", rows[j][4],
-                        "\" overlap on \"", mcc_dev_slug(dev), "\" (D16)"));
+            assert(!_mcc_floor_feature_overlap(rows[i], rows[j]),
+                str("mcc: floor features \"", rows[i][4], "\" and \"", rows[j][4],
+                    "\" overlap on \"", mcc_dev_slug(dev), "\" (D16)"));
 }
 
 // Module: mcc_floor_features_cut()
@@ -174,9 +170,7 @@ module mcc_assert_floor_keepout_no_overlap(dev, cfg) {
 //   still 2) strap-slot pairs, the splitter tie-down (mcc_splitter_tiedown(orient="edge"), NOT
 //   hand-rolled holes — layout-patch-wall.md §15 ruling 7), and a minimal stacking-profile recess
 //   (a shallow counterbore at each corner lid-fastener position, so a stacked second case's feet
-//   have somewhere to seat). The Fishtail M4 pattern is RESERVE-ONLY per §15 correction 4 (pitch
-//   unknown, M7) — no holes are cut for it here, only the keep-out registered in
-//   mcc_floor_keepout().
+//   have somewhere to seat). (The Magewell-Fishtail M4 reservation was dropped by D44.)
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list.

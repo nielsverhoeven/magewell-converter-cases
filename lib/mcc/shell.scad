@@ -251,8 +251,8 @@ module mcc_shell_base(dev, cfg) {
     // own cradle footprint or the far-wall duct.
     assert(struct_val(l, "splitter_bay_x")[1] <= struct_val(l, "x_dev_lo") + MCC_EPS,
         "mcc: splitter bay reservation collides with the device envelope");
-    // D16 (architecture.md §13, fixed by issue #25): no two mcc_floor_keepout() rows overlap,
-    // except the concentric "case_tripod_insert"/"fishtail_reserve" pair (D19).
+    // D16 (architecture.md §13, fixed by issue #25): no two mcc_floor_keepout() rows overlap (no
+    // exemptions since D44).
     mcc_assert_floor_keepout_no_overlap(dev, cfg);
 
     union() {

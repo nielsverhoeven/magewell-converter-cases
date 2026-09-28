@@ -44,7 +44,7 @@ VARIANT_PLUS_SWITCH = [
     ["fan_switch",      true],
     ["lid_vents",       true],
 ];
-// tripod_insert defaults to true (D-16) when the key is absent, as VARIANT/VARIANT_FAN above both
+// tripod_insert defaults to false (D35) when the key is absent, as VARIANT/VARIANT_FAN above both
 // exercise implicitly. This variant explicitly sets it false, exercising the deck-lattice's
 // tripod_insert=false path (issue #29) -- the boss and its collar/bore-cut are omitted entirely.
 VARIANT_NO_TRIPOD = concat(VARIANT, [["tripod_insert", false]]);
@@ -68,7 +68,7 @@ translate([1000, 0, 0]) mcc_shell_base(dev = DEV_PLUS, cfg = VARIANT_PLUS_SWITCH
 // --- cradle.scad standalone ---
 // --- shell.scad: base with tripod_insert=false (issue #29 -- boss/collar/bore-cut all omitted) ---
 translate([250, 500, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_NO_TRIPOD);
-// --- cradle.scad standalone (default tripod_insert=true, D-16) ---
+// --- cradle.scad standalone (default tripod_insert=false, D35; true needs ["rail", false], T1-63) ---
 translate([250, 250, 0]) mcc_cradle(dev = DEV, cfg = VARIANT);
 
 // --- mounts.scad standalone ---

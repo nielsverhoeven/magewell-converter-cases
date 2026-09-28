@@ -6,9 +6,8 @@
 //     - T1-38 (lib/mcc/rail.scad mcc_rail_female_cut()): >= MCC_FLOOR_T of residual floor over the
 //       groove (layout-patch-wall.md §17.2 R1).
 //     - D16 (lib/mcc/mounts.scad mcc_assert_floor_keepout_no_overlap()): no two
-//       mcc_floor_keepout() rows overlap, except the concentric "case_tripod_insert"/
-//       "fishtail_reserve" pair (D19) -- run against a real device record so the exemption is
-//       actually proven, not merely asserted to exist.
+//       mcc_floor_keepout() rows overlap (no exemptions since D44), run against a real device record.
+//     - T1-62 (D44): >= MCC_RAIL_MATE_CLR normal to the flanks and at the roof.
 //   CSG export (-o out.csg) evaluates the full tree so in-model asserts fire, without tessellating.
 // Run:
 //   openscad --backend=Manifold -o out.csg tests/test_rail.scad
@@ -43,6 +42,15 @@ assert(1.5 * MCC_RAIL_LATCH_ARM_T * MCC_RAIL_LATCH_ENGAGE / pow(MCC_RAIL_LATCH_A
 assert(MCC_RAIL_LATCH_SLOT > MCC_RAIL_LATCH_ENGAGE, "D34: latch slot narrower than the nub's deflection");
 assert(MCC_RAIL_LATCH_RAMP_OUT >= MCC_RAIL_LATCH_RAMP_IN, "D34: exit ramp should be at least as steep as entry");
 assert(MCC_RAIL_END_STOP_L == 0 && MCC_RAIL_END_STOP_H == 0, "D34: the male end-stop flange is retired");
+
+// --- T1-62 / D44: >= MCC_RAIL_MATE_CLR on every non-bearing face, and the user's width range ------
+assert(MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE) >= MCC_RAIL_MATE_CLR - MCC_EPS,
+    str("T1-62: rail flank clearance ", MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE), " below ", MCC_RAIL_MATE_CLR));
+assert(MCC_RAIL_DEPTH - MCC_RAIL_MALE_H >= MCC_RAIL_MATE_CLR - MCC_EPS,
+    str("T1-62: rail roof clearance ", MCC_RAIL_DEPTH - MCC_RAIL_MALE_H, " below ", MCC_RAIL_MATE_CLR));
+assert(MCC_RAIL_MATE_CLR >= 0.5 - MCC_EPS, "D44: the user's minimum rail clearance is 0.5 mm");
+assert(MCC_RAIL_ROOT_W >= 60 && MCC_RAIL_ROOT_W <= 70,
+    str("D44: MCC_RAIL_ROOT_W=", MCC_RAIL_ROOT_W, " outside the user's 60-70 mm range"));
 
 // --- mcc_rail_male() / mcc_rail_female_cut() -- default (production MCC_RAIL_LEN) --------------
 translate([0, 0, 0]) mcc_rail_male();
@@ -115,9 +123,13 @@ echo("mcc test_rail: OK");
 //    MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + 1.0 in constants.scad and re-running this file):
 //    -> "T1-38: MCC_RAIL_SILL_H(5) - MCC_RAIL_DEPTH(4) must be >= MCC_FLOOR_T(3)"
 //
-// 2. D16, violated by moving the rail on top of the case's own 1/4"-20 insert keep-out (scratch
-//    edit constants.scad MCC_RAIL_Y = 0):
-//    -> "mcc: floor features \"case_tripod_insert\" and \"mount_rail\" overlap ... (D16)"
+// 2. D16, violated by moving the rail onto the side-bolt support web (scratch edit constants.scad
+//    MCC_RAIL_Y = -40):
+//    -> "mcc: floor features \"mount_rail\" and \"side_bolt_web\" overlap ... (D16)"
+//
+// 3. T1-63 (D44), the opt-in case insert together with the (default-on) rail:
+//    mcc_cradle(DEV, [["fan", false], ["splitter", false], ["tripod_insert", true]]);
+//    -> "mcc: T1-63 cfg[\"tripod_insert\"]=true needs [\"rail\", false] ..."
 // -----------------------------------------------------------------------------------------
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

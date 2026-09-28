@@ -7,8 +7,9 @@ at both ends).
 
 Renders mcc_rail_male() (no plate) with the pinned OpenSCAD, loads
 exports/<slug>/base.model.stl (run `build.py render <slug> --part base` first) and, for a set of
-insertion offsets dx (male shifted +X, i.e. not yet fully in), intersects the two below the groove
-roof (the roof is a designed face-to-face contact). Expected, and asserted:
+insertion offsets dx (male shifted +X, i.e. not yet fully in), intersects the two over the WHOLE
+base: since D44 the male's frame is the groove's (no pedestal) and the roof, like the flanks, keeps
+>= MCC_RAIL_MATE_CLR -- any contact at full mate is a failure. Expected, and asserted:
   dx < 0  overlap > 0   (the groove's closed -X end stops over-travel)
   dx = 0  overlap = 0   (fully mated: nub sits in its notch with clearance)
   dx > 0  overlap only inside the nub's own X span (the arm deflects; nothing else collides)
@@ -24,13 +25,8 @@ import tempfile
 from pathlib import Path
 
 import trimesh
-from trimesh.creation import box
 
 import build
-
-RAIL_Y = -20.0      # lib/mcc/constants.scad MCC_RAIL_Y
-FLOOR_T = 3.0       # MCC_FLOOR_T: male z = FLOOR_T is the case's exterior floor face
-ROOF_Z = 3.9        # just under the groove roof (MCC_RAIL_DEPTH = 4)
 
 
 def _const(name: str) -> float:
@@ -61,14 +57,13 @@ def main(argv: list[str]) -> int:
         if not ok:
             return 1
         male = trimesh.load(str(stl), force="mesh")
-    base = trimesh.boolean.intersection(
-        [trimesh.load(str(base_path), force="mesh"), box(bounds=[[-400, -200, -10], [400, 200, ROOF_Z]])],
-        engine="manifold")
+    base = trimesh.load(str(base_path), force="mesh")
+    rail_y = _const("MCC_RAIL_Y")
     bad = []
     n0, n1 = nub_span()
     for dx in (-0.5, 0.0, 1.0, 5.0, 20.0, 40.0, 80.0, 140.0):
         m = male.copy()
-        m.apply_translation([dx, RAIL_Y, -FLOOR_T])
+        m.apply_translation([dx, rail_y, 0.0])
         inter = trimesh.boolean.intersection([m, base], engine="manifold")
         v = float(inter.volume) if inter is not None and len(inter.faces) else 0.0
         span = (float(inter.bounds[0][0]) - dx, float(inter.bounds[1][0]) - dx) if v > 1e-3 else None

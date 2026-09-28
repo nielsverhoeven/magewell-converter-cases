@@ -58,7 +58,7 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 | `render --all` | Render every discovered coupon, bracket, and model part. Per part: `<part>.model.stl` (OpenSCAD's model frame — goldens, STEP), `<part>.stl` (print pose, on the X1C bed centre) and `<part>.3mf` (single-plate Bambu Studio project); per model also `<slug>.3mf` (the whole case on its plates). Print pose: `print_pose()` in `build.py`, overridable per part with `// build.py: print_pose = <part>:<pose>`. See architecture.md §8 rev 13. |
 | `render coupons/neutrik-tile` | Render one coupon by name. |
 | `render coupons/neutrik-tile --format stl` | Only the print-pose `.stl` (default `both` also writes the `.3mf` project). |
-| `render brackets/tv-bracket` | Render one bracket by name — `models/brackets/*.scad`, discovered by `discover_brackets()` (mirrors `discover_coupons()`: flat plates, no device record; single part named after the file stem unless a `// build.py: parts = a, b` marker lists them, e.g. `brackets/arch-tv-bracket`'s `arm`/`centre`). |
+| `render brackets/arch-tv-bracket` | Render one bracket by name — `models/brackets/*.scad`, discovered by `discover_brackets()` (mirrors `discover_coupons()`: flat plates, no device record; single part named after the file stem unless a `// build.py: parts = a, b` marker lists them, e.g. `brackets/arch-tv-bracket`'s `arm`/`centre`). |
 | `render pro-convert-hdmi-tx --part base --part lid` | Render specific parts of a model. |
 | `render path/to/some.scad --part base -D foo=1` | Render an ad-hoc `.scad` file with extra `-D` overrides. |
 | `render --all --release` | Release build: also fails if OpenSCAD emits `WARNING: unmeasured` (a port below `measured` confidence used for a real cutout). |

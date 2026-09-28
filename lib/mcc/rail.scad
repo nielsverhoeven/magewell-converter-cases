@@ -32,15 +32,14 @@ use <util.scad>
 // open end (+len/2 - MCC_RAIL_LATCH_LEAD_IN). Before D34 the groove was closed at BOTH ends, so no
 // case could ever be slid onto a bracket.
 //
-// Cross-section: a standard dovetail, narrow (MCC_RAIL_MOUTH_W) at the mating surface — Z=0 for
-// the female groove's own local frame; Z=MCC_FLOOR_T for the male, where its taper begins, riding
-// on a MCC_FLOOR_T-tall constant-width pedestal that fills the standoff gap between the bracket
-// plate and the case's own exterior floor face — widening to MCC_RAIL_ROOT_W at the deepest point
-// (Z=MCC_RAIL_DEPTH female-local / Z=MCC_RAIL_SILL_H male-local). WIDE material sits DEEPER inside
-// the groove, so the case cannot be lifted straight off the bracket (out-of-slide-axis separation)
-// — only sliding along X clears the interlock. MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + MCC_FLOOR_T is
-// exactly pedestal + taper, so at full mate the case's exterior floor face rests flush on the
-// pedestal's top and the taper exactly fills the case's own groove.
+// Cross-section: a standard dovetail, narrow (MCC_RAIL_MOUTH_W) at the mating surface -- local Z=0
+// on BOTH halves (D44, 2026-09-28: the male has no pedestal any more; male-local = female-local,
+// Z included) -- widening to MCC_RAIL_ROOT_W at Z=MCC_RAIL_DEPTH, the groove roof. WIDE material sits
+// DEEPER inside the groove, so the case cannot be lifted straight off the bracket; only sliding along
+// X clears the interlock. At full mate the case's flat exterior floor rests FLUSH on the bracket
+// plate everywhere outside the two footprints -- the joint's only designed bearing face. The male
+// stands MCC_RAIL_MALE_H tall (MCC_RAIL_ROOF_CLR short of the roof) and the groove is offset
+// MCC_RAIL_CLR_HORIZ per side, so every other face has >= MCC_RAIL_MATE_CLR (T1-62).
 // -----------------------------------------------------------------------------------------
 
 // Function: mcc_rail_sill_size()
@@ -55,21 +54,21 @@ function mcc_rail_sill_size() = [MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SI
 
 // Module: _mcc_rail_taper()
 // Description:
-//   Private. The dovetail taper alone (no pedestal, no latch, no end-stop): a prismoid from
-//   MCC_RAIL_MOUTH_W (at local Z=0) to MCC_RAIL_ROOT_W (at local Z=MCC_RAIL_DEPTH), length `len`
-//   along X, centred on Y=0, anchored BOTTOM. Shared by both mcc_rail_male()'s taper (translated up
-//   onto its pedestal) and mcc_rail_female_cut()'s groove (used directly — its own local Z=0 IS the
-//   case's exterior floor face) so the two profiles can never independently drift — one function,
-//   two callers.
+//   Private. The dovetail taper alone (no latch): a prismoid from MCC_RAIL_MOUTH_W at local Z=0,
+//   widening along the flank's own slope for `h` mm, length `len` along X, centred on Y=0, anchored
+//   BOTTOM. The female groove uses the full MCC_RAIL_DEPTH (top width == MCC_RAIL_ROOT_W exactly);
+//   the male stops at MCC_RAIL_MALE_H with the SAME slope (D44), so the two profiles can never drift.
 // Arguments:
 //   len = rail/groove length along the slide axis, mm.
-//   clr = per-side clearance added to both MOUTH_W and ROOT_W, mm. Default 0 (nominal/male). The
-//         female groove passes MCC_CLR_SLIDE (reused, not a new constant — constants.scad).
-module _mcc_rail_taper(len, clr = 0) {
+//   clr = per-side horizontal clearance added to both widths, mm. Default 0 (the male). The female
+//         groove passes MCC_RAIL_CLR_HORIZ (D44).
+//   h   = height, mm. Default MCC_RAIL_DEPTH.
+module _mcc_rail_taper(len, clr = 0, h = MCC_RAIL_DEPTH) {
+    w_top = MCC_RAIL_MOUTH_W + 2 * h * _mcc_rail_flank_k();
     prismoid(
         size1 = [len, MCC_RAIL_MOUTH_W + 2 * clr],
-        size2 = [len, MCC_RAIL_ROOT_W + 2 * clr],
-        h = MCC_RAIL_DEPTH, anchor = BOTTOM
+        size2 = [len, w_top + 2 * clr],
+        h = h, anchor = BOTTOM
     );
 }
 
@@ -103,8 +102,8 @@ function _mcc_rail_latch_geom(len) =
 
 // Module: _mcc_rail_nub_2d()
 // Description:
-//   Private. The nub's plan outline at the pedestal flank line (y = -MOUTH_W/2), grown by `grow`
-//   (0 = the male nub; MCC_CLR_SLIDE = the female notch). Overlaps MCC_EPS*20 into the flank so the
+//   Private. The nub's plan outline at the mouth flank line (plate top) (y = -MOUTH_W/2), grown by `grow`
+//   (0 = the male nub; MCC_RAIL_CLR_HORIZ = the female notch). Overlaps MCC_EPS*20 into the flank so the
 //   union with the arm is a genuine shared volume.
 module _mcc_rail_nub_2d(g, grow = 0) {
     y0 = -MCC_RAIL_MOUTH_W / 2;
@@ -122,13 +121,13 @@ module _mcc_rail_nub_2d(g, grow = 0) {
 
 // Module: _mcc_rail_flank_extrude()
 // Description:
-//   Private. Extrudes a plan-view 2-D child (drawn at the pedestal's flank line) over z0..z1 of the
-//   MALE frame so it follows the -Y flank: straight up to MCC_FLOOR_T (pedestal), then sheared
-//   outward with the dovetail taper above it. The same helper cuts the female notch (female z = male
-//   z - MCC_FLOOR_T, handled by the caller's translate), so arm, slot, nub and notch stay parallel
-//   to the flank by construction.
+//   Private. Extrudes a plan-view 2-D child (drawn at the mouth flank line) over z0..z1 of the shared
+//   frame so it follows the -Y flank: sheared outward with the dovetail taper above Z=0, straight
+//   below it (only a leg or cut reaching DOWN into the consumer's plate is ever below Z=0 -- D44
+//   removed the pedestal). The same helper cuts the female notch (male Z = female Z since D44), so
+//   arm, slot, nub and notch stay parallel to the flank by construction.
 module _mcc_rail_flank_extrude(z0, z1) {
-    zb = MCC_FLOOR_T;
+    zb = 0;
     k = _mcc_rail_flank_k();
     if (z0 < zb)
         translate([0, 0, z0]) linear_extrude(height = min(z1, zb) - z0 + MCC_EPS) children();
@@ -158,8 +157,8 @@ module _mcc_rail_latch_cut_2d(g) {
 // Usage:
 //   difference() { plate(); mcc_rail_male_window(len, plate_t); }   // then union mcc_rail_male()
 // Description:
-//   SUBTRACTIVE, for the consumer's own plate (tv-bracket, arch-tv-bracket centre, rail-latch
-//   coupon base): the window under the latch arm and its slot, through the plate's whole
+//   SUBTRACTIVE, for the consumer's own plate (arch-tv-bracket centre, rail-latch
+//   coupon base): the window under the latch arm, its slot and its nub (D44), through the plate's whole
 //   thickness, so the arm's leg reaches the print bed and never fuses to the plate except at its
 //   root. Same local frame and transform as the consumer's mcc_rail_male() call; plate top at Z=0.
 //   Cut it BEFORE unioning the rail — the rail's own arm leg fills the window.
@@ -168,15 +167,23 @@ module mcc_rail_male_window(len = MCC_RAIL_LEN, plate_t) {
         g = _mcc_rail_latch_geom(len);
         y0 = -MCC_RAIL_MOUTH_W / 2;
         c = MCC_RAIL_LATCH_WINDOW_CLR;
+        e = MCC_RAIL_LATCH_ENGAGE;
         translate([0, 0, -plate_t - MCC_EPS])
             linear_extrude(height = plate_t + 2 * MCC_EPS)
                 intersection() {
                     offset(delta = c) union() {
                         translate([g[2], y0]) square([g[3] - g[2], MCC_RAIL_LATCH_ARM_T]);
                         _mcc_rail_latch_cut_2d(g);
+                        // D44: with no pedestal the nub starts AT the plate top -- the plate must be
+                        // open under it too, or the nub fuses to the plate and the arm cannot flex.
+                        _mcc_rail_nub_2d(g);
                     }
-                    // Never past the root: the arm's leg must stay joined to the plate there.
-                    translate([g[2] - 50, y0 - 50]) square([g[3] - g[2] + 50, 100]);
+                    // Never past the root (the arm's leg must stay joined to the plate there), and
+                    // never further out than the nub + clearance: the tip-gap cut reaches far past
+                    // the flank for the SHEARED arm above the plate; at plate level only the leg and
+                    // the nub need room.
+                    translate([g[2] - 50, y0 - e - c])
+                        square([g[3] - g[2] + 50, e + 2 * c + MCC_RAIL_LATCH_ARM_T + MCC_RAIL_LATCH_SLOT]);
                 }
     }
 }
@@ -185,8 +192,8 @@ module mcc_rail_male_window(len = MCC_RAIL_LEN, plate_t) {
 // Usage:
 //   mcc_rail_male([len=], [plate_t=]);
 // Description:
-//   ADDITIVE. The male dovetail rail (bracket side): a MCC_FLOOR_T-tall pedestal (MCC_RAIL_MOUTH_W
-//   wide — the standoff under the case's exterior floor face) carrying the shared taper, over the
+//   ADDITIVE. The male dovetail rail (bracket side): the shared taper, MCC_RAIL_MALE_H tall, standing
+//   directly on the consumer's plate (no pedestal since D44 -- the case floor rests flush on it), over the
 //   working length [-len/2, +len/2]. No separate end stop (D34): the case groove's closed -X end
 //   stops the rail's -X end face.
 //   Latch (issue #46, D34): on the -Y flank near +X, an in-plane snap arm — a flank-parallel strip
@@ -209,38 +216,41 @@ module mcc_rail_male(len = MCC_RAIL_LEN, plate_t = 0) {
         assert(L / t >= 8, str("mcc: rail latch L/t=", L / t, " below 8:1 (fasteners-and-hardware.md:133)"));
         assert(MCC_RAIL_LATCH_SLOT / 2 >= MCC_RAIL_LATCH_ROOT_FILLET - MCC_EPS,
             str("mcc: rail latch root radius ", MCC_RAIL_LATCH_SLOT / 2, " below the root fillet minimum"));
-        assert(MCC_RAIL_LATCH_SLOT > e + MCC_EPS - MCC_CLR_SLIDE,
+        assert(MCC_RAIL_LATCH_SLOT > e + MCC_EPS - MCC_RAIL_CLR_HORIZ,
             str("mcc: rail latch slot ", MCC_RAIL_LATCH_SLOT, " cannot absorb the nub's deflection"));
         assert(strain <= MCC_SNAP_STRAIN_MAX,
             str("mcc: rail latch tip strain ", strain, " exceeds MCC_SNAP_STRAIN_MAX ", MCC_SNAP_STRAIN_MAX));
-        assert(MCC_RAIL_SILL_H + plate_t >= 5,
-            str("mcc: rail latch arm height ", MCC_RAIL_SILL_H + plate_t, " below the 5 mm minimum clip width"));
+        // The arm's printed height (bed to rail top) only exists with a consumer plate. plate_t = 0 is
+        // the bare-rail probe call (tests/test_rail.scad, scripts/rail_fit.py): 3.5 mm there is not a
+        // printed arm. (Before D44 the 3 mm pedestal made this pass vacuously at plate_t = 0.)
+        assert(plate_t == 0 || MCC_RAIL_MALE_H + plate_t >= 5,
+            str("mcc: rail latch arm height ", MCC_RAIL_MALE_H + plate_t, " below the 5 mm minimum clip width"));
         assert(g[2] - MCC_RAIL_LATCH_SLOT > -len / 2 + 5 && g[3] < len / 2 - 2,
             str("mcc: rail latch (", g, ") does not fit inside len=", len));
     }
 
     difference() {
         union() {
-            cuboid([len, MCC_RAIL_MOUTH_W, MCC_FLOOR_T], anchor = BOTTOM);
-            translate([0, 0, MCC_FLOOR_T]) _mcc_rail_taper(len);
-            if (MCC_RAIL_LATCH_ENABLED) {
-                // Nub over the taper — the part that rides inside the groove. It starts at the
-                // case bottom's level as a 2 mm ledge off the arm: well inside the slicer's 3 mm
-                // cantilever limit, so no chin is needed (and none is added — a hulled chin left
-                // zero-volume slivers against the arm).
-                _mcc_rail_flank_extrude(MCC_FLOOR_T, MCC_RAIL_SILL_H) _mcc_rail_nub_2d(g);
-            }
+            // D44: no pedestal -- the taper stands directly on the consumer's plate (local Z=0),
+            // MCC_RAIL_ROOF_CLR short of the groove roof.
+            _mcc_rail_taper(len, h = MCC_RAIL_MALE_H);
+            if (MCC_RAIL_LATCH_ENABLED)
+                // Nub over the taper -- rides inside the groove. It starts at the plate top as a
+                // 2 mm ledge off the arm, over mcc_rail_male_window()'s opening (which covers the nub
+                // since D44), so it never fuses to the plate; it stops at the core's own top.
+                _mcc_rail_flank_extrude(0, MCC_RAIL_MALE_H) _mcc_rail_nub_2d(g);
         }
         if (MCC_RAIL_LATCH_ENABLED)
-            _mcc_rail_flank_extrude(-plate_t - 1, MCC_RAIL_SILL_H + 1) _mcc_rail_latch_cut_2d(g);
+            _mcc_rail_flank_extrude(-plate_t - 1, MCC_RAIL_DEPTH + 1) _mcc_rail_latch_cut_2d(g);
     }
     // The arm's leg through the consumer's plate window, down to the bed, drawn in its final plan
-    // shape (arm band minus slot and tip gap) so the only faces it shares with the rail or the
-    // plate have material on the same side. It runs MCC_RAIL_LATCH_WINDOW_CLR past the root into
-    // the plate (the window stops at the root) and MCC_FLOOR_T/2 up into the pedestal.
+    // shape (arm band minus slot and tip gap). It runs MCC_RAIL_LATCH_WINDOW_CLR past the root into
+    // the plate (the window stops at the root) and 20*MCC_EPS up into the arm's own lowest band -- a
+    // shared volume for the union that leaves the slot's deflection room intact (D44; it used to run
+    // MCC_FLOOR_T/2 up into the pedestal).
     if (MCC_RAIL_LATCH_ENABLED && plate_t > 0)
         translate([0, 0, -plate_t])
-            linear_extrude(height = plate_t + MCC_FLOOR_T / 2)
+            linear_extrude(height = plate_t + 20 * MCC_EPS)
                 difference() {
                     translate([g[2], -MCC_RAIL_MOUTH_W / 2])
                         square([g[3] - g[2] + MCC_RAIL_LATCH_WINDOW_CLR, t + MCC_RAIL_LATCH_SLOT]);
@@ -253,10 +263,11 @@ module mcc_rail_male(len = MCC_RAIL_LEN, plate_t = 0) {
 //   mcc_rail_female_cut([len=], [open_ext=]);
 // Description:
 //   SUBTRACTIVE. The matching dovetail groove (case-floor side): the shared taper widened by
-//   MCC_CLR_SLIDE per side for a sliding fit, from its CLOSED -X end (the end stop, D34) at -len/2
+//   MCC_RAIL_CLR_HORIZ per side (>= MCC_RAIL_MATE_CLR normal to the flanks, D44), from its CLOSED -X end (the end stop, D34) at -len/2
 //   through +len/2 and on by `open_ext` — the passage the male enters through, which the case runs
 //   out through its +X wall. Plus the latch notch in the -Y flank (the nub's outline grown by
-//   MCC_CLR_SLIDE, following the flank). Local frame: mouth at Z=0 = the case's exterior floor
+//   MCC_RAIL_CLR_HORIZ, following the flank, over the groove's full depth). Local frame: mouth at
+//   Z=0 = the case's exterior floor
 //   face, +Z into the case; a MCC_EPS overlap below Z=0 pierces that face cleanly.
 //   T1-38 (rev 9 R1): >= MCC_FLOOR_T of floor remains above the groove over the working length.
 // Arguments:
@@ -266,26 +277,35 @@ module mcc_rail_female_cut(len = MCC_RAIL_LEN, open_ext = 0) {
     assert(MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T - MCC_EPS,
         str("mcc: rail_female_cut T1-38 residual floor over the groove = ",
             MCC_RAIL_SILL_H - MCC_RAIL_DEPTH, " below the MCC_FLOOR_T (", MCC_FLOOR_T, ") minimum"));
-    clr = MCC_CLR_SLIDE;
+    // T1-62 (D44): >= MCC_RAIL_MATE_CLR on every non-bearing face -- normal to the flanks, and at the
+    // roof over the male's (and the nub's) shortened top.
+    assert(MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE) >= MCC_RAIL_MATE_CLR - MCC_EPS,
+        str("mcc: T1-62 rail flank clearance ", MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE),
+            " mm normal, below MCC_RAIL_MATE_CLR=", MCC_RAIL_MATE_CLR));
+    assert(MCC_RAIL_DEPTH - MCC_RAIL_MALE_H >= MCC_RAIL_MATE_CLR - MCC_EPS,
+        str("mcc: T1-62 rail roof clearance ", MCC_RAIL_DEPTH - MCC_RAIL_MALE_H,
+            " mm, below MCC_RAIL_MATE_CLR=", MCC_RAIL_MATE_CLR));
+    clr = MCC_RAIL_CLR_HORIZ;
     g = _mcc_rail_latch_geom(len);
 
     union() {
-        translate([open_ext / 2, 0, -MCC_EPS])
+        // No Z shift: _mcc_rail_taper_eps() already pierces Z=0 with its own slab, so the groove roof
+        // sits at exactly MCC_RAIL_DEPTH (the old extra -MCC_EPS shift lowered it by 0.01 mm).
+        translate([open_ext / 2, 0, 0])
             _mcc_rail_taper_eps(len + open_ext, clr, MCC_EPS);
         if (MCC_RAIL_LATCH_ENABLED)
-            // Female z = male z - MCC_FLOOR_T; notch spans the groove's whole depth.
-            translate([0, 0, -MCC_FLOOR_T])
-                _mcc_rail_flank_extrude(MCC_FLOOR_T - MCC_EPS, MCC_FLOOR_T + MCC_RAIL_DEPTH)
-                    _mcc_rail_nub_2d(g, grow = clr);
+            // Male Z = female Z since D44. The notch spans the groove's FULL depth, so the nub (which
+            // stops at MCC_RAIL_MALE_H) keeps MCC_RAIL_ROOF_CLR above its top as well.
+            _mcc_rail_flank_extrude(-MCC_EPS, MCC_RAIL_DEPTH)
+                _mcc_rail_nub_2d(g, grow = clr);
     }
 }
 
 // Module: _mcc_rail_taper_eps()
 // Description:
-//   Private. Like _mcc_rail_taper(), but with the whole shape shifted down by `eps` and grown by
-//   `eps` so it overlaps the caller's own Z=0 boundary cleanly (manifold-avoidance — see
-//   mcc_rail_female_cut()'s own doc comment). The extra `eps` (0.01 mm) is applied only to the
-//   bottom face; the two nominal widths (at the true Z=0 mouth and Z=depth root) are unaffected.
+//   Private. _mcc_rail_taper() at its true [0, MCC_RAIL_DEPTH], plus a thin slab at the mouth width
+//   spanning [-eps, 0], so the cut pierces the caller's own Z=0 face cleanly (manifold-avoidance).
+//   Nothing is shifted: D44 removed the caller's extra -eps shift, which lowered the groove roof.
 module _mcc_rail_taper_eps(len, clr, eps) {
     union() {
         _mcc_rail_taper(len, clr);
