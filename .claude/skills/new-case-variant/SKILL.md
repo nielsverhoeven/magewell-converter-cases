@@ -141,11 +141,16 @@ at stale muscle memory from that draft; use the table above instead.
    .venv\Scripts\python scripts\build.py render <slug>
    ```
    If this errors inside `mcc_case_layout()` or `mcc_shell_base()` — stop-and-report gate above.
-5. Check + golden:
+5. Check + golden + slicer:
    ```
    .venv\Scripts\python scripts\build.py check --all
    .venv\Scripts\python scripts\build.py golden --update <slug>
+   .venv\Scripts\python scripts\build.py slicer-check <slug> --jobs 3
    ```
+   `slicer-check` slices base/lid/panel with Bambu Studio's CLI; any warning is a CI failure
+   (render.yml runs the same gate). The library parts are already warning-free, so a warning on a
+   new variant almost always means a layout value pushed a feature into a new overhang — use
+   `.claude/knowledge/bambu-slicer.md` §3 to locate it before touching `lib/mcc/**`.
    Eyeball the new `tests/golden/<slug>.{base,lid,panel}.json` bbox/volume against
    `.claude/knowledge/layout-patch-wall.md` §16.1's fit-check table for your SKU before committing
    — `--update` captures whatever rendered, it does not itself validate that the geometry is
@@ -275,7 +280,9 @@ may be *developed* in parallel; it is the **merge order** that matters.
       not invent a `mcc_shell()`/`mcc_panel()` call.
 - [ ] `python scripts/build.py render <slug>` succeeds for `base`/`lid`/`panel` with no library
       assert firing. If one fired, stopped and reported instead of editing `lib/mcc/**`.
-- [ ] `python scripts/build.py check --all` passes (watertight, single shell, bbox).
+- [ ] `python scripts/build.py check --all` passes (watertight, single shell, bbox, no floating
+      islands/cantilevers).
+- [ ] `python scripts/build.py slicer-check <slug>` passes — zero Bambu Studio warnings.
 - [ ] `tests/golden/<slug>.*.json` created via `golden --update <slug>` and eyeballed against
       `.claude/knowledge/layout-patch-wall.md` §16.1.
 - [ ] ISO assembly preview **and** straight-on patch-wall elevation rendered; the elevation shows

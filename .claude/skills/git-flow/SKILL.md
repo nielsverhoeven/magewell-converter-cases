@@ -53,7 +53,8 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 git fetch origin
 git merge main
 ```
-Never rebase a branch that's already been pushed or has an open PR — merge `main` into it instead.
+Never rebase a branch that's already been pushed or has an open PR — merge `main` into it instead
+— unless the user explicitly asks for a rebase (then see "Rebasing another open PR" below).
 
 **Publish + PR** (always ask first — see "When to ask" below):
 ```
@@ -62,7 +63,25 @@ gh pr create --base main --title "..." --body "... 🤖 Generated with [Claude C
 ```
 
 **Merge** (ask first): squash or a regular merge commit, maintainer's call, once `render` is green.
-Delete the feature branch afterward.
+Delete the feature branch afterward. When the user has asked in the current request to "merge when
+green", turn on the desktop app's Auto-fix (wakes you on CI failures — fix, commit, push without
+asking) and auto-merge (`merge` method, the repo's style) on the PR instead of polling CI. A draft
+PR cannot auto-merge — `gh pr ready <n>` first.
+
+**What `render` is:** an aggregator job. The real work runs in parallel as "OpenSCAD asserts (smoke
+tests)" and six "Validate parts — group k of 6" jobs (`build.py ci --group k/6`: render, checks,
+golden, Bambu Studio slicer gate, STEP per part; ≈ 3 min total). `render` is the required status
+check on `main` — never rename that job.
+
+**Rebasing another open PR onto a new `main`** (only when the user asks for it): do it in a
+separate worktree so your own branch stays untouched, re-run the local gate on what it adds, and
+push with a lease pinned to the old head:
+```
+git worktree add ../pr-<n> -b pr<n>-rebase origin/<pr-branch>
+cd ../pr-<n> && git submodule update --init && git rebase origin/main
+# resolve conflicts; YAML can merge "cleanly" into invalid YAML (duplicate keys) — read it
+git push --force-with-lease=<pr-branch>:<old-head-sha> origin pr<n>-rebase:<pr-branch>
+```
 
 **Release by tag** (ask before every push/PR/merge/tag step):
 ```

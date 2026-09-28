@@ -8,3 +8,5 @@ scipy>=1.11      # trimesh needs this for some checks (e.g. convex hull / watert
 networkx>=3.2     # required by trimesh's Trimesh.split()
 shapely>=2.0      # layer polygons for scripts/printability.py (floating-island check in `build.py check`)
 rtree>=1.2        # spatial index trimesh needs for mesh.section_multiplane() (printability gate)
+manifold3d>=3.0   # scripts/slicer_probe.py: trimesh slice_plane(cap=True) booleans
+mapbox-earcut>=1.0  # scripts/slicer_probe.py: trimesh cap triangulation

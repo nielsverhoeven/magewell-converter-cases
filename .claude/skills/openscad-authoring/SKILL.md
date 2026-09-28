@@ -147,8 +147,20 @@ P1 deviation; check for it in review.
 - [ ] `%`-ghosted geometry is also gated behind `MCC_SHOW_GHOST`.
 - [ ] `models/**` never calls `mcc_neutrik_*` directly — only `mcc_panel_cutout()` (see
       `neutrik-panel` skill).
+- [ ] **Printable in its print pose without supports** (base/lid open side up, panel face down —
+      `build.py print_pose()`): no flat overhang reaching > 3 mm from its support edge, no
+      horizontal boss off a vertical wall without a 45° chin, no downward cusp where two holes meet,
+      no block resting on a lattice without walls to the floor, no sealed internal cell, never
+      protrusions on both faces of a plate. Rules and the fast debugging workflow:
+      `.claude/knowledge/bambu-slicer.md`. Verify with `build.py check <stl>` and
+      `build.py slicer-check <target>` — the CI gate runs the same slicer on every part.
 
 ## Common failure modes
+
+- **"It seems object … has floating regions / floating cantilever" in Bambu Studio.** The part
+  renders and passes the mesh checks but is not printable as posed. Do not guess: bisect the Z,
+  probe with critical-regions-only supports and fix the geometry per
+  `.claude/knowledge/bambu-slicer.md` §2–§3 (real cases: architecture.md §13 D26–D33).
 
 - **Inscribed vs circumscribed holes.** Forgetting `circum=true` on a functional hole at low `$fn`
   silently undersizes it — see the `$fn` policy above. This is the single most common way a coupon

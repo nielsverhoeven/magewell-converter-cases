@@ -62,6 +62,8 @@
 //   `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
 //
 // build.py: parts = arm, centre
+// build.py: print_count = arm:2
+//   (left + right arm: arm.3mf and the review project carry both copies)
 //
 // Render:
 //   openscad --backend=Manifold -D 'part="arm"' -o out/arm.stl models/brackets/arch-tv-bracket.scad

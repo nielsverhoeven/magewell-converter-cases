@@ -75,12 +75,15 @@ independent implementation of any of these — they will drift from what CI actu
 | Subcommand | Does |
 |---|---|
 | `doctor` | Environment sanity: OpenSCAD binary found and version-string captured, BOSL2 submodule present and at the pinned SHA, `OPENSCADPATH` resolvable. Run this first when anything else fails mysteriously. |
-| `render` | Renders every `models/<slug>/case.scad` for every `part` value it declares (typically `base`, `lid`, `panel`), `--backend=Manifold`, writes to `exports/` (gitignored). |
+| `render` | Renders every discovered target part (`--backend=Manifold`) into `exports/` (gitignored): `<part>.model.stl` (OpenSCAD's model frame — goldens, STEP), then Python derives `<part>.stl` (print pose, on the X1C bed) and `<part>.3mf` (Bambu Studio project); per case also `<slug>.3mf` (whole case on its plates). |
 | `smoke` | Tier-2: `-o out.csg` on every public module at default/min/max parameters — fast, asserts-only, no tessellation. Non-zero exit = failure. |
-| `check` | Tier-3 mesh checks via `check_mesh.py` (trimesh): `is_watertight`, `is_winding_consistent`, `euler_number`, `volume > 0`, `len(split()) == 1` (single connected shell — catches a rib/boss that floated free). Do not expect automated minimum-wall-thickness measurement; that's unreliable in trimesh — rely on the Tier-1 `assert()` plus a slicer check instead. |
+| `check` | Tier-3 mesh checks (trimesh) on every print-pose STL: watertight, winding, `volume > 0`, single connected shell (also catches sealed internal voids), bbox — plus the printability gate (`scripts/printability.py`: floating islands and > 3 mm cantilevers, the approximation of Bambu's warnings). |
+| `slicer-check` | Slices every `<part>.3mf` with Bambu Studio's CLI and fails on any slicer warning (`--jobs N`, `--require` in CI). Ground truth for printability. |
+| `ci --group k/n` | The PR gate per part: render → check → golden → Bambu slice → STEP, pipelined, on a cost-balanced part group (render.yml runs six groups in parallel). `ci` alone = every part. |
+| `review` | `exports/review.3mf`: every design in one Bambu Studio project — open it to eyeball everything. |
 | `golden` | Diffs `--summary` output against `tests/golden/<slug>.json` with tolerance (~0.5% volume, 0.1 mm bbox). `--update` regenerates the golden after a deliberate geometry change — never run `--update` to make a red diff go away without first understanding *why* it changed. |
 | `step` | Converts an already-rendered STL to STEP via `scripts/mesh_to_step.py` — see "STEP export" below. |
-| `all` | `smoke` + `render` + `check` + `golden`, in that order — what CI runs on every PR (`--with-step` also runs `step --all` at the end; that's what `release.yml` uses). |
+| `all` | `smoke` + `render` + `check` + `golden` + `review`, in that order (`--with-step` also runs `step --all`; that's what `release.yml` uses). The PR gate is `ci` (above), which also runs the slicer. |
 
 ## Manifold vs CGAL
 

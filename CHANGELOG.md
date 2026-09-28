@@ -12,6 +12,14 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Added (agent workflow)
+
+- `bambu-studio` skill + `scripts/slicer_probe.py zbisect|box|critical`: locate a Bambu Studio
+  warning on one part through the real slicer; `.claude/knowledge/bambu-slicer.md` records the
+  empirical slicer rules, design rules and debugging workflow learned on 2026-09-27/28.
+- `// build.py: print_count = <part>:<n>` marker: part projects and `review.3mf` carry the number
+  of copies one assembly needs (arch-tv-bracket arm: 2).
+
 ### Added (CI)
 
 - Bambu Studio slicer gate in the required `render` check: every exported part is sliced by the

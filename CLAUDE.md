@@ -24,7 +24,7 @@ Two knowledge trees, do not merge them:
 | Tree | Contents |
 |---|---|
 | `knowledge/**` | Sourced product/domain research (Magewell devices, Neutrik connectors, components, design guidelines). Stable, cited, third-party. Index: `knowledge/README.md`. |
-| `.claude/knowledge/**` | Agent working memory for *this* repo: `architecture.md`, `testing.md`, `ticket-source.md`. Not sourced research — don't put product facts here. |
+| `.claude/knowledge/**` | Agent working memory for *this* repo: `architecture.md`, `testing.md`, `ticket-source.md`, `bambu-slicer.md` (how Bambu Studio judges parts, learned empirically), `session-resume.md`. Not sourced research — don't put product facts here. |
 
 ## Fixed decisions (do not re-open without a user decision)
 
@@ -110,6 +110,7 @@ python scripts/build.py ci            # the PR gate per part: render+check+golde
 | Pre-slice go/no-go before printing | `print-check` |
 | Regenerate `BOM.md` | `bom-update` |
 | Pick a branch, sequence a commit/PR/release | `git-flow` |
+| Validate/debug/show parts in Bambu Studio (CLI slicer gate, warning probes, open for review) | `bambu-studio` |
 
 ## Team routing
 
@@ -119,6 +120,14 @@ architect-validated plan → a general-purpose Sonnet-tier developer, fed a full
 paths, module names, ordered steps). Tests → `tester`.
 
 ## Current status
+
+**Print-ready since 2026-09-28:** every export is in its print pose and every `.3mf` is a Bambu
+Studio project; all 36 parts (8 cases, 8 coupons, `tv-bracket`, `arch-tv-bracket` arm ×2 + centre)
+slice with **zero Bambu Studio warnings**, enforced in CI by the slicer gate (render.yml: six
+parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions from that work —
+the top of the panel frame is a lip on the **lid** (D32), `tv-bracket` has no ribs (D31), the
+rail latch is disabled pending #46 (D28) — are in architecture.md §13. Slicer rules and the
+debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio` skill.
 
 **All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,
 HDMI/SDI Plus, NDI to HDMI / HDMI 4K / SDI / AIO), built on the full library: L0 (`constants`,
@@ -130,7 +139,8 @@ is green locally and in CI; every merge to `main` publishes a pre-release with p
 (Tier 4)**: print and measure the six coupons on the X1C, measure the side 1/4"-20 hole per SKU, the
 dongle splitter and the E-clip, write the measured values into `constants.scad` (confidence →
 `measured`), then the first full-size print. Later: the IP-decoder family (120 × 79.3 × 24.5). See
-`.claude/knowledge/session-resume.md` for the ordered plan; `new-case-variant` explains the
+`.claude/knowledge/session-resume.md` for the ordered plan (and the open material-saving options);
+`new-case-variant` explains the
 thin-assembly workflow and when to stop and report instead of improvising geometry.
 
 ## Branching (Git Flow)
