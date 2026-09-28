@@ -1,5 +1,21 @@
 # Architecture — magewell-converter-cases
 
+**Revision 15, 2026-09-28 (round connector holes, no printed thread — D40/D41; plan
+`docs/plans/2026-09-28-round-holes-no-threads.md`).** Two user decisions after the external CAD
+specialist opened the exact STEP (D39). **(D40)** The Neutrik D holes in the patch wall are
+**perfectly round** in the model, the STL and the STEP: D36's truncated teardrops are reverted,
+T1-34a and `MCC_APERTURE_BRIDGE_MAX`/`MCC_APERTURE_CAP_RISE` retire, T1-34c is re-scoped. **(D41)**
+The connector's fixing is a **plain ⌀2.5 mm M3×0.5 tap-drill bore** (`MCC_FIXING_BORE_D`), not a
+printed thread: `mcc_thread_pad()`, every `MCC_THREAD_*` constant, T1-42a/b/c, the §3 `$fn = 32`
+exception, the `m3-thread-ladder` coupon, R28 and M16 retire; `MCC_THREAD_M3_MAJOR_D` becomes
+`MCC_M3_MAJOR_D`. The wall-web assert D36 filed as "T1-48" is renumbered **T1-61** (**D42**:
+T1-47 … T1-60 already belonged to `arch-tv-bracket`); **D43** re-registers the bbox-cap deviation
+whose proposed id "D26" collided with rev 13's D26. `build.py ci` now fails a case part whose STEP
+falls back to the faceted converter (§8). New: the §3 nominal-bore rule, **R39** (the round arch
+printed standing), **Q20** (how a printed case gets its thread), **M19** (`neutrik-tile` round-hole
+and bore check). **No envelope figure moves on any SKU.** Rev 14 (2026-09-28, D34–D39) was
+recorded in the body and §13 without a header entry; this paragraph names it.
+
 **Revision 13, 2026-09-27 (export contract + printability fixes):** §8 now defines the *print-ready* artefacts —
 every exported STL/3MF in its print pose on the X1C bed, real Bambu Studio projects per part and per
 case, `build.py review`, and a floating-island + cantilever printability gate in `build.py check`; deviations
@@ -481,19 +497,20 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
   `MCC_HOLE_COMP`) so the polygonal approximation is circumscribed rather than inscribed. An
   inscribed 24.2 mm hole at `$fn=32` is effectively 24.08 mm — that matters when the Neutrik flange
   only overlaps the hole by ~0.9 mm per side.
-- **The one sanctioned exception: `$fn = 32` on a BOSL2 `screw_hole(thread=true)` bore** (rev 10,
-  issue #30). Scoped to the **thread bore only** — the pad/boss cylinder around it still takes
-  `$fn = 64` with `circum = true`. Justification, in this order: (1) `screw_hole()` accepts **no
-  `circum` argument**, so the circumscribing mechanism above is simply unavailable; (2) the residual
-  inscribed error at `$fn = 32` on ⌀3.0 is `3.0·(1 − cos(180/32))/2 = 0.0072 mm per side` — **2.7 %
-  of the thread's 0.2705 mm radial engagement**, and ~7 % of the `$slop` term, so the fit is carried
-  by `$slop` (and by assert T1-42c), not by facet count; (3) the measured cost is real —
-  `$fn = 64` is ~26× the render time and ~38× the STL size of a plain bore, `$fn = 32` roughly halves
-  both (table in the plan's §3.3). **This is a bounded carve-out, not a loosening of the policy**:
-  it does not extend to any other hole class, and any future use must cite this bullet. Note also
-  that the far bigger STL-size lever is **ASCII → binary STL** (~6×, lossless); `scripts/build.py`
-  emits ASCII today (`build.py:64,423`, no `--export-format`). That is a separate ticket, deliberately
-  **not** folded into #30 because it changes every export and every golden's provenance.
+- ~~**The one sanctioned exception: `$fn = 32` on a BOSL2 `screw_hole(thread=true)` bore** (rev 10,
+  issue #30).~~ **RETIRED rev 15 (2026-09-28, D41):** there is no printed thread left in the repo, so
+  there is no `$fn` exception of any kind. Kept from it because it is still true: the far bigger
+  STL-size lever is **ASCII → binary STL** (~6×, lossless); that remains a separate ticket because it
+  changes every export and every golden's provenance.
+- **Holes that are CAD inputs are modelled at their nominal diameter (rev 15, D41).** Since D39 the
+  exact STEP rebuilds OpenSCAD's CSG tree, so it carries each primitive's radius *verbatim* — and
+  `cyl(..., circum = true)` puts `r / cos(180/$fn)` into that tree (⌀2.5 at `$fn = 64` becomes
+  ⌀2.503 in CAD). A hole whose exact size is a downstream CAD input — today only the connector fixing
+  bore (`MCC_FIXING_BORE_D`, the M3×0.5 tap-drill size the specialist threads) — is therefore
+  `cyl(d = <nominal>, $fn ≥ 64)` **without** `circum` and without `MCC_HOLE_COMP`; the inscribed
+  error (0.0015 mm/side at ⌀2.5, `$fn = 64`) is far below print tolerance. Clearance holes that must
+  pass a real part keep the rule above (`circum = true`, or a diameter that already carries
+  `MCC_HOLE_COMP`, as the D-connector circles do).
 
 ---
 
@@ -525,7 +542,7 @@ library change. That is the acceptance test for this decomposition — if a new 
 
 ---
 
-## 5. The connectors mount directly in the patch wall (rev 14, D36 — was: a separate printed plate)
+## 5. The connectors mount directly in the patch wall (rev 14 D36, rev 15 D40/D41 — was: a separate printed plate)
 
 **Rev 14 (user decision 2026-09-28, D36): there is no separate connector panel any more.** The
 modeller's review of the printed-plate design: *"the connectors do not need a separate panel; they
@@ -537,17 +554,33 @@ history for the reasoning behind the numbers):
 |---|---|---|
 | Wall stack in Y | unchanged **8.0 mm** (`MCC_T_PATCH`): 3.0 bezel recess + 2.0 flange seat + 3.0 behind it — no envelope figure moves | `constants.scad` |
 | Bezel recess | `MCC_PANEL_BEZEL_T` = 3 mm deep over the old plate footprint (`plate_size`, `L − 26` × 39); its floor is the flange-seat plane. Roof chamfered ~50° (rise 1.2 per mm of depth) so the standing wall never overhangs it and the cut exits through the wall top, not along its edge | `shell.scad` `_mcc_patch_wall_recess()` |
-| Seat hole | `mcc_cutout_d(part)` through the 2 mm seat, **truncated teardrop** pointing up | `neutrik.scad` `mcc_neutrik_d_wall_cut()` |
-| Body window | `mcc_cutout_d + 2·MCC_CLR_SLIDE` through the 3 mm behind the seat, same teardrop; both caps at the window's `cap_h`, so the roof over the opening is **one** flat bridge (≤ `MCC_APERTURE_BRIDGE_MAX`) through the whole wall | `layout.scad` `mcc_aperture_window()` |
-| Connector fixing | 2 × printed M3×0.5 thread **in the wall itself**, through all 5 mm (9 turns), on the standard diagonal; screws M3×10 through the flange. No pads, no inserts, nothing standing proud of the inner face | T1-42b, **T1-48**: ≥ `MCC_WALL_THREAD_WEB_MIN` (1.2 mm, `assumed`) of wall between each thread and either opening |
+| Seat hole | `mcc_cutout_d(part)` through the 2 mm seat, **perfectly round** (rev 15, D40 — was D36's truncated teardrop) | `neutrik.scad` `mcc_neutrik_d_wall_cut()` |
+| Body window | `mcc_cutout_d + 2·MCC_CLR_SLIDE` through the 3 mm behind the seat, **perfectly round**, coaxial with the seat hole. The roof over the opening is the round arch itself — no cap, no flat bridge (T1-34a retired); the window stays inside the recess band with `MCC_APERTURE_LIP_WEB_MIN` to spare (T1-34c) | `layout.scad` `mcc_aperture_window()` |
+| Connector fixing | 2 × **plain ⌀2.5 mm bore** (`MCC_FIXING_BORE_D`, the ISO M3×0.5 tap-drill size) **through the whole 5 mm wall**, on the standard diagonal — **no printed thread** (rev 15, D41), no chamfer, no pads, no inserts, nothing standing proud of the inner face; screws M3×10 through the flange. The external CAD specialist models the thread on the exact STEP; how a *printed* case gets its thread is open (§12 Q20) | **T1-61**: ≥ `MCC_WALL_BORE_WEB_MIN` (1.2 mm, `assumed`) of wall between each bore and either opening |
 | Dispatch | `models/**` never calls `neutrik.scad`; `shell.scad` calls `panel.scad` `mcc_panel_wall_cut()` | layering rule unchanged |
 | Lid | the D32 patch-wall lip is gone (nothing to frame); the tongue/groove runs unbroken | `shell.scad` `mcc_shell_lid()` |
-| Coupon | `neutrik-tile` is now a 40 × 45 mm section of this wall, printed **standing**, on a foot — it tests the real geometry (teardrops, horizontal printed threads) | `models/coupons/neutrik-tile.scad` |
+| Coupon | `neutrik-tile` is a 40 × 45 mm section of this wall, printed **standing**, on a foot — it tests the real geometry: the round holes' printed arch (R39) and the horizontal ⌀2.5 bores (M19) | `models/coupons/neutrik-tile.scad` |
 
-Printed-thread risk: the threads now print with a **horizontal** axis (the `m3-thread-ladder`
-calibrates them vertical). Check the screws on the `neutrik-tile` coupon before the first case; if
-they strip, the fallback is the self-tapping screws Neutrik ships (`d-series-cutout.md:102`) into a
-plain pilot, not pads.
+**Round holes and the plain bore (rev 15, 2026-09-28, D40/D41 — user decisions).** The external CAD
+specialist, opening the exact STEP (D39), asked why only the D holes were not round: D36's teardrops
+are genuinely not circles, and a printed thread is a polyhedron that D39 leaves faceted by design.
+Both are fixed in the *shape*, not in the converter: plain circles for the seat hole and window, a
+plain ⌀2.5 cylinder for each fixing bore, so all of them reach CAD as true circles/cylinders at their
+nominal size (§3 nominal-bore rule). Consequences, all deliberate:
+- **The round holes are a deliberate exception to the ≤ 45° roof rule** in a standing wall: their
+  upper ~90° is a > 45° arch. The ≤ 10 mm span rule still holds (the last layers close a chord of a
+  few mm). The plan's research pass sliced a 5 mm standing wall section at `NE8FDP-B` with no Bambu
+  Studio warning, the CI slicer gate re-checks every base, and the print quality of the arch is
+  judged on `neutrik-tile` (**R39**, **M19**). Do not reintroduce a teardrop, cap or bridge to "fix"
+  it — that reverses D40; it goes back to the user.
+- **The fixing bore is not threaded in the print.** A tap-drill bore is the right input for the
+  specialist's CAD thread. For a *printed* case the route — hand-tap M3×0.5 (the knowledge base's
+  recommendation for printed cases, `knowledge/neutrik/d-series-cutout.md:109-110`), Neutrik's
+  bundled self-tapping screws, or the specialist's own route — is **open (§12 Q20)**. The rev-14
+  fallback ("the self-tapping screws Neutrik ships into a plain pilot") is now one of those
+  candidates, not a fallback.
+- **The bore is plain** — no chamfer, no counterbore, no `MCC_HOLE_COMP`. Anything the specialist
+  wants at the mouth he models together with the thread.
 
 **Superseded (rev ≤ 13): connectors mount in a bolt-in `mcc_panel()` plate, not directly in the shell wall.**
 Since the side-exit decision (§1, §14) there is exactly **one plate per case**, in the long patch
@@ -639,6 +672,10 @@ are part of the design contract:
 mix the two approaches on one case without recording why here.
 
 ### Connector fixing
+
+> **History (rev ≤ 13).** The current connector fixing is the rev-15 table row above: a plain ⌀2.5 mm
+> tap-drill bore straight through the patch wall (D41). Bullet 3 below (the printed pad thread) and
+> R28 are retired; they are kept for the reasoning behind the numbers.
 
 The Neutrik screw holes (±9.5, ±12.0 mm) sit *inside* the 26 × 31 flange footprint, so the screws
 cannot land on material outside the flange. Two supported options:
@@ -1062,6 +1099,16 @@ rendered STL only), and nothing carried a printer/filament/process. The export c
   (`text`, `minkowski`, `import`, …) falls back to `mesh_to_step.py`'s faceted B-rep, and the
   part's manifest says so (`step.backend`). Still not a parametric feature tree — OpenSCAD has none.
   Booleans are fused pairwise: one OCCT Fuse with many overlapping tools silently lost volume.
+- **Case STEPs must be exact (rev 15, D40/D41).** The round connector holes and the ⌀2.5 fixing
+  bores are only true cylinders if the part goes through `csg_to_step.py`; a faceted fallback
+  silently turns them back into flat facets. `build.py ci` therefore fails any **case part**
+  (`Target.kind == "model"`: `base`, `base_fan`, `lid`) whose manifest records a `step.backend`
+  other than `csg-exact` (`step_exact_check()`, next to `golden_check_part()`). Coupons and brackets
+  may still fall back (engraved `text()` labels are unsupported by design). The gate lives only in
+  `ci`; `build.py step` stays a conversion command, so a machine without cadquery-ocp can still
+  convert (faceted) locally. A per-part face-type census was considered and rejected: a base carries
+  many other analytic cylinders (boss bores, the side-bolt boss, gusset stadia), so a count cannot
+  tell a round connector hole from anything else.
 
 **Branching (user decision 2026-09-08 — the `develop` branch is dropped):** work happens on
 `feature/*` and merges to `main` by CI-green PR; a release is an annotated `vX.Y.Z` tag on `main`,
@@ -1092,7 +1139,8 @@ contracts, so a bad parameter fails loudly at render instead of quietly at the p
 | `24.0 ≤ cutout_d ≤ 24.6` (never blow out the hole — flange overlap is only ~0.9 mm/side) | `d-series-cutout.md:36-43` |
 | clear depth behind each cutout ≥ `mcc_bay_depth(part)` | `placement-and-depth.md:66-71` |
 | heat-set boss OD ≥ 1.8 × insert OD, ≥ 2 mm material to any edge | `fasteners-and-hardware.md:123-131` |
-| **printed-thread pad: wall ≥ 2.0 mm, ≥ 3 engaged turns, residual radial engagement ≥ 50 % of nominal after `$slop`** (T1-42a/b/c, rev 10) | §5 "Connector fixing" bullet 3; `lib/BOSL2/screws.scad:753` |
+| ~~printed-thread pad: wall ≥ 2.0 mm, ≥ 3 engaged turns, residual radial engagement ≥ 50 % of nominal after `$slop` (T1-42a/b/c, rev 10)~~ **retired rev 15 (D41): no printed thread** | — |
+| connector fixing bore: ≥ `MCC_WALL_BORE_WEB_MIN` (1.2) of wall between each ⌀`MCC_FIXING_BORE_D` bore and the seat hole / window (**T1-61**, rev 15 — filed as "T1-48" by D36, renumbered by D42) | §5 rev 15 table |
 | rib thickness ≤ 0.6 × adjoining wall, height ≤ 3 × thickness | `fdm-rugged-enclosure-guidelines.md:65-70` |
 | no two floor features overlap (`mcc_floor_keepout()`) | §6 floor rule |
 | every port with `panel != "none"` has a cutout, and vice versa | §7 |
@@ -1118,6 +1166,13 @@ lid-fastener boss/gusset and `+Y` vs. the connector bay's plug envelope, both wi
 `MCC_FAN_BAY_CLR`; `Z` contained in the interior cavity, without a clearance term (§6). They live in
 `layout.scad` and are evaluated **unconditionally**, exactly like T1-18(c) — §6 reserves the bay
 whether or not `cfg.fan` is true.
+**Rev 14 (D36)** retired T1-34b/T1-34d (the plate's boss reliefs and plate-fixing bores went with the
+plate) and added the wall-web assert under the id "T1-48" — which `models/brackets/arch-tv-bracket.scad`
+already used: the arch-tv-bracket gate (2026-09-27, `docs/plans/2026-09-27-arch-tv-bracket.md` B4)
+owns **T1-47 … T1-60**. **Rev 15** renumbers the wall web to **T1-61** (D42), retires **T1-34a** (no
+teardrop cap, D40) and **T1-42a/b/c** (no printed thread, D41), and re-scopes **T1-34c** to the round
+window. **The next free id is T1-62** — take it from `layout-patch-wall.md` §9, which now lists every
+id.
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
@@ -1135,20 +1190,18 @@ trimesh; it is unreliable. Rely on the Tier-1 assert plus the slicer.
 
 **Tier 4 — physical coupons, `models/coupons/`.** Non-negotiable and *first*, before any 244 mm case
 is printed:
-- `neutrik-tile` — one D cutout with the 2 mm pocket and rear bosses, in a 40 × 45 mm tile. Verifies a
-  real connector actually fits and screws down.
+- `neutrik-tile` — a 40 × 45 mm section of the patch wall, printed standing (D36), with one connector
+  cut exactly as in the case. Verifies a real connector passes the round hole's printed arch and
+  seats flush (R39), that the two ⌀2.5 fixing bores line up and are round, and — once §12 Q20 is
+  answered — that the chosen thread holds (M19).
 - `depth-mockup` — holds one panel connector at a set distance from a mock device port face, so the
   real patch cable can be tried. **This is the only way to replace the `unknown` plug lengths.**
 - `tg-ladder` — tongue-and-groove clearance ladder to calibrate `MCC_CLR_TG`.
 - `insert-boss` — heat-set boss hole-diameter ladder for ASA.
 - `tolerance-ladder` — general fit ladder.
-- `m3-thread-ladder` (**new, rev 10, issue #30**) — 5 printed M3 thread pads at production
-  `pad_d`/`pad_h`/`$fn`, sweeping `$slop` across **`[0.02, 0.035, 0.05, 0.065, 0.08]`** (per-side
-  0.04–0.16 mm, i.e. 15–59 % of the 0.2705 mm nominal engagement). The ladder must be built from the
-  same `mcc_thread_pad()` the production module calls — a coupon that duplicates the geometry cannot
-  calibrate it. **Acceptance is ≥ 5 insert/remove cycles per pad, not one successful seat**: a
-  connector gets unscrewed for cable service, and repeat-cycle stripping is the exact failure mode
-  heat-set inserts existed to prevent (**R28**). Print it in the same batch as `neutrik-tile`.
+- ~~`m3-thread-ladder`~~ — **retired rev 15 (2026-09-28, D41)** together with the printed thread it
+  calibrated (`MCC_THREAD_M3_SLOP`); file and golden deleted. Its acceptance idea — ≥ 5
+  insert/remove cycles, not one successful seat — moves to M19 for whichever thread Q20 picks.
 
 Every coupon result is written back into `constants.scad` as a calibrated constant with a comment
 naming the coupon and the date.
@@ -1613,7 +1666,9 @@ D-14 bonds the **KSD9700** to the device's metal top, so debris entering the slo
 switch and its joints. Neither is a blocker; both are recorded so they are not rediscovered.
 
 **R28 — M3 is below the conservative floor for printed FDM internal threads, and the connector
-fixing now depends on one. NEW 2026-09-09 (rev 10, #30).** Sourced FDM-thread guidance treats **M6
+fixing now depends on one. NEW 2026-09-09 (rev 10, #30). RETIRED 2026-09-28 (rev 15, D41): the
+connector fixing is a plain tap-drill bore — there is no printed thread left; kept as history (its
+repeat-cycle acceptance moves to M19).** Sourced FDM-thread guidance treats **M6
 and larger** as the safe default on a 0.4 mm nozzle and calls M3–M5 viable only "on well-tuned
 machines" with "precise clearance calibration and test prints". This repo has now committed the
 **connector-to-plate fixing** — the joint that holds a Neutrik connector in the patch wall on a
@@ -1653,6 +1708,20 @@ throw, a fixed panel-clamp range, and an actuator that wants to stand proud. Thr
   bench-test, do not block on it. Stacking the manual switch *and* the thermoswitch in series
   (wiring variant (b)) stacks that risk — which is why (a) is the default and (b) is an explicit,
   documented user option, not a silent default.
+
+**R39 — the round connector holes print as a > 45° arch in a standing wall. NEW 2026-09-28 (rev 15,
+D40).** (R30 … R38 are reserved to the arch-tv-bracket gate, `docs/plans/2026-09-27-arch-tv-bracket.md`.)
+The user's "perfectly round" decision gives up D36's teardrop, whose whole purpose was that the wall
+never roofs over with an unsupported round arch. Bambu Studio raises no warning — its warnings test
+floating regions and > 3 mm cantilevers, not arch quality — so the residual risk is physical: the top
+of a ⌀24.2–24.8 mm hole may sag, and the Neutrik flange overlaps the hole by only ~0.9 mm per side
+(`knowledge/neutrik/d-series-cutout.md:36-43`).
+- **The gate is `neutrik-tile`, both classes (M19)** — already a CLAUDE.md "Coupons before cases"
+  coupon. No full-size case is printed before it passes.
+- **If the arch sags enough that the connector does not pass or seat flush:** recalibrating
+  `MCC_HOLE_COMP` from the coupon (its normal write-back), deburring/reaming, or a slicer setting
+  keeps the holes round and needs no decision. A teardrop, cap, bridge or sacrificial layer
+  reverses D40 and goes back to the user.
 
 ---
 
@@ -1724,6 +1793,17 @@ throw, a fixed panel-clamp range, and an actuator that wants to stand proud. Thr
     a smaller low-profile actuator (needs sourcing). (b) wiring variant **(a) manual switch only**
     (recorded default) vs. **(b) manual master + KSD9700 in series**. (b) has **no geometry impact**
     either way — it is a BOM row, so it must not gate the branch.
+20. **How does a *printed* case get its M3×0.5 thread? NEW 2026-09-28 (rev 15, D41) — needs the
+    user.** The model carries a plain ⌀2.5 tap-drill bore; the external CAD specialist models the
+    thread on the STEP. For a case printed from this repo's own STL/3MF the candidates are (a)
+    hand-tap M3×0.5 (the knowledge base's recommendation for printed cases,
+    `knowledge/neutrik/d-series-cutout.md:109-110`), (b) the self-tapping screws Neutrik bundles with
+    front-mount D connectors (`d-series-cutout.md:102-104`; their size against a ⌀2.5 pilot is
+    `unknown` — §5's "no self-tapping into 2 mm of ASA" concerned a 2 mm plate, this bore is 5 mm
+    deep), or (c) every physical case follows the specialist's own manufacturing route. It also
+    settles whether ASA is really the material being threaded. **No geometry depends on it** (the
+    bore is a user decision); it gates the BOM wording, the first physical assembly and M19's
+    thread-hold test.
 
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
@@ -1747,11 +1827,14 @@ throw, a fixed panel-clamp range, and an actuator that wants to stand proud. Thr
 | **M15** | **Print `models/coupons/rail-latch` and pull-test it:** slide force, axial retention at disengage (target **≥ 30 N**, `assumed`), thumb-release force, and the achieved dovetail fit at `MCC_CLR_SLIDE = 0.3` | R24 — every `MCC_RAIL_*` figure is `assumed`. Calibrates `MCC_RAIL_CLR`, `MCC_RAIL_LATCH_ENGAGE` and the retention target the same way `tg-ladder` calibrates `MCC_CLR_TG`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale |
 
 | **M17** | **Buy one panel switch of the chosen class and measure: actuator height proud of the panel, mounting-hole ⌀, nut across-flats (⇒ circumscribed ⌀), body depth behind the panel, and the panel-clamp thickness range** | **R29 — gates the pocket geometry for issue #32.** All five are `assumed` from a family-analogue datasheet, and all five are load-bearing: the actuator height sets `recess_t` (T1-44), the nut ⌀ sets `pad_d` and therefore whether the part fits the +X band at all (T1-43), and the clamp range decides whether a 2.0 mm residual panel is legal. The plus family's feasible `switch_y` window is 3.2 mm wide — this is not a figure to leave `assumed` through a print | User, after buying one (≈ €1–2) |
+| **M19** | **`neutrik-tile`, both classes (NAHDMI-W-B and NE8FDP-B), printed standing in ASA:** (a) seat-hole and window diameter measured **horizontally and vertically** (sag at the top of the arch, R39); (b) the real connector passes and its flange seats flush; (c) both ⌀2.5 fixing bores aligned with the flange holes, round, and their printed diameter; (d) once §12 Q20 is answered, the chosen thread survives **≥ 5 insert/remove cycles** (R28's acceptance idea, kept) | **R39 + Q20 — gates the first full-size print** (with the other "Coupons before cases" coupons). `MCC_HOLE_COMP` is written back from (a)/(b) as usual; `MCC_FIXING_BORE_D` and the hole shape are user decisions (D40/D41) — report, do not tune | User, calipers + a ⌀2.5 drill shank as a gauge |
 
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
 > **Rev 9** adds M14 (truss coupler flange) and M15 (rail-latch coupon). **Rev 10** adds M16
-> (`m3-thread-ladder` + `neutrik-tile` in ASA). **Rev 11** adds M17 (panel switch, above).
+> (`m3-thread-ladder` + `neutrik-tile` in ASA) — **retired rev 15 (D41)**, superseded by M19. **Rev 11**
+> adds M17 (panel switch, above). **M18a–d** belong to the arch-tv-bracket gate
+> (`docs/plans/2026-09-27-arch-tv-bracket.md` §9) and are not repeated here. **Rev 15** adds M19.
 
 ---
 
@@ -1800,6 +1883,10 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D37** | 2026-09-28 | T1-40 (compliant floor-pad island in the cradle) and D33 (its skirt, vent channels and sliver fill) | The modeller asked what the 40 × 40 mm "square" in the cradle is for: it was the island for a floor EPDM pad that §11 R8 had already moved to the side-bolt boss face (D-09) — a leftover | — | **Done.** Island, skirt, vent channels, sliver fill, `MCC_CRADLE_FLOOR_PAD_*` and the floor-pad BOM row removed; the device rests on the rib lattice, located by the far-flank ribs and the side bolt |
 | **D38** | 2026-09-28 | shell.scad `_mcc_gusset_web()` (lid-fastener boss webs) | The modeller: "the vertical supports for the screw pillars barely make contact". The web was a 3 mm bar that started at the boss's outer edge, so it touched the boss only along a tangent line | — | **Done.** The web is now a boss-wide stadium (hull of the boss circle and a boss-wide bar into the wall), overlapping the boss by `MCC_WEB_BORE_KEEP` short of its insert bore |
 | **D39** | 2026-09-28 | §8 "STEP remains a faceted B-rep of the mesh" | The modeller: every round object arrived in CAD as dozens of flat rectangles — unusable for post-processing | STEP converted from the tessellated mesh | **Done.** `scripts/csg_to_step.py` (CSG tree → exact OCCT B-rep), wired into `build.py step`/`ci` with the faceted converter as a reported fallback; §8 updated |
+| **D40** | 2026-09-28 | §5 rev 14 (D36): seat hole + body window are truncated teardrops so the standing wall never roofs over with a round arch; T1-34a caps their flat bridge | Not a code defect — **a user decision reverses the rule.** The external CAD specialist opened the exact STEP (D39) and asked why only the D holes were not round: a teardrop is genuinely not a circle (D39 arc-fits its round part, the cap stays straight) | The connector holes are what the user and the specialist see first; "perfectly round in the model, the STL and the STEP" is now the requirement | **Done in rev 15 (user decision 2026-09-28).** `mcc_neutrik_d_wall_cut()` cuts plain `$fn = 96` circles; `mcc_aperture_window()` returns only `d_win`; T1-34a, `MCC_APERTURE_BRIDGE_MAX` and `MCC_APERTURE_CAP_RISE` retired; T1-34c re-scoped to the round window. Evidence: the plan's research pass sliced a 5 mm standing wall section at `NE8FDP-B` with no Bambu Studio warning; the CI slicer gate covers every base. §5 records the arch as a deliberate exception to the ≤ 45° roof rule; its print quality is **R39 / M19**. Plan: `docs/plans/2026-09-28-round-holes-no-threads.md` |
+| **D41** | 2026-09-28 | §5 rev 10/rev 14: the connector's screws thread into a printed M3×0.5 thread (a pad, then the wall itself under D36); §3's `$fn = 32` exception; T1-42a/b/c; R28/M16 | Not a code defect — **a user decision reverses the rule**: "the thread with those little triangles is really bad; the specialist prefers to model the thread in himself afterwards". A BOSL2 thread is a polyhedron, which D39 exports faceted by design | The specialist threads the part in CAD; a faceted helix in the STEP is unusable for that | **Done in rev 15 (user decision 2026-09-28).** Plain ⌀2.5 bore (`MCC_FIXING_BORE_D`, the ISO M3×0.5 tap-drill size) through the whole 5 mm wall, modelled at nominal without `circum` (§3 nominal-bore rule) and without a chamfer; `mcc_thread_pad()`, `MCC_THREAD_*` (incl. `MCC_THREAD_FAST`), the `fast` argument, T1-42a/b/c, the `$fn = 32` exception, the `m3-thread-ladder` coupon + golden, R28 and M16 retired; `MCC_THREAD_M3_MAJOR_D` → `MCC_M3_MAJOR_D` (reused by `arch-tv-bracket` T1-57). How a *printed* case gets its thread: **§12 Q20**. The plan's 0.5 mm lead-in chamfer was **rejected at the gate**: it is not "plain", and counted in the web assert it fails T1-61 on every 24-class slot (`2.91 − 1.75 = 1.16 < 1.2`) |
+| **D42** | 2026-09-28 | §9 / `layout-patch-wall.md` §9: every Tier-1 id is unique, and the next free id is taken from §9 (rev 11's own lesson) | `lib/mcc/neutrik.scad` (D36) filed the wall-web assert as **T1-48**, but `models/brackets/arch-tv-bracket.scad:394-400` has used **T1-48** (its A2, "the case stays behind the TV") since the arch-tv-bracket gate assigned **T1-47 … T1-60** on 2026-09-27 (`docs/plans/2026-09-27-arch-tv-bracket.md` B4). Root cause: that gate's ids (T1-47 … T1-60, R30 … R38, M18a–d and its proposed deviation "D26") were never entered in this file or in `layout-patch-wall.md` §9 — `arch-tv-bracket.scad:54-57` says the architect would record them "after merge" | Two asserts answer to one id: an assert message or a review comment citing "T1-48" is ambiguous, and the next plan would collide again | **Fixed in rev 15.** The wall web becomes **T1-61** (message, constant comment, skill, both docs). `layout-patch-wall.md` §9 now carries a row for T1-47 … T1-60 (owned by `arch-tv-bracket`); R30 … R38 and M18a–d are reserved to that gate (§11/§12 notes), so rev 15's new ids are R39, M19, Q20 and T1-61. The proposed "D26" is re-registered as **D43** (rev 13's D26 is the patch-wall window fix) |
+| **D43** | 2026-09-28 | §9 Tier-1 "`bbox ≤ MCC_BUILD − MCC_BED_MARGIN` per part" vs. the per-side meaning of `MCC_BED_MARGIN` | `lib/mcc/util.scad:42-43` `mcc_bbox_ok()` caps each axis at `MCC_BUILD − MCC_BED_MARGIN` = **250**, while `scripts/build.py:57` enforces `MAX_AXIS_MM = MCC_BUILD_MM − 2 * MCC_BED_MARGIN_MM` = **244** (a margin on each side). §1's "margin vs the 250 assert limit" column and the §9 row repeat the 250 | Found by the arch-tv-bracket gate (2026-09-27, filed there as "D26", never recorded here — D42). Two ceilings for one rule, and the Tier-1 assert is the looser one: a part between 244 and 250 mm renders but fails `check` | **Open — separate small ticket, record only.** Per that gate: change `util.scad` to `MCC_BUILD − 2·MCC_BED_MARGIN`, prove it golden-neutral for every current caller of `mcc_bbox_ok()`, and update §1/§9. `arch-tv-bracket.scad` already asserts 244 explicitly (its T1-47). Not part of the D40/D41 PR |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
@@ -1814,12 +1901,13 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 length, +Y towards the patch wall, +Z up. Interior floor `z = 3`, lid underside `z = 48`, patch wall
 inner face `y = W/2 − 8`.
 
-**Panel aperture.** Patch-wall stack in Y = 3.0 proud bezel + 2.0 plate seat + 3.0 structural lip =
-8.0 mm. Aperture Z range `[6, 45]`, X range `±(plate_l/2 − 3)` with `plate_l = L − 26`. Connector
-centreline `z = 25.5`. One stepped rabbet (6 mm over the plate's rim ring, 5 mm over the field) plus
-`n_slots` windows through the 3 mm lip; **each window is a `union()` of a truncated-teardrop body
-circle and two plain ⌀8.88 boss reliefs — never a `hull()` (rev 6, D9)**, so from outside the user
-sees a flat plate face with exactly-round cutouts. The top-open U-notch aperture is rejected.
+**Panel aperture (rev 14 D36, rev 15 D40/D41).** Patch-wall stack in Y = 3.0 bezel recess + 2.0
+flange seat + 3.0 behind it = 8.0 mm; there is **no plate** (D36). The bezel recess covers the old
+plate footprint (`L − 26` × 39). Per slot, `mcc_panel_wall_cut()` cuts a **perfectly round** seat
+hole (`mcc_cutout_d`) and a coaxial round window (`+ 2·MCC_CLR_SLIDE`) through the 5 mm of wall
+behind the recess (D40), plus two plain ⌀2.5 fixing bores on the Neutrik diagonal (D41, no printed
+thread). Connector centreline `z = 25.5`. The rev-6 plate aperture (one stepped rabbet, `union()`
+windows with boss reliefs) is history; the top-open U-notch stays rejected.
 
 **Cradle deck is derived, not chosen.** It is set so the device's end-face port centreline lands on
 the connector centreline (`z = 25.5`), giving an 8.8 mm cradle deck + 2.0 mm compliant pad and a

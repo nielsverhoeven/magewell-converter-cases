@@ -70,7 +70,7 @@ turning by hand, that is a bug in the pose table, not a slicer step.
 
 | Part | Orientation | Why |
 |---|---|---|
-| Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The connectors sit straight in the base's standing patch wall (D36, no panel plate): their holes are truncated teardrops with one flat ≤10 mm roof bridge, the bezel recess roof is chamfered ~50°, and the connector screws thread into horizontal printed M3 threads — check those on the standing `neutrik-tile` coupon first. |
+| Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The connectors sit straight in the base's standing patch wall (D36, no panel plate): their holes are **perfectly round** (D40 — the top of each hole prints as a round arch, a deliberate exception to the ≤45° roof rule), the bezel recess roof is chamfered ~50°, and the connector screws go into horizontal plain Ø2.5 mm tap-drill bores (D41, no printed thread) — check the arch and the bores on the standing `neutrik-tile` coupon first (M19). |
 | Any part with a boss/insert hole | Hole axis vertical (printing top-down through the hole), not horizontal | A horizontal insert hole is a small bridge/overhang per hole and prints out-of-round; a vertical hole prints as a clean circular wall. |
 | `models/brackets/tv-bracket.scad` | Flat, either face down — but **mount with the plate's own +Y axis up** (not a print-orientation choice; see `models/brackets/README.md` "Orientation") so the mated case hangs with its patch/cable wall down, not the fan/vent side against the TV. |
 | `models/brackets/arch-tv-bracket.scad` | `arm`: **TV face down**; `centre`: **flat face down, rail up**. Mount with the **arch up** (UP arrow on the centre); patch wall then hangs down. **Do not print for use before M15 (rail-latch), M18 (TV measurements) and R38 (rail entry/interference, issue #48) are closed** (`models/brackets/README.md`). |
@@ -163,11 +163,11 @@ Before slicing for real, in Bambu Studio:
 - [ ] `build.py step` clean, if a STEP file is wanted (not required to slice/print from STL/3MF)
 - [ ] Bbox fits 256 mm cube minus margin, confirmed in-slicer at the actual print orientation
 - [ ] Orientation matches the table in §3 for this part type
-- [ ] No unsupported span >10 mm; all roofs ≤45°
+- [ ] No unsupported span >10 mm; all roofs ≤45° — the round D-connector holes in the base's standing patch wall are a deliberate exception (D40, user decision; judged on `neutrik-tile`, architecture.md R39)
 - [ ] For a case base: a head-on orthographic elevation of the patch wall from OUTSIDE (`base`,
-      `--projection=o`, camera along −Y) shows each D hole with its teardrop cap hidden inside the
-      26 × 31 flange outline, its two threaded holes, and nothing standing inside the hole
-      (architecture.md §5 rev 14, D36)
+      `--projection=o`, camera along −Y) shows each D hole **perfectly round** inside the 26 × 31
+      flange outline, its two Ø2.5 fixing bores on the Neutrik diagonal, and nothing standing inside
+      the hole (architecture.md §5 rev 15, D36/D40/D41)
 - [ ] Slicer profile matches §4 (enclosure on, 260°/105-110°, 5 walls, 3 mm walls, brim)
 - [ ] Relevant coupons (§6) already printed and measured back into `constants.scad`, if this is a
       full case rather than a coupon itself

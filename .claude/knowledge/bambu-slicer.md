@@ -22,6 +22,10 @@ Empirical facts (tested with synthetic pieces and the real parts, 2026-09-28):
   first principles; **measure with the slicer** (§3).
 - A bridge closed on all sides by walls/ribs is fine. The same bridge with vent holes in it —
   a fixed grid or one hole per bay centre — **is flagged**. Vent sealed cells sideways instead.
+- **A plain round hole through a standing wall does not warn** (D40, 2026-09-28): a ⌀24.8 connector
+  window through a 5 mm wall section at `NE8FDP-B` sliced clean, and the CI slicer gate covers every
+  base. Slicer silence is not print quality — the top ~90° of the arch still overhangs > 45°;
+  `neutrik-tile` judges the sag (architecture.md R39, M19).
 - Sealed internal voids (a bridge over a fully walled cell) do not bother Bambu, but they fail
   `build.py check` (parts > 1) — they are real trapped-air cavities.
 - A hole in the slicer's view of "support needed" goes away when the geometry changes; an
@@ -31,9 +35,10 @@ Empirical facts (tested with synthetic pieces and the real parts, 2026-09-28):
 
 ## 2. Design rules that keep parts warning-free (FDM, this repo, print pose)
 
-1. **Know the print pose before modelling.** Shells print open-side-up, the panel and neutrik-tile
-   face-down (flipped by `build.py print_pose()`), brackets flat on their TV face. Anything that
-   points down in that pose is an overhang.
+1. **Know the print pose before modelling.** Shells (base and lid) print open-side-up — the base's
+   patch wall standing — and the `neutrik-tile` coupon stands on its foot exactly like that wall
+   (D36); brackets print flat on their TV face. Anything that points down in that pose is an
+   overhang.
 2. **No flat overhang > 3 mm from its support edge.** Either support it on ≥ 2 opposite sides
    (a real bridge ≤ 10 mm, repo rule), give it a ≥ 45° chin/gusset, or move it to a part where it
    prints upright (D32: the top frame of the panel moved from the base to the lid).

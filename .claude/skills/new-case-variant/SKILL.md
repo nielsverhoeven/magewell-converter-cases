@@ -191,14 +191,13 @@ Notes learned tuning these against NDI to HDMI, so the next developer doesn't re
   off both edges of the frame; `600` frames all four slots with margin. If your SKU's `plate_l` is
   much longer (the `plus` family, up to ~185 mm vs. compact's ~168 mm) or has only 3 slots (HDMI
   TX / SDI TX), re-render once and adjust distance before trusting the crop.
-- **What "correct" looks like in the elevation:** `n_slots` **exactly round** cutouts (never a
-  diagonal/teardrop blob — that shape was deviation D9 and is retired), each with two small screw
-  dots near its edge on the Neutrik diagonal, the same diagonal orientation repeated identically at
-  every slot (a slot whose dots look rotated 90° relative to its neighbours is the mirrored-relief
-  regression ruling 2026-09-08c C1 fixed once already — report it, don't silently "fix" it
-  yourself), and the 4 plate-fixing screw dots at the rim corners. A small (≤ ~1.5 mm) crescent
-  sliver at one edge of a cutout is expected (T1-34b) — it is the shell's own boss-relief window
-  showing through, covered by the fitted connector body in real life; it is not a defect.
+- **What "correct" looks like in the elevation:** `n_slots` **perfectly round** cutouts in the
+  bezel recess (never a diagonal/teardrop blob — D9's hull and D36's teardrop are both retired,
+  D40), each with two small Ø2.5 bore dots near its edge on the Neutrik diagonal, the same diagonal
+  orientation repeated identically at every slot (a slot whose dots look rotated 90° relative to its
+  neighbours is the mirrored-pattern regression ruling 2026-09-08c C1 fixed once already — report
+  it, don't silently "fix" it yourself). There is no plate since D36: no plate-fixing screw dots and
+  no relief crescent — anything else visible inside a cutout's outline is a defect.
 
 ## cfg vs. the device file — what decides what
 
