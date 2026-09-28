@@ -67,8 +67,10 @@ Two knowledge trees, do not merge them:
   Case height stays **51 mm** (4 mm Z web; 49 mm proposal vetoed); **no right-angle HDMI adapter in
   the default BOM** — end zones are sized for straight plugs, measured with the `depth-mockup` coupon.
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
-  behind a shell bezel. The connector panel is a separate 2 mm flat-printed plate in a rabbet
-  (architecture.md §5) — never call the Neutrik provider directly from `models/**`.
+  behind a shell bezel. **The connectors mount straight into the patch wall** (user decision
+  2026-09-28, D36 — no separate panel plate): a 3 mm bezel recess, a 2 mm flange seat with a
+  teardropped hole, and printed M3 threads in the wall itself — no screw pillars (architecture.md
+  §5 rev 14). Never call the Neutrik provider directly from `models/**`.
 
 ## Non-negotiables
 
@@ -124,11 +126,12 @@ paths, module names, ordered steps). Tests → `tester`.
 ## Current status
 
 **Print-ready since 2026-09-28:** every export is in its print pose and every `.3mf` is a Bambu
-Studio project; all 36 parts (8 cases, 8 coupons, `tv-bracket`, `arch-tv-bracket` arm ×2 + centre)
-slice with **zero Bambu Studio warnings**, enforced in CI by the slicer gate (render.yml: six
-parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions from that work —
-the top of the panel frame is a lip on the **lid** (D32), `tv-bracket` has no ribs (D31), the
-rail latch is disabled pending #46 (D28) — are in architecture.md §13. Slicer rules and the
+Studio project; every part (8 cases as base + lid, coupons, `tv-bracket`, `arch-tv-bracket` arm ×2
++ centre) slices with **zero Bambu Studio warnings**, enforced in CI by the slicer gate (render.yml:
+six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions since — the
+connectors mount straight into the patch wall, no panel part (D36), no floor insert (D35), no
+floor-pad island (D37), boss-wide lid-boss webs (D38), `tv-bracket` has no ribs (D31), the rail
+latch redesign (D34) — are in architecture.md §13. Slicer rules and the
 debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio` skill.
 
 **All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,

@@ -80,11 +80,6 @@ assert(_mcc_near(fp[0][0], 86.95, 1e-3) && _mcc_near(fp[0][1], 69.925, 1e-3), st
 assert(_mcc_near(fp[4][0], 0, 1e-3) && _mcc_near(fp[4][1], 69.925, 1e-3), str("fp[4] (patch-wall mid)=", fp[4]));
 assert(_mcc_near(fp[5][0], -12.64, 1e-2) && _mcc_near(fp[5][1], -69.925, 1e-3), str("fp[5] (far-wall mid)=", fp[5]));
 
-// --- mcc_panel_fixing_pos() matches mcc_panel_plate()'s own already-implemented formula (D6) ---
-fix = mcc_panel_fixing_pos([100, 40], 6);
-assert(len(fix) == 4);
-assert(_mcc_near(fix[0][0], -(100 / 2 - 3)) || _mcc_near(fix[0][0], (100 / 2 - 3)), "mcc_panel_fixing_pos x");
-
 // --- mcc_end_zone() direct calls ---
 assert(_mcc_near(mcc_end_zone(DEV, "neg"), 47), str("mcc_end_zone neg=", mcc_end_zone(DEV, "neg")));
 assert(_mcc_near(mcc_end_zone(DEV, "pos"), 40), str("mcc_end_zone pos=", mcc_end_zone(DEV, "pos")));

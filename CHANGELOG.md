@@ -12,6 +12,22 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Changed (modeller feedback, 2026-09-28) — MAJOR: printed panels/bases are not interchangeable
+
+- **No separate connector panel** (architecture.md D36): the connectors mount straight into the
+  base's patch wall — 3 mm bezel recess, 2 mm flange seat with a teardropped hole, and printed M3
+  threads in the wall itself. The panel part, its rabbet, the 4 plate-retention inserts/screws and
+  the lid's patch-wall lip are gone. This also removes the "screw pillars in the D opening": the
+  plate's rear thread pads overlapped every D hole by ~1 mm. `neutrik-tile` is now a standing
+  section of that wall.
+- **No floor insert** (D35): the case's own 1/4"-20 floor insert boss is off in every variant; the
+  side bolt is the only screw.
+- **No floor-pad island** (D37): the unexplained 40 × 40 mm square in the cradle was left over from
+  the floor EPDM pad that moved to the side-bolt boss long ago.
+- **Lid-boss webs** (D38) are as wide as the boss and merge into it; they used to touch it only
+  along a tangent line.
+- Material: base + lid ≈ 262 g (was ≈ 272 g with the panel).
+
 ### Fixed (mount rail, issue #46)
 
 - **The mount rail could not be assembled**: the case groove was closed at both ends and the

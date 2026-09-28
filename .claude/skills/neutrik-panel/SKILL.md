@@ -1,6 +1,6 @@
 ---
 name: neutrik-panel
-description: Place a Neutrik D-series panel cutout with pocket, rear screw bosses, and spacing/depth asserts; use whenever a model needs a connector cutout — always through mcc_panel_cutout(), never by calling the Neutrik provider module directly.
+description: Place a Neutrik D-series connector — straight in the case's patch wall (teardropped seat hole + window, printed M3 threads in the wall, no screw pillars) or in a flat coupon panel — with spacing/depth/web asserts; use whenever a model needs a connector cutout — always through mcc_panel_wall_cut()/mcc_panel_cutout(), never by calling the Neutrik provider module directly.
 ---
 
 # neutrik-panel
@@ -73,35 +73,28 @@ Flange keep-out: reserve the full **26 × 31 mm** flange (`MCC_D_FLANGE`), corne
 (`MCC_D_FLANGE_R`), as flat unobstructed panel around every cutout — this is what the ≥4 mm web
 assert (below) is protecting.
 
-## Panel seat, bosses, and fixing (architecture.md §5)
+## Seat, fixing and printability — connectors straight in the patch wall (architecture.md §5 rev 14, D36)
 
-The connector panel is a **separate 2 mm flat-printed plate in a rabbet** — never a pocket cut
-directly into the shell end wall. Rationale in full in architecture.md §5; the two load-bearing
-consequences for this skill:
+There is **no separate connector panel** (user decision 2026-09-28). The connectors mount straight
+into the base's 8 mm patch wall: a 3 mm bezel recess (`_mcc_patch_wall_recess()`), then 5 mm of
+wall that `mcc_panel_wall_cut()` → `mcc_neutrik_d_wall_cut()` cuts per slot. The base prints
+**standing** (open side up), so everything in the wall is designed for a vertical wall:
 
-- **Seat thickness**: `MCC_PANEL_SEAT_T = 2.0 mm` — the safe common denominator across the whole
-  family (HDMI caps at 2 mm; everything else in this project's part list is treated as ≤2 mm too,
-  since NAUSB-W-B and NBB75DFGB's true panel-thickness rating is an open question in
-  `knowledge/neutrik/d-series-cutout.md:92-93`). Do not thin below 2.0 mm even for etherCON, which
-  officially tolerates up to 4 mm — a uniform seat keeps the panel-plate module parameter-free per
-  connector kind.
-- **Screw fixing (rev 10, 2026-09-09, GitHub issue #30 — supersedes the pre-#30 heat-set-insert
-  boss)**: the Neutrik screw holes (±9.5, ±12.0 mm) sit *inside* the 26×31 flange footprint, so they
-  cannot land on shell material outside the flange. The connector's own two screws thread directly
-  into a **printed M3×0.5 internal thread** in the same local rear pad, via BOSL2
-  `screw_hole(thread=true)` — not into a heat-set insert. Geometry lives in one public module,
-  `mcc_thread_pad()` (`lib/mcc/neutrik.scad`), called both by `mcc_neutrik_d_bosses()` (production)
-  and by `models/coupons/m3-thread-ladder.scad` (the calibration ladder) — never call BOSL2
-  `screw_hole()` directly from `models/**`. Pad OD (`MCC_THREAD_M3_PAD_D = 8.28`) and height
-  (`MCC_THREAD_M3_PAD_H = 7.0`) are pinned equal to the pre-#30 boss's own OD/height, so no shell
-  wall-window geometry moved when this landed. **Self-tapping directly into 2 mm of ASA is still not
-  an approved option** — that remains the reason this is a *pad*, not a thread in the 2 mm plate
-  field itself (~4 turns, rejected). The Neutrik **MFD** M3 fixing plate is the documented
-  alternative if a pad ever proves impractical for a specific connector, but it adds an SKU per
-  connector — don't reach for it as a default.
-  - **Print orientation is the reason this is printable at all**: the panel plate prints flange-face
-    down, so the pad's bore axis is **vertical**, growing straight up off the bed — the single best
-    orientation for a printed internal thread (no bridging, no thread-flank overhang).
+- **Seat thickness**: `MCC_PANEL_SEAT_T = 2.0 mm` — the safe common denominator across the family
+  (HDMI caps at 2 mm, `knowledge/neutrik/d-series-cutout.md:90`). Behind it a slightly larger body
+  window runs through the remaining 3 mm.
+- **Holes are truncated teardrops** pointing up, both capped at the window's `cap_h` so the roof
+  over the opening is ONE flat bridge through the whole wall (≤ `MCC_APERTURE_BRIDGE_MAX`). A seat
+  hole capped lower than the window leaves a 2 mm strip open on both faces — Bambu reads it as a
+  floating cantilever. Everything the teardrop adds lies inside the 26 × 31 flange.
+- **Screw fixing**: the connector's two screws thread into a **printed M3×0.5 thread in the wall
+  itself**, through all 5 mm (9 turns). **No pads/pillars behind the wall** — the old plate's rear
+  pads (⌀8.28 at 15.3 mm from the centre) reached ~1 mm into the ⌀24.3 hole, which the modeller
+  rejected, and standing proud of a vertical wall they would be overhangs. T1-48 asserts ≥
+  `MCC_WALL_THREAD_WEB_MIN` (1.2 mm) of wall between each thread and either opening — the
+  tightest web in the wall. The thread axis is now **horizontal** in the print: verify on the
+  `neutrik-tile` coupon (a standing wall section) before the first case. Never call BOSL2
+  `screw_hole()` directly from `models/**`.
   - **`$fn` policy exception, scoped to the thread bore only** (`architecture.md` §3, rev 10): the
     thread bore is `$fn=32`, not the repo's usual `$fn≥64` minimum — BOSL2 `screw_hole()` accepts no
     `circum` argument, so the usual circumscribe mechanism is unavailable, and the measured cost of
@@ -121,25 +114,23 @@ consequences for this skill:
     interactive case-viewer artifact only (same `MCC_SHOW_GHOST` precedent: default `false`/safe,
     opt in via `-D`). **Never** for a release, coupon, or print export — goldens and CI always use
     the real thread.
-  - **Out of scope, and don't conflate the two**: the panel *plate's own* 4 retention bosses
-    (`_mcc_patch_wall_fixing_bosses()` in `shell.scad`, screwing the plate into the shell's rabbet)
-    are a completely different physical system and are **unchanged** — still M3 heat-set inserts.
-    Issue #30 only converted the connector-to-plate fixing covered by this section.
-- **Print orientation**: the panel plate prints flat, face-down, so its holes are true circles with
-  no bridging — see `print-check` for the full orientation rule.
-- **Aperture roof in the shell**: the rabbet's roof is a ≤45° self-supporting chamfer, never a flat
-  bridge — this is the general shell rule "no unsupported horizontal span over 10 mm anywhere in the
-  shell," not specific to the panel.
+- **Never add material to the connector's side of the seat plane or inside the hole cylinder** —
+  cut the openings *after* anything added nearby (the plate-era bug was pads unioned after the
+  hole was cut).
+- **Bezel recess roof**: chamfered steeper than 45° (rise 1.2 per mm) so the standing wall never
+  overhangs it; at exactly 45° the chamfer ran through the wall's top outer edge and left
+  zero-area slivers (parts > 1 in `build.py check`).
 
-## Dispatcher contract — `mcc_panel_cutout()` is the only entry point
+## Dispatcher contract — `panel.scad` is the only entry point
 
-`panel.scad` owns `mcc_panel_cutout(part, ...)`. `neutrik.scad` is one *provider* behind it, not the
+`panel.scad` owns `mcc_panel_wall_cut(part, ...)` (the case's patch wall, D36) and
+`mcc_panel_cutout(part, ...)` (a flat panel — the `depth-mockup` coupon). `neutrik.scad` is one *provider* behind it, not the
 top-level abstraction — today every dispatchable part is a Neutrik D-series part (plus the
 `DBA-BL-B` blank), so the dispatcher is single-provider in practice. It stays behind `panel.scad`
 rather than being called directly so a second provider (e.g. a future Mini-DIN-8 round-cutout
 module, see the note above) can be added later without touching `models/**`.
 
-**If `models/**` ever calls `mcc_neutrik_*` directly instead of `mcc_panel_cutout()`, that is a
+**If `models/**` ever calls `mcc_neutrik_*` directly instead of the `panel.scad` dispatchers, that is a
 layering deviation** — flag it in review, don't just fix it silently; log it per architecture.md §13.
 
 ## Multi-connector spacing
@@ -165,12 +156,11 @@ numbers below are an engineering recommendation derived from the flange size, al
 | Each flange fits on the panel with ≥4 mm web to the frame | 26×31 mm + margin ≤ available panel area |
 | Panel seat thickness | ≤ `mcc_panel_max_t(part)` |
 | Clear depth behind the cutout | ≥ `mcc_bay_depth(part)` |
-| Connector-fixing thread pad wall (T1-42a, rev 10) | `(pad_d − (major_d + 4·$slop))/2` ≥ `MCC_THREAD_WALL_MIN` (2.0) |
-| Connector-fixing thread engagement (T1-42b, rev 10) | `(pad_h − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH` ≥ `MCC_THREAD_ENGAGE_MIN_TURNS` (3) |
+| Wall web around each connector thread (T1-48, D36) | distance from the thread axis to the seat hole / window outline − (major_d + 4·$slop)/2 ≥ `MCC_WALL_THREAD_WEB_MIN` (1.2) |
+| Teardrop cap bridges (T1-34a) | flat width of both teardrops ≤ `MCC_APERTURE_BRIDGE_MAX` (10) |
+| Connector-fixing thread engagement (T1-42b) | `(wall_t − MCC_THREAD_M3_CHAMFER)/MCC_THREAD_M3_PITCH` ≥ `MCC_THREAD_ENGAGE_MIN_TURNS` (3); 9 turns in the 5 mm wall |
+| Thread pad wall (T1-42a — `mcc_thread_pad()`, the `m3-thread-ladder` coupon only) | `(pad_d − (major_d + 4·$slop))/2` ≥ `MCC_THREAD_WALL_MIN` (2.0) |
 | Connector-fixing residual radial thread engagement vs `$slop` (T1-42c, rev 10 — the one that would have caught a too-large `$slop`) | `0.5·(major_d − minor_d) − 2·$slop` ≥ `MCC_THREAD_ENGAGE_MIN_RADIAL` (0.135) |
-
-The plate's own 4 retention bosses (out of scope for issue #30, see the note above) still follow the
-pre-#30 rule: Heat-set boss OD ≥ `MCC_BOSS_MIN_RATIO` (1.8) × insert OD.
 
 ## Coupons — how the placeholder numbers get replaced
 
@@ -178,9 +168,10 @@ Two of the five Tier-4 physical coupons (architecture.md §9) exist specifically
 numbers, and neither has been printed yet — do not treat any `assumed`-confidence figure in
 `MCC_PANEL_PARTS` as final until its coupon reports back:
 
-- **`neutrik-tile`** (`models/coupons/neutrik-tile.scad`, not yet written) — one D cutout with the
-  2 mm pocket and rear bosses in a 40×45 mm tile. Verifies a real connector actually fits and screws
-  down; this is what calibrates `MCC_HOLE_COMP` for real.
+- **`neutrik-tile`** (`models/coupons/neutrik-tile.scad`) — a 40×45 mm section of the patch wall
+  (5 mm, printed standing on a foot) with one connector cut exactly as in the case (D36). Verifies
+  a real connector fits, seats flush and screws into the horizontal printed threads; this is what
+  calibrates `MCC_HOLE_COMP` for real.
 - **`depth-mockup`** (`models/coupons/depth-mockup.scad`, not yet written) — holds one panel
   connector at a set distance from a mock device port face so the real patch cable can be tried. This
   is the *only* way to replace the `plug_len`/`bend` placeholders in `MCC_PANEL_PARTS` (currently

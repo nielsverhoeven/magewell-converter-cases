@@ -62,11 +62,11 @@ PROCESS_OVERRIDES: dict[str, str] = {
 }
 
 # Print poses. "as-modelled" keeps OpenSCAD's frame; "flip" rotates 180 deg about X (model -Z
-# becomes printer +Z). print-check §3: the panel plate prints face-down (its authored front face is
-# model Z = 0 with the field/bosses toward -Z), shells print open-side-up (the lid is authored in
-# its assembled pose, exterior on top, so it must be flipped to put its open/tongue side up).
+# becomes printer +Z). print-check §3: shells print open-side-up (the lid is authored in its
+# assembled pose, exterior on top, so it must be flipped to put its open/groove side up). There is
+# no separate connector panel any more (D36) — the connectors sit in the base's own patch wall.
 POSES = ("as-modelled", "flip")
-DEFAULT_POSE_BY_PART = {"lid": "flip", "panel": "flip"}
+DEFAULT_POSE_BY_PART = {"lid": "flip"}
 
 
 def pose_matrix(pose: str) -> np.ndarray:

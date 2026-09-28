@@ -13,7 +13,7 @@ Printer: **Bambu Lab X1 Carbon**, 256×256×256 mm, enclosed, 0.4 mm nozzle, ASA
 
 | Coupon | Verifies | Calibrates (file : symbol) |
 |---|---|---|
-| `neutrik-tile.scad` | A real Neutrik D-series connector (NAHDMI-W-B 23.6-class default, NE8FDP-B 24.0-class variant) actually drops into the cutout and screws down onto the rear bosses | `lib/mcc/constants.scad` : `MCC_HOLE_COMP` (cross-checks each `MCC_PANEL_PARTS[<part>].hole_d`) |
+| `neutrik-tile.scad` | A real Neutrik D-series connector (NAHDMI-W-B 23.6-class default, NE8FDP-B 24.0-class variant) drops into a **standing** section of the case's patch wall (D36: teardropped seat hole, no panel plate), seats flush, and its two M3 screws hold in the horizontal printed threads in the wall (≥5 in/out cycles) | `lib/mcc/constants.scad` : `MCC_HOLE_COMP` (cross-checks each `MCC_PANEL_PARTS[<part>].hole_d`) |
 | `depth-mockup.scad` | The real mating patch cable's plug seats with a comfortable bend at the budgeted bay depth | `lib/mcc/constants.scad` : `MCC_PANEL_PARTS[<part>].plug_len` (cross-checks `.bend`) |
 | `tg-ladder.scad` | Which tongue-and-groove per-side clearance slides freely without slop | `lib/mcc/constants.scad` : `MCC_CLR_TG` |
 | `insert-boss.scad` | Which M3 heat-set insert bore diameter seats with firm hand pressure in ASA without splitting the boss | `lib/mcc/constants.scad` : `MCC_INSERT_M3` → `hole_d` entry |
@@ -65,7 +65,7 @@ about the other.
 
 | Coupon | Orientation | Why |
 |---|---|---|
-| `neutrik-tile` | **Flange (front) face down on the bed, rear screw bosses pointing up** — the exported `.stl`/`.3mf` are already in this pose (`// build.py: print_pose = neutrik-tile:flip`; the tile is authored front-face-at-Z=0 like the panel plate, so it needs the same flip). | The Ø23.8/24.2 mm cutout prints as a true circle with no bridging; the flange seat prints against the bed as a smooth, flat surface (print-check §3). |
+| `neutrik-tile` | **Standing on its foot, as modelled** — the wall section stands exactly like the case's patch wall (D36). | It has to test the real print orientation: teardropped hole with one flat roof bridge and horizontal printed M3 threads. A flat-printed tile would pass where the case fails. |
 | `depth-mockup` | **Flat, floor plate down on the bed**, walls rising vertically out of the floor. No supports needed. | A flat-printing U-channel: the floor plate is the bed-contact face, and both the panel wall and the mock-face wall stack directly on top of the floor (and of each other's ribs), so every layer has full support from the layer below. The only overhang is the connector cutout's horizontal hole, which prints with a short self-supporting bridge at its top — expected, not a defect (print-check §8 exception, noted in the coupon's own header comment). |
 | `tg-ladder` | **Flat, base plate down.** | Base is a simple flat plate; tongues/grooves project upward, no bridging. Brim recommended — base footprint is 230×36 mm, the longest single dimension of any coupon here. |
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |

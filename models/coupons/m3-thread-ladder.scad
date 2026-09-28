@@ -12,7 +12,7 @@
 //   NOTE (flagged for architect/user confirmation, not silently resolved): the mandated top rung
 //   (slop=0.08) itself fails T1-42c -- residual radial engagement = 0.2705 - 2*0.08 = 0.1105 mm,
 //   below the 0.135 mm (50% of nominal) production floor by 0.0245 mm. T1-42c is a *production*
-//   policy assert (mcc_neutrik_d_bosses() always enforces it); this coupon's whole purpose is to
+//   policy assert (production callers always enforce it); this coupon's whole purpose is to
 //   physically test rungs on both sides of that floor and read back which one actually strips a
 //   real screw, so this file passes mcc_thread_pad(..., enforce_min_radial=false) for every rung
 //   -- the only call site in the repo allowed to do so. T1-42a (wall) and T1-42b (turns) still

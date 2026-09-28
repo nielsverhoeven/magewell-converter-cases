@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/neutrik.scad
-//   L1. Neutrik D-series cutout, rear seat pocket, screw bosses, flange outline, and rear
-//   keep-out envelope. One *provider* behind lib/mcc/panel.scad's dispatcher, not the top-level
+//   L1. Neutrik D-series cutouts (flat-panel cutout with rear seat pocket; the wall-integrated
+//   cut the cases use, D36), the printed-thread pad, flange outline and rear keep-out envelope. One *provider* behind lib/mcc/panel.scad's dispatcher, not the top-level
 //   panel abstraction (architecture.md:213-219).
 //   `use`d by lib/mcc/mcc.scad and by lib/mcc/panel.scad; never called directly from models/**
 //   (architecture.md:217-219 — calling mcc_neutrik_* from models/** is a layering deviation).
@@ -13,11 +13,11 @@ include <BOSL2/std.scad>
 include <BOSL2/screws.scad>
 include <constants.scad>
 use <util.scad>
+use <layout.scad> // mcc_aperture_window() (L0)
 
 // Z-axis convention used throughout this file: the panel material spans Z in [0, panel_t], with
 // Z=0 the REAR (inside-the-case) face and Z=panel_t the FRONT (outward, connector-flange) face.
-// Rear bosses/pockets are modelled in their own local frame with Z=0 at the rear pocket floor,
-// extending further rearward (negative Z) — see mcc_neutrik_d_bosses().
+// (mcc_neutrik_d_wall_cut() uses its own frame — seat face at Z=0, wall toward -Z; see there.)
 
 // Module: mcc_neutrik_d_cutout()
 // Usage:
@@ -98,16 +98,15 @@ module mcc_neutrik_d_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, pan
 // Description:
 //   One additive pad (ADDITIVE solid, union onto the panel) carrying a printed M3x0.5 internal
 //   thread bore (GitHub issue #30, architecture.md §5 "Connector fixing" bullet 3, rev 10,
-//   2026-09-09). Public so mcc_neutrik_d_bosses() (below, connector fixing) and
-//   models/coupons/m3-thread-ladder.scad (the calibration ladder) share ONE geometry source — a
+//   2026-09-09). Public so models/coupons/m3-thread-ladder.scad (the calibration ladder) share ONE geometry source — a
 //   coupon that hand-rebuilds this shape cannot calibrate the constant it exists to calibrate
 //   (architect verdict B5, docs/plans/2026-09-09-printed-m3-threads.md §9). Do not call BOSL2
 //   `screw_hole()` directly from models/** — always through this module.
 //   Local Z convention matches the pre-#30 boss: Z=0 is the pad's seat face (the screw ENTERS
 //   here, from the panel side), the pad extends to Z=-pad_h (the rear tip). The bore is a genuine
 //   THROUGH-hole, open at both Z=0 and Z=-pad_h — required so this union does not hit the same
-//   Manifold "blind-bore-flush-against-a-face" defect documented at length in shell.scad's
-//   _mcc_patch_wall_fixing_bosses() (deviation D10); verified clean for this exact pad-on-plate
+//   Manifold "blind-bore-flush-against-a-face" defect (deviation D10, architecture.md §13);
+//   verified clean for this exact pad-on-plate
 //   shape by an isolated repro during this ticket's research pass (plan §1).
 //   When MCC_THREAD_FAST is true, the bore is a plain MCC_M3_CLR_D clearance cylinder instead of a
 //   real thread — fast dev-iteration renders / the interactive case-viewer artifact only
@@ -130,7 +129,7 @@ module mcc_neutrik_d_cutout(part, mirror = false, seat_t = MCC_PANEL_SEAT_T, pan
 //           without having to re-`include` constants.scad with a different -D value.
 //   enforce_min_radial = when false, SKIP the T1-42c residual-radial-engagement assert only
 //           (T1-42a wall and T1-42b turns still always assert). Default: true (every production
-//           call site — mcc_neutrik_d_bosses() — keeps the full contract). Exists ONLY for
+//           call site keeps the full contract). Exists ONLY for
 //           models/coupons/m3-thread-ladder.scad: architecture.md rev 10 B1 mandates the ladder
 //           sweep $slop across EXACTLY [0.02, 0.035, 0.05, 0.065, 0.08], and rev 10 also mandates
 //           T1-42c as unconditional — but the top rung (0.08) fails T1-42c by construction
@@ -186,32 +185,103 @@ module mcc_thread_pad(pad_d = MCC_THREAD_M3_PAD_D, pad_h = MCC_THREAD_M3_PAD_H, 
     }
 }
 
-// Module: mcc_neutrik_d_bosses()
-// Usage:
-//   mcc_neutrik_d_bosses(part, [mirror=], [pad_h=], [pad_d=]);
+// Function: _mcc_seg_dist()
 // Description:
-//   Two rear pads (ADDITIVE solid, union onto the panel) at the two screw positions, each carrying
-//   a printed M3 internal thread the connector's own machine screw drives straight into (GitHub
-//   issue #30, 2026-09-09 — replaces the heat-set-insert version of this module, T1-35/deviation
-//   D10's fix). The plate's own 4 retention bosses in shell.scad are UNCHANGED (still heat-set
-//   inserts) — this module only covers the connector-to-plate fixing
-//   (docs/plans/2026-09-09-printed-m3-threads.md §0). Geometry lives in mcc_thread_pad() (above);
-//   this module only places two of them at the standard diagonal.
-// Arguments:
-//   part   = panel part number (kept only to keep the call site symmetric with the cutout call;
-//            the pad geometry itself does not vary per connector).
-//   mirror = mirror the two screw-hole positions left-right, matching mcc_neutrik_d_cutout()'s own
-//            `mirror` argument. Default: false.
-//   pad_h  = total rearward pad length from the seat, mm. Default: MCC_THREAD_M3_PAD_H (7.0).
-//   pad_d  = pad outer diameter override, mm. Default: MCC_THREAD_M3_PAD_D (8.28).
-module mcc_neutrik_d_bosses(part, mirror = false, pad_h = MCC_THREAD_M3_PAD_H, pad_d = MCC_THREAD_M3_PAD_D) {
-    mirror_x = mirror ? -1 : 1;
-    screw_x  = mirror_x * MCC_D_SCREW_PITCH[0] / 2;
-    screw_y  = MCC_D_SCREW_PITCH[1] / 2;
+//   Private, pure. Distance from 2-D point `p` to the segment [a, b].
+function _mcc_seg_dist(p, a, b) =
+    let(ab = b - a, t = max(0, min(1, ((p - a) * ab) / max(ab * ab, 1e-12))))
+    norm(p - (a + t * ab));
+// Distance from 2-D point `p` to the boundary of closed polygon `path`.
+function _mcc_path_dist(p, path) =
+    min([for (i = [0:1:len(path) - 1]) _mcc_seg_dist(p, path[i], path[(i + 1) % len(path)])]);
 
-    for (pos = [[-screw_x, screw_y], [screw_x, -screw_y]])
-        translate([pos[0], pos[1], 0])
-            mcc_thread_pad(pad_d = pad_d, pad_h = pad_h);
+// Module: mcc_neutrik_d_wall_cut()
+// Usage:
+//   mcc_neutrik_d_wall_cut(part, [wall_t=], [seat_t=], [fast=]);
+// Description:
+//   SUBTRACTIVE. Everything a Neutrik D-series connector needs from a wall it is mounted in
+//   DIRECTLY — no separate panel plate (architecture.md §5 rev 14, D36, user decision 2026-09-28:
+//   "the connectors do not need a separate panel; they can go straight into the case"):
+//     * the flange-seat hole through the first `seat_t` of wall (the connector's own
+//       mcc_cutout_d(part)), and the body window behind it through the rest of the wall
+//       (mcc_aperture_window(part), a little larger) — both TRUNCATED TEARDROPS pointing local +Y
+//       (= up in the print), cut flat at the same height so the roof is one bridge: the wall prints standing, so a plain round hole would roof over with a
+//       24 mm arch. Everything the teardrop adds lies above the circle and inside the 26 x 31 mm
+//       flange, so a fitted connector hides it;
+//     * two printed M3x0.5 threads on the standard diagonal (front view A(-9.5, +12) /
+//       B(+9.5, -12), knowledge/neutrik/d-series-cutout.md:47,62-63) straight through the whole
+//       wall — the screw bites into the wall itself. There are NO screw pillars: the old plate's
+//       two rear thread pads stood 7 mm proud, overlapped the seat hole by ~1 mm (the modeller's
+//       "screw pillars sit in the D opening") and would have been horizontal overhangs here.
+//   Local frame: X/Y is the wall face as seen FROM OUTSIDE (Y = up), Z = outward normal. The seat
+//   (front) face is Z = 0 and the wall runs to Z = -wall_t (inside face). The cut reaches MCC_EPS
+//   past both faces.
+//   Asserts: seat_t within the part's max panel thickness; the teardrop caps' flat bridges within
+//   MCC_APERTURE_BRIDGE_MAX (T1-34a); >= MCC_THREAD_ENGAGE_MIN_TURNS thread turns; and at least
+//   MCC_WALL_THREAD_WEB_MIN of wall between each thread's slopped major diameter and either
+//   opening (T1-48).
+//   $fn: the thread keeps mcc_thread_pad()'s $fn=32 exception (architecture.md §3 rev 10); the
+//   teardrops are $fn=96 like the old cutout.
+// Arguments:
+//   part   = panel part number, key into MCC_PANEL_PARTS (constants.scad).
+//   wall_t = total wall thickness at the connector, mm. Default: MCC_PANEL_SEAT_T + MCC_WALL.
+//   seat_t = flange-seat thickness (the part of the wall the flange clamps), mm.
+//            Default: MCC_PANEL_SEAT_T.
+//   fast   = plain clearance bores instead of threads (dev renders only). Default: MCC_THREAD_FAST.
+module mcc_neutrik_d_wall_cut(part, wall_t = MCC_PANEL_SEAT_T + MCC_WALL, seat_t = MCC_PANEL_SEAT_T, fast = MCC_THREAD_FAST) {
+    is_blank = mcc_panel_hole_d(part) == 0;
+    d_seat = mcc_cutout_d(part);
+    aw = mcc_aperture_window(part);
+    d_win = aw[0]; cap_win = aw[1];
+    // Both teardrops share the window's cap height, so the roof over the opening is ONE flat bridge
+    // through the whole wall. With the seat hole capped lower than the window behind it, its roof
+    // was a separate 2 mm-deep strip open on both faces ("floating cantilever" on the tile coupon).
+    cap_seat = cap_win;
+    sx = MCC_D_SCREW_PITCH[0] / 2; sy = MCC_D_SCREW_PITCH[1] / 2;
+    screws = [[-sx, sy], [sx, -sy]]; // front view (knowledge/neutrik/d-series-cutout.md:62-63)
+    thread_r = (MCC_THREAD_M3_MAJOR_D + 4 * MCC_THREAD_M3_SLOP) / 2; // BOSL2 grows 2*slop per side
+
+    assert(seat_t <= mcc_panel_max_t(part) + MCC_EPS,
+        str("mcc: seat_t=", seat_t, " exceeds max panel thickness ", mcc_panel_max_t(part), " for \"", part, "\""));
+    assert(wall_t > seat_t, str("mcc: wall_t=", wall_t, " must exceed seat_t=", seat_t));
+    turns = (wall_t - MCC_THREAD_M3_CHAMFER) / MCC_THREAD_M3_PITCH;
+    assert(turns >= MCC_THREAD_ENGAGE_MIN_TURNS,
+        str("mcc: T1-42b wall thread engagement=", turns, " turns below ", MCC_THREAD_ENGAGE_MIN_TURNS));
+    if (!is_blank) {
+        seat_path = teardrop2d(d = d_seat, ang = 45, cap_h = cap_seat, $fn = 96);
+        win_path = teardrop2d(d = d_win, ang = 45, cap_h = cap_win, $fn = 96);
+        for (w = [[d_seat, cap_seat], [d_win, cap_win]]) {
+            w_flat = 2 * (w[0] / 2 * sqrt(2) - w[1]);
+            assert(w_flat <= MCC_APERTURE_BRIDGE_MAX + MCC_EPS,
+                str("mcc: T1-34a teardrop flat ", w_flat, " exceeds MCC_APERTURE_BRIDGE_MAX for \"", part, "\""));
+        }
+        for (sc = screws) {
+            web = min(_mcc_path_dist(sc, seat_path), _mcc_path_dist(sc, win_path)) - thread_r;
+            assert(web >= MCC_WALL_THREAD_WEB_MIN - MCC_EPS,
+                str("mcc: T1-48 wall web between the M3 thread at ", sc, " and the opening is ", web,
+                    " mm, below MCC_WALL_THREAD_WEB_MIN=", MCC_WALL_THREAD_WEB_MIN, " for \"", part, "\""));
+        }
+    }
+
+    union() {
+        if (!is_blank) {
+            translate([0, 0, -seat_t - MCC_EPS])
+                linear_extrude(height = seat_t + 2 * MCC_EPS)
+                    teardrop2d(d = d_seat, ang = 45, cap_h = cap_seat, $fn = 96);
+            translate([0, 0, -wall_t - MCC_EPS])
+                linear_extrude(height = wall_t - seat_t + 2 * MCC_EPS)
+                    teardrop2d(d = d_win, ang = 45, cap_h = cap_win, $fn = 96);
+        }
+        for (sc = screws)
+            translate([sc[0], sc[1], -wall_t - MCC_EPS])
+                if (fast)
+                    cyl(h = wall_t + 2 * MCC_EPS, d = MCC_M3_CLR_D, circum = true, anchor = BOTTOM, $fn = 64);
+                else
+                    // anchor=BOTTOM at the inside face; bevel2 = the lead-in at the seat (entry) face,
+                    // same convention as mcc_thread_pad() (architect verdict B3).
+                    screw_hole(str("M3,", wall_t + 2 * MCC_EPS), thread = true, tolerance = "6H",
+                        $slop = MCC_THREAD_M3_SLOP, bevel2 = true, anchor = BOTTOM, $fn = 32);
+    }
 }
 
 // Module: mcc_neutrik_d_flange_outline()

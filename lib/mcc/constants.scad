@@ -311,25 +311,22 @@ MCC_APERTURE_BRIDGE_MAX = 10.0; // max unsupported horizontal span anywhere in t
                           // aperture, mm — the one place architecture.md §5's "no unsupported
                           // horizontal span over 10 mm anywhere in the shell" becomes a number.
                           // Used by T1-34a (window apex flat-bridge width w_flat).
-MCC_APERTURE_SELF_SUPPORT_MAX_D = 10.0; // assumed -- round-hole diameter below which a
-                          // horizontally-printed hole needs NO teardrop of its own (same 10 mm span
-                          // rule, read as a diameter). Used by T1-34a to justify the plain-circle
-                          // boss reliefs (d_rel = 8.88 < 10.0).
 MCC_APERTURE_CAP_RISE = 0.4; // assumed -- how far the truncated-teardrop cap sits above the body
                           // circle's own top, mm: cap_h = d_win/2 + MCC_APERTURE_CAP_RISE. Chosen as
                           // the smallest rise that still hides the cap behind the plate
                           // (cap_h > mcc_cutout_d(part)/2, margin 0.7 mm) while keeping w_flat under
                           // MCC_APERTURE_BRIDGE_MAX. Calibrate with the neutrik-tile coupon.
-MCC_APERTURE_RELIEF_INTRUSION_MAX = 1.5; // assumed -- maximum radial intrusion of a boss relief
-                          // inside the plate's own cutout silhouette, mm -- the numeric form of "the
-                          // D slots must read as exactly round" (the user's rejection, 2026-09-08).
-                          // Actual worst case today 1.235 mm (NE8FDP-B). T1-34b.
+MCC_WALL_THREAD_WEB_MIN = 1.2; // assumed -- minimum wall between a connector's printed M3 thread
+                          // (slopped major diameter) and the seat hole / body window beside it, mm
+                          // (D36, T1-48): three 0.4 mm perimeters. The screws sit 15.3 mm from the
+                          // connector centre on a 24 mm hole, so this is the tightest web in the
+                          // patch wall; only a sliver of each thread's circumference is this thin.
 MCC_APERTURE_LIP_WEB_MIN = 2.0; // minimum lip material between any part of a window and the plate's
                           // own edge, mm. knowledge/design/fdm-rugged-enclosure-guidelines.md:127.
                           // T1-34c.
 MCC_INSERT_BORE_EXTRA = 0.5; // assumed -- extra bore depth past a heat-set insert's own length so
                           // the insert seats fully, mm. Replaces the bare "+ 1" literal in
-                          // mcc_neutrik_d_bosses() (deviation D10 / T1-35).
+                          // the old connector bosses (deviation D10 / T1-35).
 
 // -----------------------------------------------------------------------------------------
 // Section: Printed M3 threads (connector fixing, GitHub issue #30) -- the connector's own two
@@ -375,7 +372,7 @@ MCC_THREAD_M3_PAD_D = 8.28; // connector-fixing pad outer diameter, mm. Pinned E
                              // plate-fixing bosses) cannot silently move the wall aperture via
                              // this file.
 MCC_THREAD_M3_PAD_H = 7.0;  // connector-fixing pad depth, mm. Numerically unchanged from the old
-                             // mcc_neutrik_d_bosses() boss_h default (architecture.md §5 "~7 mm
+                             // connector-boss boss_h default (architecture.md §5 "~7 mm
                              // total"). Minus MCC_THREAD_M3_CHAMFER, gives 6.5 mm / 13 full turns
                              // of engagement at MCC_THREAD_M3_PITCH -- above both the ticket's
                              // >=3-turn floor (T1-42b) and the sourced 2.0-2.5x-diameter
@@ -412,12 +409,6 @@ MCC_THREAD_FAST = false; // when true (-D MCC_THREAD_FAST=true only -- NEVER the
                           // stray fast-path render fails the golden. NEVER set true for a
                           // release/coupon/print export.
 
-MCC_PLATE_RIM_W = 6.0; // the panel plate's rim (border) width, mm. Named once so
-                          // mcc_panel_plate()'s rim_w default, _mcc_patch_wall_aperture()'s local
-                          // rim_w and the literal passed to _mcc_patch_wall_fixing_bosses() cannot
-                          // drift apart across the two L2 files that used to hardcode "6"
-                          // independently -- the exact drift hazard that produced deviation D6.
-
 MCC_T_PATCH = MCC_PANEL_BEZEL_T + MCC_PANEL_SEAT_T + MCC_WALL;
                           // total patch-wall Y stack at the panel band, mm. DERIVED —
                           // layout-patch-wall.md §2.1 "MCC_T_PATCH total = 8.0" =
@@ -445,6 +436,9 @@ MCC_GAP_DEV = 2.0;         // clearance between the deepest plug envelope and th
 MCC_LID_SPAN_MAX = 180.0;  // lid span threshold above which 6 (not 4) captive thumbscrews are used,
                             // mm. Architect-derived, user-reviewed, ACCEPTED 2026-09-08 (D-04) —
                             // layout-patch-wall.md §6 / §10.
+MCC_WEB_BORE_KEEP = 0.8; // how far a lid-boss web reaches INTO its boss (radially, from the boss's
+                         // outer radius), mm (D38). Only has to be a real overlap and stay well
+                         // outside the insert bore; not a physical dimension of any part.
 MCC_FASTENER_INSET = 10.0; // lid-fastener ring inset from the outer faces ("e"), mm. assumed —
                             // layout-patch-wall.md §6.
 MCC_LID_FASTENER_CLR_MIN =
@@ -557,10 +551,8 @@ MCC_CRADLE_RIB_T = 3.0;    // locating-rib thickness, mm. layout-patch-wall.md �
                             // "Locating ribs | 3.0 mm thick x 9.0 mm tall".
 MCC_CRADLE_RIB_H = 9.0;    // locating-rib height, mm. Same table; <= 3x thickness rule
                             // (fdm-rugged-enclosure-guidelines.md:65-70) satisfied (9 <= 9).
-MCC_CRADLE_FLOOR_PAD_T = 2.0; // compliant EPDM floor-pad thickness under the device, mm.
-                               // fasteners-and-hardware.md:186, layout-patch-wall.md §7.
-MCC_CRADLE_FLOOR_PAD_MIN = 40; // minimum compliant floor-pad footprint (square), mm.
-                                // layout-patch-wall.md §7 "footprint >= 40x40".
+// (MCC_CRADLE_FLOOR_PAD_T / _MIN retired with the floor-pad island, D37 — the compliant pad sits
+// on the side-bolt boss face, architecture.md §11 R8.)
 
 // Ribbed cradle deck lattice (issue #29, rev 9 D-17 -- replaces the solid deck slab). The ladder
 // ribs reuse MCC_CRADLE_RIB_T above, NOT a derived per-family thickness -- architecture.md §13 D22

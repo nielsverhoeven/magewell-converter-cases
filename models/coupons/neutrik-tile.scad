@@ -1,16 +1,15 @@
 //////////////////////////////////////////////////////////////////////
 // models/coupons/neutrik-tile.scad
-//   Tier-4 physical coupon (architecture.md §9). A 40x45x3 mm tile with one Neutrik D-series
-//   panel cutout (2 mm seat pocket) and its rear screw bosses, to verify a real connector fits
-//   and screws down before any full case is printed.
+//   Tier-4 physical coupon (architecture.md §9). A 40 x 45 mm section of the patch wall, printed
+//   STANDING exactly like the case wall, with one Neutrik D-series connector cut straight into it
+//   (D36: no panel plate — teardropped seat hole + body window and two printed M3 threads through
+//   the MCC_PANEL_SEAT_T + MCC_WALL of wall behind the bezel recess), on a foot so it stands on the
+//   bed. Verifies a real connector fits, seats flush and screws down, and that the horizontal
+//   printed M3 threads hold, before any full case is printed.
 //
 // Render:
 //   openscad --backend=Manifold -o out/neutrik-tile.stl models/coupons/neutrik-tile.scad
 //   openscad --backend=Manifold -D 'connector="NE8FDP-B"' -o out/neutrik-tile-ne8fdp.stl models/coupons/neutrik-tile.scad
-// build.py: print_pose = neutrik-tile:flip
-//   (2026-09-27) the tile is authored like the panel plate — front/flange face at Z=0, rear
-//   bosses toward -Z — so it must be flipped to print flange-down, bosses up (print-check §3).
-//   Exported unflipped it printed the whole plate on top of its bosses (Bambu "floating cantilever").
 //////////////////////////////////////////////////////////////////////
 
 $fa = 1; $fs = 0.4;
@@ -27,36 +26,36 @@ part = "neutrik-tile";
 // hole.
 connector = "NAHDMI-W-B";
 
-TILE_SIZE = [40, 45]; // brief's explicit instruction: "40 x 45 x 3 mm tile".
-TILE_T    = 3.0;      // brief's explicit instruction; matches MCC_WALL.
-SEAT_T    = 2.0;      // brief's explicit instruction: "(2 mm seat pocket)"; matches MCC_PANEL_SEAT_T.
-LABEL_SIZE = 3.2;      // engraved label text height, mm. assumed.
+TILE_SIZE = [40, 45];                        // wall section W x H, mm (was the flat tile's footprint).
+WALL_T    = MCC_T_PATCH - MCC_PANEL_BEZEL_T; // the case's wall behind the recess: seat + lip (5 mm).
+FOOT      = [40, 20, 3];                     // foot behind the wall so the coupon stands, mm. assumed.
+LABEL_SIZE = 3.2;                            // engraved label text height, mm. assumed.
 
 echo(str(
-    "neutrik-tile: connector=\"", connector, "\" size=", TILE_SIZE, " t=", TILE_T, " seat_t=", SEAT_T,
+    "neutrik-tile: connector=\"", connector, "\" wall=", TILE_SIZE, " t=", WALL_T,
     " cutout_d=", mcc_cutout_d(connector), " bay_depth=", mcc_bay_depth(connector)
 ));
 
-// Tile spans Z=[0, TILE_T]; front (outward, flange) face at Z=TILE_T, matching
-// lib/mcc/neutrik.scad's own convention. mcc_panel_cutout() cuts a 2 mm seat pocket from the
-// rear since TILE_T (3) > SEAT_T (2).
+// Frame: the seat (outer) face is the plane Y = 0, facing -Y; the wall runs to Y = WALL_T and the
+// foot extends behind it (+Y). Connector centre at mid-height. mcc_panel_wall_cut()'s frame (wall
+// seen from outside, local Y up, local Z outward) maps onto it with rotate([90, 0, 0]):
+// local X -> world X, local Y -> world Z, local Z -> world -Y.
 difference() {
-    linear_extrude(height = TILE_T)
-        square(TILE_SIZE, center = true);
+    union() {
+        translate([-TILE_SIZE[0] / 2, 0, 0])
+            cube([TILE_SIZE[0], WALL_T, TILE_SIZE[1]]);
+        translate([-FOOT[0] / 2, WALL_T - MCC_EPS, 0])
+            cube([FOOT[0], FOOT[1], FOOT[2]]);
+    }
 
-    mcc_panel_cutout(connector, seat_t = SEAT_T, panel_t = TILE_T);
+    translate([0, 0, TILE_SIZE[1] / 2])
+        rotate([90, 0, 0])
+            mcc_panel_wall_cut(connector, wall_t = WALL_T);
 
-    // Engraved (recessed) part-name label near one edge.
-    translate([0, -TILE_SIZE[1] / 2 + 5, TILE_T - 0.6])
+    // Engraved (recessed) part-name label on the foot.
+    translate([0, WALL_T + FOOT[1] / 2, FOOT[2] - 0.6])
         linear_extrude(height = 0.6 + MCC_EPS)
             text(connector, size = LABEL_SIZE, halign = "center", valign = "center", font = "Liberation Sans:style=Bold");
 }
-
-// Rear screw bosses: local Z=0 of mcc_neutrik_d_bosses() is the rear pocket floor, which sits at
-// global Z = TILE_T - SEAT_T here (see lib/mcc/panel.scad's mcc_panel_plate() for the same math).
-// No panel.scad boss dispatcher exists (only a cutout dispatcher, architecture.md §5) — calling
-// the neutrik.scad boss module directly here mirrors what mcc_panel_plate() itself does.
-translate([0, 0, TILE_T - SEAT_T])
-    mcc_neutrik_d_bosses(connector);
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
