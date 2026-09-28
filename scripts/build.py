@@ -662,6 +662,128 @@ def find_bambu_studio() -> Path | None:
     return Path(which) if which else None
 
 
+# -----------------------------------------------------------------------------------------
+# ci  (the PR gate, sharded + pipelined — .github/workflows/render.yml)
+# -----------------------------------------------------------------------------------------
+
+def _unit_cost(target: Target, part: str) -> float:
+    """Relative CI cost of one part (render + check + slice + STEP), for balancing shards. Rough
+    wall-clock weights measured on ubuntu-latest (2026-09-28): case bases dominate, thread-bearing
+    panels are next, coupons are cheap."""
+
+    if target.kind == "model":
+        return {"base": 10.0, "base_fan": 10.0, "panel": 6.0, "lid": 4.0}.get(part, 6.0)
+    if target.kind == "bracket":
+        return 5.0
+    return 2.0
+
+
+def shard_units(n_shards: int, index: int) -> list[tuple[Target, str]]:
+    """Deterministic longest-processing-time split of every (target, part) over n_shards;
+    returns shard `index` (1-based), heaviest units first so they start earliest."""
+
+    units = [(t, p) for t in discover_all() for p in t.parts]
+    units.sort(key=lambda u: (-_unit_cost(*u), u[0].name, u[1]))
+    loads = [0.0] * n_shards
+    shards: list[list[tuple[Target, str]]] = [[] for _ in range(n_shards)]
+    for u in units:
+        i = loads.index(min(loads))
+        shards[i].append(u)
+        loads[i] += _unit_cost(*u)
+    return shards[index - 1]
+
+
+def golden_check_part(target: Target, part: str) -> list[str]:
+    """[] when the part's render summary matches its committed golden, else the mismatches."""
+
+    summary_path = target.export_dir / f"{part}.summary.json"
+    gpath = golden_path(target.name, part)
+    if not summary_path.exists():
+        return [f"no summary at {summary_path.relative_to(REPO_ROOT)}"]
+    if not gpath.exists():
+        return [f"missing golden {gpath.relative_to(REPO_ROOT)}"]
+    current = _golden_payload(json.loads(summary_path.read_text(encoding="utf-8")))
+    return _compare_golden(current, json.loads(gpath.read_text(encoding="utf-8")))
+
+
+def cmd_ci(args: argparse.Namespace) -> int:
+    """One CI shard: for every (target, part) in the shard, as its own pipeline — render (OpenSCAD)
+    -> check (mesh + printability) -> golden -> slicer gate (Bambu Studio) -> STEP — with
+    `--jobs` parts in flight at once, so one part's slicing/STEP overlaps the next part's OpenSCAD
+    render. Every gate still runs on every part; only the scheduling changed."""
+
+    from concurrent.futures import ThreadPoolExecutor
+
+    exe = find_openscad()
+    bambu = find_bambu_studio()
+    if bambu is None and not args.no_slice:
+        print("error: Bambu Studio not found (set MCC_BAMBU_STUDIO) — the CI slicer gate cannot be skipped")
+        return 1
+    step_backend, step_detail = mesh_to_step.backend_available()
+    if step_backend is None and not args.no_step:
+        print(f"error: no STEP backend ({step_detail})")
+        return 1
+    n, k = (int(x) for x in args.shard.split("/"))
+    units = shard_units(n, k)
+    print(f"shard {k}/{n}: {len(units)} parts, {args.jobs} in flight: " + ", ".join(f"{t.name}:{p}" for t, p in units), flush=True)
+
+    def _pipeline(unit: tuple[Target, str]) -> tuple[str, list[str], dict]:
+        target, part = unit
+        label = f"{target.name}:{part}"
+        errors: list[str] = []
+        stats: dict = {}
+        r = render_part(target, part, "both", {}, args.release, exe)
+        if not r.ok:
+            return label, [f"render: {r.error}"], stats
+        c = check_mesh(target.export_dir / f"{part}.stl")
+        if not c.ok:
+            errors.append("check: " + (c.error or
+                f"watertight={c.watertight} winding={c.winding_consistent} parts={c.n_parts} "
+                f"bbox_ok={c.bbox_ok} islands={len(c.printability.islands) if c.printability else '?'} "
+                f"cantilevers={len(c.printability.cantilevers) if c.printability else '?'}"))
+        errors += [f"golden: {m}" for m in golden_check_part(target, part)]
+        if not args.no_slice:
+            ok, warnings = slicer_check_project(bambu, target.export_dir / f"{part}.3mf", stats)
+            if not ok or warnings:
+                errors += [f"slicer: {w}" for w in (warnings or ["slicing failed"])]
+        if not args.no_step:
+            proc = subprocess.run(
+                [sys.executable, str(Path(__file__).with_name("mesh_to_step.py")),
+                 str(target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"),
+                 str(target.export_dir / f"{part}.step"), "--product", f"{target.name}/{part}"],
+                capture_output=True, text=True, check=False)
+            if proc.returncode != 0:
+                errors.append("step: " + ((proc.stderr or proc.stdout).strip().splitlines() or ["failed"])[-1])
+        print(f"   done {label}: {'ok' if not errors else 'FAIL'}", flush=True)
+        return label, errors, stats
+
+    with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
+        rows = list(pool.map(_pipeline, units))
+
+    print(f"\nci shard {k}/{n} results:")
+    width = max((len(r[0]) for r in rows), default=10)
+    for label, errors, stats in rows:
+        extra = f"  {stats['grams']:7.1f} g  {stats['seconds'] / 3600:5.2f} h" if "grams" in stats else ""
+        print(f"  [{'PASS' if not errors else 'FAIL'}] {label.ljust(width)}{extra}")
+        for e in errors:
+            print(f"           {e}")
+    n_ok = sum(not r[1] for r in rows)
+    print(f"  {n_ok}/{len(rows)} passed")
+
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        lines = [f"## Shard {k}/{n} — render · check · golden · Bambu Studio slicer · STEP", "",
+                 f"**{n_ok}/{len(rows)} parts pass every gate**", "",
+                 "| Part | Result | Filament | Print time | Problems |", "|---|---|---|---|---|"]
+        for label, errors, stats in rows:
+            g = f"{stats['grams']:.1f} g" if "grams" in stats else ""
+            h = f"{stats['seconds'] / 3600:.2f} h" if "seconds" in stats else ""
+            lines.append(f"| `{label}` | {'✅' if not errors else '❌'} | {g} | {h} | {'<br>'.join(errors)} |")
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    return 0 if n_ok == len(rows) else 1
+
+
 SLICE_TIMEOUT_S = 900   # one Bambu Studio CLI slice; the CLI occasionally hangs — retried once
 
 
@@ -1349,6 +1471,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_review = sub.add_parser("review", help="write exports/review.3mf: every rendered design in one Bambu Studio project")
     p_review.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
     p_review.set_defaults(func=cmd_review)
+
+    p_ci = sub.add_parser("ci", help="one CI shard: render -> check -> golden -> Bambu slicer gate -> STEP, pipelined per part")
+    p_ci.add_argument("--shard", default="1/1", help="k/n — run the k-th of n cost-balanced shards (default 1/1 = everything)")
+    p_ci.add_argument("--jobs", type=int, default=3, help="parts in flight at once (default 3)")
+    p_ci.add_argument("--release", action="store_true", help="fail if OpenSCAD emits 'WARNING: unmeasured'")
+    p_ci.add_argument("--no-slice", action="store_true", help="skip the Bambu Studio slicer gate (local debugging only)")
+    p_ci.add_argument("--no-step", action="store_true", help="skip STEP conversion (local debugging only)")
+    p_ci.set_defaults(func=cmd_ci)
 
     p_slice = sub.add_parser("slicer-check", help="slice every rendered <part>.3mf with Bambu Studio's CLI; fail on any slicer warning")
     p_slice.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
