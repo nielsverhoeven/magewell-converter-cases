@@ -221,10 +221,12 @@ number under a stale `confidence: "drawing"` still reads as unverified.
 
 ### rail-latch
 
-> **Latch disabled for now** (2026-09-27, `MCC_RAIL_LATCH_ENABLED = false`, architecture.md D28):
-> the spring-lip arm as modelled printed in mid-air and did not clear the groove, so it is left off
-> the male rail until it is redesigned. Test the slide fit and the end-stop; skip the click,
-> pull-test and thumb-release steps below.
+> **Latch redesigned** (2026-09-28, architecture.md D34): an in-plane snap arm cut from the male
+> rail's flank (it stands on the bed through a window in the base) and a notch in the groove flank.
+> The female groove is closed at −X (the end stop) and open at +X, like the case: slide the male in
+> from +X until it clicks, then pull-test. There is no thumb release any more — the latch lets go
+> when pulled hard enough; tune `MCC_RAIL_LATCH_RAMP_OUT` / `MCC_RAIL_LATCH_ENGAGE` until the pull-off
+> force meets the ≥ 30 N target. Ignore the thumb-release steps below.
 
 - Hardware needed: a luggage/fish scale (or similar) and a temporary loop (string/cable tie) through
   the male half's end-stop flange, for the pull test.

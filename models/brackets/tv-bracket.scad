@@ -180,15 +180,23 @@ module _mcc_tv_bracket_ribs() {
 //   The exported part: plate + VESA through-holes + stiffening ribs + the male mount rail. See
 //   this file's own header comment for the frame convention.
 module mcc_tv_bracket_plate() {
+    // The rail is unioned AFTER the plate's own cuts: its latch arm's leg fills the window
+    // mcc_rail_male_window() cuts through the plate (issue #46, D34) and must not be cut away with it.
+    // rotate([0,0,180]) -- see this file's header comment "Derivation of the rotate([0,0,180])" for
+    // why; mcc_rail_male()'s own local Z=0 (pedestal foot) sits on this plate's top face (Z=0).
+    union() {
+        _mcc_tv_bracket_plate_body();
+        rotate([0, 0, 180]) mcc_rail_male(plate_t = MCC_BRACKET_PLATE_T);
+    }
+}
+
+module _mcc_tv_bracket_plate_body() {
     difference() {
         union() {
             cuboid([PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T], anchor = TOP);
             if (RIBS) _mcc_tv_bracket_ribs();
-            // Rail: rotate([0,0,180]) -- see this file's header comment "Derivation of the
-            // rotate([0,0,180])" for why. mcc_rail_male()'s own local Z=0 (pedestal foot) already
-            // sits exactly on this plate's own rail face (local Z=0) with no extra translate.
-            rotate([0, 0, 180]) mcc_rail_male();
         }
+        rotate([0, 0, 180]) mcc_rail_male_window(plate_t = MCC_BRACKET_PLATE_T);
         // Through-holes span the plate's own Z range [-MCC_BRACKET_PLATE_T, 0] with an MCC_EPS
         // overlap on both faces (non-manifold-avoidance, same pattern used throughout lib/mcc) --
         // anchored TOP at local Z=+MCC_EPS so the cylinder's top face pokes MCC_EPS above the

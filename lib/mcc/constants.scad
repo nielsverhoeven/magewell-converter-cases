@@ -677,60 +677,56 @@ MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-loca
 // 19.31) so the disc/rect clearance in §1.4 (2.69 mm) comfortably exceeds MCC_FLOOR_FEATURE_EDGE_MIN.
 MCC_RAIL_Y = -20.0;
 
-// Spring-lip latch on the MALE rail: DISABLED (user decision 2026-09-27, architecture.md §13 D28).
-// As modelled, _mcc_rail_latch_tab() starts 1 mm above the bracket plate and hangs only from the
-// dovetail's top edge (the 60 deg flank touches the arm nowhere else), so it prints entirely in
-// mid-air (Bambu Studio "floating regions" on the rail-latch coupon and the tv-bracket), and above
-// the groove mouth it sits outside the flank, where the case floor is. It returns via a redesign
-// (fixed root, free tip, printable without support, clear of the groove) — flip this back only
-// together with that redesign. The female latch pocket in the case floor stays cut (inert without
-// the arm) so re-enabling needs no case reprint and no case golden moves.
-MCC_RAIL_LATCH_ENABLED = false;
-MCC_RAIL_LATCH_ARM_L = 14.0;  // spring-lip latch cantilever arm length, mm. assumed — matches the
-                               // T_L=14 flexure-feature precedent (models/coupons/tg-ladder.scad) and
-                               // clears the L/t >= 8:1 rule below.
-MCC_RAIL_LATCH_ARM_T = 1.6;   // spring-lip latch cantilever arm thickness, mm. assumed — matches
-                               // MCC_TG_W's existing 1.6 mm feature-thickness precedent.
-                               // L/t = 14.0/1.6 = 8.75 >= 8:1
-                               // (knowledge/components/fasteners-and-hardware.md:133).
-MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED —
+// Rail latch — REDESIGNED 2026-09-28 (issue #46, architecture.md §13 D34; replaces the D28
+// disabled spring-lip). An in-plane snap arm cut out of the male rail's own -Y flank: a flank-
+// parallel strip MCC_RAIL_LATCH_ARM_T thick, freed from the rail core by a MCC_RAIL_LATCH_SLOT slot
+// and from the bracket plate by a window through the plate, so it stands on the bed and is joined
+// only at its root. It bends in Y — in the printed layer plane, the strong FDM axis
+// (fasteners-and-hardware.md:137). A nub on its free tip rides the groove flank during the slide
+// and snaps into a notch in the case groove's flank at full insertion; it releases by pulling
+// (ramped both ways, steeper on the way out) — no thumb access through the case floor any more.
+// Root at the +X end (towards the case's open end), tip at -X: the pull-off load puts the arm in
+// tension, not compression.
+MCC_RAIL_LATCH_ENABLED = true;
+MCC_RAIL_LATCH_ARM_L = 18.0;  // snap arm free length, root to tip, mm. assumed — L/t = 11.25 >= 8
+                               // (fasteners-and-hardware.md:133) and tip strain ~1.5 % (asserted
+                               // against MCC_SNAP_STRAIN_MAX in rail.scad).
+MCC_RAIL_LATCH_ARM_T = 1.6;   // snap arm thickness (Y, flank-parallel), mm. assumed — MCC_TG_W's
+                               // 1.6 mm feature-thickness precedent; 4 lines at 0.42 mm.
+MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED — minimum root radius,
                                // fasteners-and-hardware.md:134 "fillet >= 0.5x base thickness".
-MCC_RAIL_LATCH_ENGAGE = 2.0;  // latch nub engagement depth, mm.
+MCC_RAIL_LATCH_ENGAGE = 2.0;  // nub protrusion beyond the flank, mm.
                                // fasteners-and-hardware.md:136 "≥ ~2 mm for a secure catch".
-MCC_RAIL_LATCH_W = 6.0;       // spring-lip latch cantilever arm width, mm. assumed — clears the
-                               // >=5 mm minimum clip width (fasteners-and-hardware.md:135).
-MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the open (insertion) end to the latch/detent, so the case
-                               // self-aligns on the dovetail before the latch has to do any work.
-                               // assumed. Named (not folded into MCC_RAIL_LATCH_X below) because
-                               // lib/mcc/rail.scad's modules re-derive the latch's own X position
-                               // from their OWN `len` parameter as -len/2 + MCC_RAIL_LATCH_LEAD_IN —
-                               // not from MCC_RAIL_LATCH_X directly, which is fixed to MCC_RAIL_LEN
-                               // — so a shorter test length (models/coupons/rail-latch.scad, len=60)
-                               // still gets a valid, in-bounds latch position.
-MCC_RAIL_LATCH_X = -MCC_RAIL_LEN / 2 + MCC_RAIL_LATCH_LEAD_IN; // = -55.0. Local X of the latch/
-                               // detent at the PRODUCTION length (MCC_RAIL_LEN) — informational/BOM
-                               // use; rail.scad's own geometry modules do not read this directly.
-MCC_RAIL_ACCESS_W = 10.0;     // thumb-release access cutout width, mm. assumed — fingertip/thin-tool
-                               // clearance, centred at MCC_RAIL_LATCH_X.
-MCC_RAIL_ACCESS_L = 14.0;     // thumb-release access cutout length, mm. assumed — same basis.
+MCC_RAIL_LATCH_SLOT = MCC_RAIL_LATCH_ENGAGE + 0.6; // = 2.6. gap between arm and rail core, mm —
+                               // room for the full inward deflection plus margin; its rounded root
+                               // end (radius SLOT/2 = 1.3) is the root fillet (>= ROOT_FILLET).
+MCC_RAIL_LATCH_RAMP_IN = 30;  // nub entry ramp angle to the slide axis, deg. assumed — easy snap-in.
+MCC_RAIL_LATCH_RAMP_OUT = 45; // nub exit ramp angle, deg. assumed — steeper = more pull-off force;
+                               // tune against the >= 30 N target on models/coupons/rail-latch.scad.
+MCC_RAIL_LATCH_FLAT = 3.0;    // nub flat length at full protrusion, mm. assumed.
+MCC_RAIL_LATCH_WINDOW_CLR = 0.6; // clearance of the bracket-plate window around the arm leg and
+                               // slot, mm. assumed — keeps the arm from fusing to the plate.
+MCC_SNAP_STRAIN_MAX = 0.025;  // allowed peak bending strain of a printed ASA snap arm at full
+                               // deflection (1.5 t d / L^2). assumed — the usual ~2.5 % design limit
+                               // for ABS-class snap fits; no sourced ASA figure in knowledge/**.
+MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the case's OPEN (+X) end of the working length to the
+                               // latch, so the case self-aligns on the dovetail before the nub has
+                               // to ride the flank. assumed. rail.scad re-derives the latch X from
+                               // its own `len` (+len/2 - LEAD_IN) so a short coupon rail works too.
+MCC_RAIL_LATCH_X = MCC_RAIL_LEN / 2 - MCC_RAIL_LATCH_LEAD_IN; // = +55.0 at the production length.
+                               // Informational/BOM; geometry re-derives from `len`.
+MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs out through the case's
+                               // +X end zone (D34). There the passage only guides the male during
+                               // insertion — at full mate nothing loads it — so the T1-38 residual
+                               // (MCC_FLOOR_T) does not apply; the fan-bay reservation above caps
+                               // the passage sill at fan_bay_z[0]. assumed.
 
-// End-stop (closed, +X end — opposite the latch): a WIDTH feature, not a height bump. A bump raised
-// above MCC_RAIL_SILL_H cannot physically stop anything, because the case's own residual floor is
-// UNIFORMLY MCC_RAIL_SILL_H tall everywhere within the sill footprint (T1-38) — a Z-height shoulder
-// positioned anywhere inside the working rail length would sit in open interior air the whole slide,
-// never contacting the case. Instead, mcc_rail_male() extends its solid pedestal MCC_RAIL_END_STOP_L
-// beyond the dovetail's own working length (len), full MCC_RAIL_ROOT_W wide — OUTSIDE the female
-// groove's own footprint entirely, so it never collides during approach, and the case's own un-
-// grooved floor edge (immediately past the sill) contacts it exactly once the case reaches full
-// insertion (len/2 <-> the case's own sill boundary), capping over-travel by plain interference, not
-// a Z clearance trick.
-MCC_RAIL_END_STOP_L = 6.0;    // end-stop flange length beyond the rail's own working length, mm.
-                               // assumed — long enough to print/mold as a clean, obviously-distinct
-                               // shoulder; not calibration-critical (models/coupons/rail-latch.scad
-                               // verifies the fit).
-MCC_RAIL_END_STOP_H = 2.0;    // end-stop flange's EXTRA rise above MCC_RAIL_SILL_H, mm — cosmetic/
-                               // structural only (the flange sits outside the groove's footprint, so
-                               // this does not itself carry the stop function — see above). assumed.
+// End stop: the CLOSED (-X) end of the case groove itself (D34). The old separate end-stop flange
+// on the male rail sat inside the case footprint and 6 mm above the case bottom — it would have hit
+// the case floor — so it is retired. The constants stay at 0 so bracket placement math that still
+// adds them keeps its meaning; drop them at the next bracket rework.
+MCC_RAIL_END_STOP_L = 0;
+MCC_RAIL_END_STOP_H = 0;
 
 // MCC_RAIL_CLR: deliberately NOT a new constant. Reuse MCC_CLR_SLIDE (0.3, above) for the
 // per-side dovetail sliding-fit clearance — same coupon (tolerance-ladder / the new rail-latch

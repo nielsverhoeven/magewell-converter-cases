@@ -157,6 +157,17 @@ P1 deviation; check for it in review.
 
 ## Common failure modes
 
+- **Zero-volume slivers / "parts > 1" after a union.** Two solids that only *touch* (a face of one
+  exactly on a face of the other, material on opposite sides) leave degenerate shells. Either
+  overlap them for real (extend one by a clearance into the other) or draw the added piece in its
+  final shape so any shared face has material on the same side — never "oversize and trim" against
+  a cut boundary that another solid also ends on (D34: the rail latch leg).
+- **A mechanism that renders, checks and slices but cannot be assembled.** Meshes are checked one
+  part at a time; nothing checks that parts mate. For the mount rail run
+  `scripts/rail_fit.py <slug>` (virtual insertion sweep); for any new sliding/snapping interface,
+  add the same kind of sweep before calling it done (D34: a groove closed at both ends shipped for
+  weeks).
+
 - **"It seems object … has floating regions / floating cantilever" in Bambu Studio.** The part
   renders and passes the mesh checks but is not printable as posed. Do not guess: bisect the Z,
   probe with critical-regions-only supports and fix the geometry per

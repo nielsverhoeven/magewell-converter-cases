@@ -571,6 +571,9 @@ module mcc_arch_tv_centre(g) {
     m3_counterbore_depth = M3_HEAD_K + 0.3;
     arrow_y = (RAIL_KEEPOUT_Y[1] + CENTRE_W / 2) / 2;
 
+    // The rail is unioned AFTER the plate's own cuts: its latch arm's leg fills the window
+    // mcc_rail_male_window() cuts through this plate (issue #46, D34) down to the bed.
+    union() {
     difference() {
         union() {
             cuboid([2 * C_HALF, CENTRE_W, ARCH_PLATE_T], anchor = BOTTOM);
@@ -582,10 +585,8 @@ module mcc_arch_tv_centre(g) {
                 _mcc_arch_tv_place(g, side)
                     translate([struct_val(g, "arm_len"), 0, 0])
                         cuboid([LAP_L, ARM_W, ARCH_PLATE_T], anchor = BOTTOM);
-            // Rail (B1: RAIL_X-centred on this plate) -- identical call to tv-bracket.scad:182,
-            // just lifted onto this plate's own top face.
-            translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male();
         }
+        translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male_window(plate_t = ARCH_PLATE_T);
         // 4 M3 counterbored clearance holes per tab, same placement transform as the tabs above.
         for (side = [-1, 1], h = _mcc_arch_tv_joint_holes(g)) {
             p = _mcc_arch_tv_xform(h, side, g);
@@ -599,6 +600,10 @@ module mcc_arch_tv_centre(g) {
         translate([-30, arrow_y, z_rail - ARROW_DEPTH])
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
+    }
+    // Rail (B1: RAIL_X-centred on this plate) -- identical call to tv-bracket.scad's, just lifted
+    // onto this plate's own top face; plate_t lets the latch arm's leg reach the bed.
+    translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male(plate_t = ARCH_PLATE_T);
     }
 }
 

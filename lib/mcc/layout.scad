@@ -288,7 +288,8 @@ function mcc_floor_keepout(dev, cfg) =
         // wider of the groove's two widths, so the keep-out covers the whole cut, not just the
         // mouth). The sill's MCC_RAIL_SILL_SIDE_W side walls (D30) are interior-only solid material
         // with no cut of their own, so they need no floor keep-out.
-        [0, MCC_RAIL_Y, "rect", [MCC_RAIL_LEN, MCC_RAIL_ROOT_W], "mount_rail"],
+        // D34: the groove runs from its closed end at -MCC_RAIL_LEN/2 out through the +X wall.
+        [(L / 2 - MCC_RAIL_LEN / 2) / 2, MCC_RAIL_Y, "rect", [L / 2 + MCC_RAIL_LEN / 2, MCC_RAIL_ROOT_W], "mount_rail"],
         [strap_x_pos, strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_y"],
         [strap_x_pos, -strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_neg_y"],
         [strap_x_neg, strap_y, "rect", MCC_STRAP_SLOT, "strap_neg_y"],

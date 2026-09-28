@@ -12,6 +12,15 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Fixed (mount rail, issue #46)
+
+- **The mount rail could not be assembled**: the case groove was closed at both ends and the
+  bracket rail's end-stop flange would have hit the case floor. The groove now runs out through the
+  case's +X wall (closed −X end = end stop, flange retired), and the latch is redesigned as a
+  printable in-plane snap arm cut from the rail's flank that snaps into a notch in the groove
+  (architecture.md D34). Goldens of every base, the tv-bracket, the arch-tv-bracket centre and the
+  rail-latch coupon change accordingly.
+
 ### Added (agent workflow)
 
 - `bambu-studio` skill + `scripts/slicer_probe.py zbisect|box|critical`: locate a Bambu Studio
