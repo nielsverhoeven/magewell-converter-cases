@@ -16,8 +16,8 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 - Bambu Studio slicer gate in the required `render` check: every exported part is sliced by the
   pinned Bambu Studio 02.08.02.61 Linux AppImage (`.github/actions/setup-bambu-studio`) and any
-  slicer warning fails the PR. The gate is sharded over six parallel runners and pipelined per
-  part (`build.py ci --shard k/6`: render → check → golden → slicer → STEP), with smoke in its own
+  slicer warning fails the PR. The gate runs as six parallel "Validate parts — group k of 6" jobs, pipelined per
+  part (`build.py ci --group k/6`: render → check → golden → slicer → STEP), with smoke in its own
   parallel job; the `render` status check is now an aggregator job.
 
 ### Fixed

@@ -663,11 +663,11 @@ def find_bambu_studio() -> Path | None:
 
 
 # -----------------------------------------------------------------------------------------
-# ci  (the PR gate, sharded + pipelined — .github/workflows/render.yml)
+# ci  (the PR gate, split into parallel part groups + pipelined — .github/workflows/render.yml)
 # -----------------------------------------------------------------------------------------
 
 def _unit_cost(target: Target, part: str) -> float:
-    """Relative CI cost of one part (render + check + slice + STEP), for balancing shards. Rough
+    """Relative CI cost of one part (render + check + slice + STEP), for balancing part groups. Rough
     wall-clock weights measured on ubuntu-latest (2026-09-28): case bases dominate, thread-bearing
     panels are next, coupons are cheap."""
 
@@ -678,19 +678,19 @@ def _unit_cost(target: Target, part: str) -> float:
     return 2.0
 
 
-def shard_units(n_shards: int, index: int) -> list[tuple[Target, str]]:
-    """Deterministic longest-processing-time split of every (target, part) over n_shards;
-    returns shard `index` (1-based), heaviest units first so they start earliest."""
+def group_units(n_groups: int, index: int) -> list[tuple[Target, str]]:
+    """Deterministic longest-processing-time split of every (target, part) into n_groups part
+    groups of similar cost; returns group `index` (1-based), heaviest parts first so they start earliest."""
 
     units = [(t, p) for t in discover_all() for p in t.parts]
     units.sort(key=lambda u: (-_unit_cost(*u), u[0].name, u[1]))
-    loads = [0.0] * n_shards
-    shards: list[list[tuple[Target, str]]] = [[] for _ in range(n_shards)]
+    loads = [0.0] * n_groups
+    groups: list[list[tuple[Target, str]]] = [[] for _ in range(n_groups)]
     for u in units:
         i = loads.index(min(loads))
-        shards[i].append(u)
+        groups[i].append(u)
         loads[i] += _unit_cost(*u)
-    return shards[index - 1]
+    return groups[index - 1]
 
 
 def golden_check_part(target: Target, part: str) -> list[str]:
@@ -707,7 +707,7 @@ def golden_check_part(target: Target, part: str) -> list[str]:
 
 
 def cmd_ci(args: argparse.Namespace) -> int:
-    """One CI shard: for every (target, part) in the shard, as its own pipeline — render (OpenSCAD)
+    """One CI part group: for every (target, part) in the group, as its own pipeline — render (OpenSCAD)
     -> check (mesh + printability) -> golden -> slicer gate (Bambu Studio) -> STEP — with
     `--jobs` parts in flight at once, so one part's slicing/STEP overlaps the next part's OpenSCAD
     render. Every gate still runs on every part; only the scheduling changed."""
@@ -723,9 +723,11 @@ def cmd_ci(args: argparse.Namespace) -> int:
     if step_backend is None and not args.no_step:
         print(f"error: no STEP backend ({step_detail})")
         return 1
-    n, k = (int(x) for x in args.shard.split("/"))
-    units = shard_units(n, k)
-    print(f"shard {k}/{n}: {len(units)} parts, {args.jobs} in flight: " + ", ".join(f"{t.name}:{p}" for t, p in units), flush=True)
+    k, n = (int(x) for x in args.group.split("/"))
+    if not 1 <= k <= n:
+        raise SystemExit(f"error: --group {args.group}: expected k/n with 1 <= k <= n")
+    units = group_units(n, k)
+    print(f"part group {k} of {n}: {len(units)} parts, {args.jobs} in flight: " + ", ".join(f"{t.name}:{p}" for t, p in units), flush=True)
 
     def _pipeline(unit: tuple[Target, str]) -> tuple[str, list[str], dict]:
         target, part = unit
@@ -760,7 +762,7 @@ def cmd_ci(args: argparse.Namespace) -> int:
     with ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
         rows = list(pool.map(_pipeline, units))
 
-    print(f"\nci shard {k}/{n} results:")
+    print(f"\nci part group {k} of {n} results:")
     width = max((len(r[0]) for r in rows), default=10)
     for label, errors, stats in rows:
         extra = f"  {stats['grams']:7.1f} g  {stats['seconds'] / 3600:5.2f} h" if "grams" in stats else ""
@@ -772,7 +774,7 @@ def cmd_ci(args: argparse.Namespace) -> int:
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
-        lines = [f"## Shard {k}/{n} — render · check · golden · Bambu Studio slicer · STEP", "",
+        lines = [f"## Part group {k} of {n} — OpenSCAD render · checks · golden · Bambu Studio slice · STEP", "",
                  f"**{n_ok}/{len(rows)} parts pass every gate**", "",
                  "| Part | Result | Filament | Print time | Problems |", "|---|---|---|---|---|"]
         for label, errors, stats in rows:
@@ -1472,8 +1474,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_review.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
     p_review.set_defaults(func=cmd_review)
 
-    p_ci = sub.add_parser("ci", help="one CI shard: render -> check -> golden -> Bambu slicer gate -> STEP, pipelined per part")
-    p_ci.add_argument("--shard", default="1/1", help="k/n — run the k-th of n cost-balanced shards (default 1/1 = everything)")
+    p_ci = sub.add_parser("ci", help="validate one part group: render -> check -> golden -> Bambu slicer gate -> STEP, pipelined per part")
+    p_ci.add_argument("--group", default="1/1", help="k/n — validate the k-th of n cost-balanced part groups (default 1/1 = every part)")
     p_ci.add_argument("--jobs", type=int, default=3, help="parts in flight at once (default 3)")
     p_ci.add_argument("--release", action="store_true", help="fail if OpenSCAD emits 'WARNING: unmeasured'")
     p_ci.add_argument("--no-slice", action="store_true", help="skip the Bambu Studio slicer gate (local debugging only)")

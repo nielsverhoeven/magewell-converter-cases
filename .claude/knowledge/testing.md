@@ -35,7 +35,7 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
    (`scripts/printability.py`, 2026-09-27): sliced at 0.2 mm, no layer may contain a floating
    island (Bambu Studio's "floating regions"), and the **slicer gate** `slicer-check --require`
    (every part sliced by the pinned Bambu Studio CLI, no slicer warning allowed). CI runs all of
-   Tier 3 per part via `build.py ci --shard k/6` on six parallel runners; `ci` with no shard runs
+   Tier 3 per part via `build.py ci --group k/6` on six parallel runners ("Validate parts — group k of 6"); `ci` with no `--group` runs
    the same thing locally. `golden` compares bbox/volume/area/facet-count
    from each render against a committed snapshot in `tests/golden/**`.
 4. **Tier 4 — physical coupons, `models/coupons/*.scad`.** Printed and measured by a human;
