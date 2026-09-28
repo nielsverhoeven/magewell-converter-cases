@@ -169,7 +169,7 @@ RAIL_KEEPOUT_Y = [-MCC_RAIL_ROOT_W / 2, MCC_RAIL_ROOT_W / 2 + MCC_RAIL_LATCH_ARM
 
 // reused from constants.scad, no new library constant: MCC_M8_CLR_D, MCC_M3_CLR_D, MCC_INSERT_M3,
 // MCC_CLR_SLIDE, MCC_RAIL_*, MCC_FLOOR_T, MCC_WALL, MCC_BUILD, MCC_BED_MARGIN, MCC_EPS,
-// MCC_THREAD_M3_MAJOR_D, MCC_RIB_HEIGHT_RATIO_MAX, MCC_RAIL_Y.
+// MCC_M3_MAJOR_D, MCC_RIB_HEIGHT_RATIO_MAX, MCC_RAIL_Y.
 
 // -----------------------------------------------------------------------------------------
 // §4/B7: one list of devices feeding the case-envelope loop. A NEW SKU MUST BE ADDED HERE (and to
@@ -484,9 +484,9 @@ module mcc_arch_tv_assert(g) {
     engagement     = ARCH_PLATE_T - m3_tip_z;
     assert(m3_tip_z >= bore_floor_z + 0.5 - MCC_EPS,
         str("mcc: arch-tv-bracket T1-57 M3 tip z=", m3_tip_z, " must clear bore floor+0.5=", bore_floor_z + 0.5));
-    assert(engagement >= 1.5 * MCC_THREAD_M3_MAJOR_D - MCC_EPS,
+    assert(engagement >= 1.5 * MCC_M3_MAJOR_D - MCC_EPS,
         str("mcc: arch-tv-bracket T1-57 M3 engagement=", engagement,
-            " below 1.5x major diameter=", 1.5 * MCC_THREAD_M3_MAJOR_D));
+            " below 1.5x major diameter=", 1.5 * MCC_M3_MAJOR_D));
 
     // T1-58 (A12): M8 pad -- clamp thickness and boss wall (§3.4).
     m8_counterbore_d = M8_WASHER_D + 2 * MCC_CLR_SLIDE;

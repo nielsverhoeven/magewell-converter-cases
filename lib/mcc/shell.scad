@@ -166,8 +166,9 @@ module _mcc_patch_wall_recess(size, y_outer, z_c, z_max) {
 // Module: _mcc_patch_wall_aperture()
 // Description:
 //   Private, SUBTRACTIVE. The whole patch-wall connector field for `dev` (D36): the bezel recess
-//   plus, per slot, mcc_panel_wall_cut() — teardropped seat hole + body window and the two printed
-//   M3 threads, through the MCC_PANEL_SEAT_T + MCC_WALL of wall left behind the recess.
+//   plus, per slot, mcc_panel_wall_cut() — a perfectly round seat hole + body window (D40) and the
+//   two plain ⌀2.5 fixing bores (D41), through the MCC_PANEL_SEAT_T + MCC_WALL of wall left behind
+//   the recess.
 // Arguments:
 //   l   = mcc_case_layout() struct.
 //   dev = device record.

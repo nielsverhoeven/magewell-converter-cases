@@ -133,27 +133,19 @@ function mcc_slot_for_port(dev, id) =
 
 // Function: mcc_aperture_window()
 // Usage:
-//   aw = mcc_aperture_window(part);
+//   d_win = mcc_aperture_window(part);
 // Description:
 //   The body window through the patch wall BEHIND the flange seat for panel part `part` (D36: the
-//   connector sits in the wall itself — mcc_neutrik_d_wall_cut()): a round opening a little larger
-//   than the seat hole, truncated-teardropped above its 45 deg tangent line so it prints standing.
-//   Returns [d_win, cap_h, w_flat]:
-//     d_win  = window diameter, mm (mcc_cutout_d(part) + 2*MCC_CLR_SLIDE).
-//     cap_h  = truncated-teardrop cap height above the centre, mm (d_win/2 + MCC_APERTURE_CAP_RISE).
-//     w_flat = the cap's flat bridge width, mm (<= MCC_APERTURE_BRIDGE_MAX, T1-34a).
-//   All three read 0 for a genuinely solid blank (mcc_panel_hole_d(part) == 0; none today —
-//   DBA-BL-B carries a full hole, D18).
+//   connector sits in the wall itself — mcc_neutrik_d_wall_cut()): a plain round opening a little
+//   larger than the seat hole (architecture.md §5 rev 15, D40 — perfectly round, no teardrop, user
+//   decision 2026-09-28). Returns d_win = mcc_cutout_d(part) + 2*MCC_CLR_SLIDE, or 0 for a
+//   genuinely solid blank (mcc_panel_hole_d(part) == 0; none today — DBA-BL-B carries a full hole,
+//   D18). Simplified from a 3-element [d_win, cap_h, w_flat] list (rev 14/D36) now that there is no
+//   teardrop cap to describe.
 // Arguments:
 //   part = panel part number, key into MCC_PANEL_PARTS (constants.scad).
 function mcc_aperture_window(part) =
-    let(
-        is_blank = mcc_panel_hole_d(part) == 0,
-        d_win = is_blank ? 0 : mcc_cutout_d(part) + 2 * MCC_CLR_SLIDE,
-        cap_h = is_blank ? 0 : d_win / 2 + MCC_APERTURE_CAP_RISE,
-        w_flat = is_blank ? 0 : 2 * (d_win / 2 * sqrt(2) - cap_h)
-    )
-    [d_win, cap_h, w_flat];
+    mcc_panel_hole_d(part) == 0 ? 0 : mcc_cutout_d(part) + 2 * MCC_CLR_SLIDE;
 
 // -----------------------------------------------------------------------------------------
 // Section: Cradle deck (layout-patch-wall.md §1)
@@ -317,14 +309,14 @@ function mcc_case_layout(dev, cfg) =
         pitch = (n_slots > 1) ? span / (n_slots - 1) : 0,
         slot_x = [for (i = [0:1:n_slots - 1]) (n_slots > 1) ? (-span / 2 + i * pitch) : 0],
 
-        // Patch-wall connector openings (D36). T1-34c: every window's teardrop cap stays inside
-        // the connector recess with MCC_APERTURE_LIP_WEB_MIN of wall left above it. (T1-34b/d —
-        // plate boss reliefs and plate-fixing bores — went with the plate.)
+        // Patch-wall connector openings (D36; round since D40). T1-34c: every round window stays
+        // inside the connector recess with MCC_APERTURE_LIP_WEB_MIN of wall left above it. (T1-34b/d
+        // — plate boss reliefs and plate-fixing bores — went with the plate.)
         slots_assigned = mcc_slot_assignment(dev),
         apertures = [for (i = [0:1:n_slots - 1]) mcc_aperture_window(struct_val(slots_assigned[i], "part"))],
         _t134c_check = [for (i = [0:1:n_slots - 1])
-            assert(apertures[i][1] + MCC_APERTURE_LIP_WEB_MIN <= MCC_PLATE_H / 2 + MCC_EPS,
-                str("mcc: T1-34c aperture cap containment fails for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
+            assert(apertures[i] / 2 + MCC_APERTURE_LIP_WEB_MIN <= MCC_PLATE_H / 2 + MCC_EPS,
+                str("mcc: T1-34c aperture containment fails for slot ", i + 1, " on \"", mcc_dev_slug(dev), "\""))
             0],
 
         // Fan bay, +X end wall. fan_y is a shell parameter, default y_dev_c (R20).

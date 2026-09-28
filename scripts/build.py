@@ -757,6 +757,25 @@ def golden_check_part(target: Target, part: str) -> list[str]:
     return _compare_golden(current, json.loads(gpath.read_text(encoding="utf-8")))
 
 
+def step_exact_check(target: Target, part: str) -> list[str]:
+    """[] unless a case part's STEP came from the faceted fallback. architecture.md §8 rev 15 (D40/D41):
+    for case parts the exact STEP is a deliverable -- their round connector holes and fixing bores
+    reach CAD as true cylinders only through scripts/csg_to_step.py. Coupons and brackets may fall
+    back (engraved text() labels are unsupported by design), so they are exempt."""
+
+    if target.kind != "model":
+        return []
+    manifest_path = target.export_dir / f"{part}.manifest.json"
+    try:
+        step = json.loads(manifest_path.read_text(encoding="utf-8")).get("step", {})
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"cannot read {manifest_path.name} for {target.name}:{part} ({exc})"]
+    if step.get("backend") != "csg-exact":
+        return [f"case part fell back to the faceted STEP converter (backend={step.get('backend')!r}, "
+                f"why_not_exact={step.get('why_not_exact')!r}) -- its holes would reach CAD as facets"]
+    return []
+
+
 def cmd_ci(args: argparse.Namespace) -> int:
     """One CI part group: for every (target, part) in the group, as its own pipeline — render (OpenSCAD)
     -> check (mesh + printability) -> golden -> slicer gate (Bambu Studio) -> STEP — with
@@ -804,6 +823,8 @@ def cmd_ci(args: argparse.Namespace) -> int:
             stats["step"] = detail
             if not ok:
                 errors.append("step: " + detail)
+            else:
+                errors += [f"step: {m}" for m in step_exact_check(target, part)]
         print(f"   done {label}: {'ok' if not errors else 'FAIL'}", flush=True)
         return label, errors, stats
 
