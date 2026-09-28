@@ -12,6 +12,12 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Added (CI)
+
+- Bambu Studio slicer gate in the required `render` check: every exported part is sliced by the
+  pinned Bambu Studio 02.08.02.61 Linux AppImage (`.github/actions/setup-bambu-studio`) and any
+  slicer warning fails the PR (`build.py slicer-check --require --jobs 3`).
+
 ### Fixed
 
 - **Exports are now usable in Bambu Studio as delivered** (user report 2026-09-27: a senior Bambu

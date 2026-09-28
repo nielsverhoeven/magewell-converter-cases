@@ -129,9 +129,10 @@ writes `exports/review.3mf` — every case (each on its own plates) plus all cou
 one Bambu Studio project; each release also carries it as `review-vX.Y.Z.3mf`. Open it, **Slice
 all**, and every plate should slice without a "floating regions" or exclusion-area warning —
 `build.py check` gates the same floating-island / cantilever conditions in CI
-(`scripts/printability.py`), and `build.py slicer-check` slices every part headlessly with your
-local Bambu Studio and fails on any slicer warning — the ground truth; run it before a print-facing
-PR.
+(`scripts/printability.py`), and `build.py slicer-check` slices every part headlessly with Bambu
+Studio's CLI and fails on any slicer warning — the ground truth. CI runs that slicer gate on every PR
+(pinned Bambu Studio 02.08.02.61 AppImage), so nothing that Bambu Studio would flag reaches `main`;
+run it locally too before pushing print-facing changes.
 
 See `.claude/skills/print-check/SKILL.md` for the full pre-slice checklist (orientation, ASA
 profile hints, coupons-before-cases).
