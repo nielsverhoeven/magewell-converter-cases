@@ -19,7 +19,7 @@ Printer: **Bambu Lab X1 Carbon**, 256×256×256 mm, enclosed, 0.4 mm nozzle, ASA
 | `insert-boss.scad` | Which M3 heat-set insert bore diameter seats with firm hand pressure in ASA without splitting the boss | `lib/mcc/constants.scad` : `MCC_INSERT_M3` → `hole_d` entry |
 | `tolerance-ladder.scad` | Which round peg/hole per-side clearance is a free slide vs. a firm press fit | `lib/mcc/constants.scad` : `MCC_CLR_SLIDE` (slide), `MCC_CLR_PRESS` (press) |
 | `side-bolt.scad` | The captive 1/4"-20 side bolt (D-09, **flush per D-13**): the real slotted screw seats with its head recessed, a DIN 6799 E-clip snaps into the pocket and holds the screw captive, the screw reaches its engagement length into a nut behind the EPDM pad, and the ASA **central support web** (root fillet retired by D-13) carries real clamp load down to the coupon's own base plate without cracking or needing slicer supports | `lib/mcc/constants.scad` : `MCC_SIDE_BOLT_HEAD_D`/`_HEAD_H`/`_HEAD_REC_D`/`_HEAD_REC_H`, `MCC_SIDE_BOLT_WEB_T`, `MCC_SIDE_BOLT_CLIP`, `MCC_SIDE_BOLT_POCKET_D`/`_POCKET_H`, `MCC_SIDE_BOLT_ENGAGE`, `MCC_SIDE_BOLT_PAD_OD`/`_PAD_ID`, `MCC_SIDE_BOLT_SCREW_LEN`, `MCC_GAP_FAR`, `MCC_SIDE_BOLT_PROUD`, `MCC_SIDE_BOLT_SUPPORT_WEB_T`, `MCC_SIDE_BOLT_AXIS_Z` |
-| `rail-latch.scad` | The tool-less dovetail mount rail (D-15; widened, flush and ≥ 0.5 mm-clearance since D44): the dovetail slides freely along its full engagement length with acceptable play, the groove roof (a ~66 mm bridge printed exactly like the case floor) does not sag into the 0.5 mm roof gap, the snap latch flexes freely, clicks at full insertion and holds at least the assumed retention target (pull-test with a luggage scale through a temporary loop, **≥ 30 N / ≈3 kgf**) | `lib/mcc/constants.scad` : `MCC_RAIL_ROOF_CLR` (raise it if the roof sags — never narrow the rail), `MCC_RAIL_LATCH_ENGAGE` / `MCC_RAIL_LATCH_RAMP_OUT`, the 30 N retention target (`assumed`); confirms (does not calibrate) `MCC_RAIL_MATE_CLR`, a user decision |
+| `rail-lock.scad` | The tool-less dovetail mount rail (D-15; wide, flush, ≥ 0.5 mm clearance since D44) and its **gravity lock** (D48): the dovetail slides freely with the expected play, the groove roof (a ~66 mm bridge printed exactly like the case floor) does not sag into the 0.5 mm roof gap, the case-side lead-in guides the rail in, and — with the rail plate vertical and the groove half loaded and hanging — the lock clicks, cannot be pulled off along the rail, and releases when the groove half is lifted about 1 mm | `lib/mcc/constants.scad` : `MCC_RAIL_ROOF_CLR` (raise it if the roof sags — never narrow the rail), `MCC_RAIL_LOCK_ENGAGE` (the e-ladder); confirms (does not calibrate) `MCC_RAIL_MATE_CLR`, a user decision |
 
 ## Render
 
@@ -70,7 +70,7 @@ about the other.
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |
 | `tolerance-ladder` | **Flat, base plate down**, pegs facing up. | Peg/hole axis vertical for both the printed pegs and the through-holes in the base — true circles, no bridging. |
 | `side-bolt` | **Print flat on the base**, wall slab vertical, boss/support-web horizontal off the wall, self-supporting. As modeled: the small base pad is the bed-contact face and stands in for the case's interior floor; the wall slab rises vertically off it and the boss protrudes horizontally off the wall at the real (unscaled) axis height above the base — the same orientation the far wall prints in on a full case. No rotation needed. | Matches how `shell.scad` will eventually orient this feature (a horizontal boss off a vertical wall). Since D-13 the boss is flush and a **central vertical support web** (`mcc_captive_side_bolt_boss()`'s `support_web_t`/`web_to_floor_h`) — not a root fillet — carries the cantilever down to the base plate; whether that web alone prints clean without slicer supports is exactly what this coupon exists to verify. |
-| `rail-latch` | **Print as modelled, no rotation:** the groove half stands directly on the bed, groove mouth down (like the case floor); the rail half stands on its own plate, rail up (like a bracket). Two thin snap-off strips join them — break them off before testing. | Both halves in their production print pose: the groove roof prints as the same ~66 mm bridge as on a real base (architecture.md R40), and the latch arm's leg stands on the bed through its plate window. |
+| `rail-lock` | **Print as modelled, no rotation:** the groove half stands directly on the bed, groove mouth down (like the case floor); the rail half stands on its own plate, rail up (like a bracket). Two thin snap-off strips join them — break them off before testing. | Both halves in their production print pose: the groove roof prints as the same ~66 mm bridge as on a real base (architecture.md R40), the lock pocket and lead-in print like the case's, and the rail's lock bump stands on its plate like on a bracket. |
 
 ## Print settings (ASA, Bambu Studio) — print-check §4
 
@@ -198,32 +198,40 @@ number under a stale `confidence: "drawing"` still reads as unverified.
   hole `v` is measured, per M1 — this coupon renders at the current `pos [0,0]` placeholder) and
   bump `confidence` from `"assumed"` toward `"measured"` as each figure is confirmed.
 
-### rail-latch
+### rail-lock
 
-- Hardware needed: a luggage/fish scale (or similar), a temporary loop (string/cable tie) round the
-  rail half's plate for the pull test, and calipers.
+- Hardware needed: a luggage/fish scale, a dummy mass of the heaviest case (weigh one assembled case
+  with its device; ≈ 0.8 kg `assumed` until weighed) that can be strapped to the groove half, a
+  temporary loop (string/cable tie), a board to screw or clamp the rail half to vertically, calipers.
 - Snap the two joining strips off first.
 - **Roof sag (R40):** before inserting anything, measure the groove roof's height above the groove
   half's bottom face at mid-width, at both ends and in the middle (nominal 4.0 mm). The rail's own top
   is 3.5 mm tall: the roof must stay clear of it.
-- **Latch freedom:** with a small screwdriver, press the latch nub inward — the arm must flex freely
-  (nothing fused to the plate under the nub) and spring back.
-- Slide the rail half into the groove from the open (+X) end. Does it engage smoothly along the full
-  60 mm, self-aligning on the dovetail before the latch has to do any work (the 20 mm
-  `MCC_RAIL_LATCH_LEAD_IN`)? Does it click at full insertion, and does the groove's closed end stop
-  over-travel?
-- **Play (R41):** at full insertion, measure the lateral and lift play (expected ≈ ±0.6 mm and ≈ 1 mm
-  from the 0.5 mm clearance, D44).
-- Pull-test: with the latch engaged, pull the two halves apart along the slide axis (via the loop)
-  and read the scale at disengagement. **Target ≥ 30 N (≈3 kgf)**, `assumed`.
-- **Good** = no roof contact, free latch arm, smooth slide, clean click, end stop works, pull-off at
-  or above 30 N, play within the expected figures.
-- Record: roof heights, slide feel, play, click quality, pull-off force (N), any cracking at the
-  latch arm's root.
+- **Play (R41, R45):** lying flat, slide the rail half in from the open (+X) end until it stops;
+  with the lock *not yet* engaged (rail only partly in), measure the lateral play (expect ≈ 1.15 mm
+  total; the lock needs at least `MCC_RAIL_LOCK_ENGAGE` + 0.2 = 0.9 mm of it).
+- **Lock, hanging:** clamp the rail half's plate vertical, slide axis horizontal, the rail's lock bump
+  on its upper flank (the bump side up). Strap the dummy mass to the groove half. Hang the groove half
+  on the rail's free end and push it along: it must ride over the bump without binding and click in.
+  Then (a) pull the groove half along the rail, away from the stop, via the loop at the rail line:
+  it must not release up to ≥ 50 N (record where and how it fails if it does); (b) tug the groove
+  half's lower edge outward, away from the plate: no release; (c) lift the groove half until it stops
+  (≤ 1.2 mm) and slide it off: it must release one-handed.
+- **e-ladder:** the teamlead or tester produces the extra 3MFs at `LOCK_E` 0.5 / 0.6 / 0.8 for you
+  (`python scripts/build.py render coupons/rail-lock -D LOCK_E=0.5`, then 0.6, then 0.8, copying
+  `exports/coupons/rail-lock/rail-lock.3mf` aside after each run, then re-running
+  `render coupons/rail-lock` without `-D` to restore the release export) — you do not run `build.py`
+  yourself. Print each and repeat "Play" and "Lock, hanging" on it, and pick the largest bump that
+  never binds.
+- **Cycling:** 100 insert/remove cycles on the production copy, then repeat "Play" and "Lock,
+  hanging"; inspect the bump and the pocket's +X wall for crushing or wear.
+- **Good** = no roof contact, smooth slide-in with a clean click, locked against the pulls in (a) and
+  (b), one-handed lift-and-slide release, play within the expected figure, no wear after 100 cycles.
+- Record: roof heights, play, click quality, the pull forces reached in (a), the e-ladder results,
+  wear after cycling.
 - Update: `lib/mcc/constants.scad` → `MCC_RAIL_ROOF_CLR` if the roof sags into the gap (raise it;
-  never narrow the rail — user decision D44), and `MCC_RAIL_LATCH_ENGAGE` / `MCC_RAIL_LATCH_RAMP_OUT`
-  if the pull-off misses the target. If the play is objectionable, report it — `MCC_RAIL_MATE_CLR`
-  is a user decision, not a coupon result.
+  never narrow the rail — user decision D44), `MCC_RAIL_LOCK_ENGAGE` from the e-ladder. If the play is
+  objectionable, report it — `MCC_RAIL_MATE_CLR` is a user decision, not a coupon result.
 
 ## print-log.md
 

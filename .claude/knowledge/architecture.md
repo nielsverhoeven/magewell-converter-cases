@@ -1,5 +1,16 @@
 # Architecture — magewell-converter-cases
 
+**Revision 17, 2026-09-28 (gravity rail lock — D48–D50; plan `docs/plans/2026-09-28-gravity-lock.md`;
+shipped in one PR with rev 16).** User decisions after the analysis of the external specialist's DP48
+plate: the rail lock is a **gravity lock only** — a rigid 0.7 mm bump on the rail's upper (rail-local
+−Y) flank drops into a pocket in the groove flank and is held there by the case's own weight; the **D34
+snap latch is removed** (arm, window, nub, notch, `MCC_RAIL_LATCH_*`, `MCC_SNAP_STRAIN_MAX`). **A mounted
+case always hangs patch-wall down** (D49). The groove entrance gets the DP48's 1 × 45° lead-in. Brackets
+consume the rail only through `mcc_rail_male()` (no plate cut) and `mcc_rail_male_keepout()` (D50). New:
+**T1-64 … T1-66**, **R44**, **R45**, **M21**, **Q23**; M15 rewritten; Q21 closed; R41 corrected (the upper
+flank bears). T1-67 … T1-69 and R46, reserved for this revision, stay unused. No case envelope figure
+moves.
+
 **Revision 16, 2026-09-28 (wide, flush mount rail — D44; `tv-bracket` retired — D47; plan
 `docs/plans/2026-09-28-wide-dovetail.md`).** User decisions after the external specialist's CAD review:
 the dovetail stays and becomes **much wider** (65 mm root, `MCC_RAIL_Y` = −23.5, near the device's
@@ -391,7 +402,8 @@ L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS 
     lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
     lib/mcc/fasteners.scad                heat-set bosses, captive thumbscrew, 1/4"-20 boss
     lib/mcc/rail.scad                     mount-rail dovetail profile: male rail, female cut,
-                                          spring-lip latch. ONE source of truth shared by
+                                          gravity-lock bump and pocket, plate-side keep-out
+                                          (rev 17). ONE source of truth shared by
                                           mounts.scad (case floor) and models/brackets/*.scad
                                           (rev 9, D-15). NOT named bracket.scad — see below
     lib/mcc/fan.scad                      fan bay envelope, grille, finger guard
@@ -441,7 +453,7 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
 - **`shell.scad` must not `use <neutrik.scad>`.** If the shell ever needs a connector-shaped void it
   goes through `mcc_panel_cutout()` (§5 dispatcher rule). Today it needs neither.
 - **`rail.scad` (L1, added rev 9).** Owns the mount-rail dovetail cross-section and nothing else:
-  `mcc_rail_male()` (additive), `mcc_rail_female_cut()` (subtractive), `mcc_rail_sill_size()` (pure).
+  `mcc_rail_male()` (additive), `mcc_rail_female_cut()` (subtractive), `mcc_rail_sill_size()` and `mcc_rail_male_keepout()` (pure, rev 17).
   Both halves of a mating interface must come out of **one** file or they drift — the same reasoning
   that moved `mcc_panel_fixing_pos()` into `layout.scad` (D6). Consumers: `mounts.scad` (L2, the
   female groove in the case floor) and `models/brackets/*.scad` (the male rail). Three rules:
@@ -453,6 +465,12 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
     **constants** (L0), never from `mcc_rail_sill_size()`.
   - `shell.scad` reaches the rail only through `mounts.scad`, never by `use <rail.scad>` — the floor
     rule (§6) has one owner.
+  - **Brackets consume the rail through two public symbols only** (rev 17, D50): `mcc_rail_male(len)`,
+    unioned onto the bracket's plate — the rail needs no cut in any plate — and
+    `mcc_rail_male_keepout(len)`, the rail-local plate-side keep-out (bump included) that the bracket
+    maps through its own placement and pads with its own clearance. A bracket never passes `lock_e`
+    (only the rail-lock coupon's e-ladder does, always to both halves), never reads `MCC_RAIL_LOCK_*`
+    or other rail internals, and never rebuilds the rail's footprint.
 - **`switch.scad` (L1, added rev 11, #32).** Owns the panel-switch void and nothing else:
   `mcc_switch_cutout(spec, wall_t)` (subtractive: through-bore + outer recess pocket),
   `mcc_switch_keepout(spec)` (**pure**, the wall-plane pad footprint + the body depth behind it) and
@@ -869,15 +887,16 @@ Three rules exist because these features will otherwise collide silently:
   `MCC_RAIL_Y = −23.5` — as close to the device's centre of mass (`y_dev_c ≈ −30.8`) as the side-bolt
   web allows (sill edge 3.4 mm clear on the tightest SKU, W = 158.80). The male carries **no
   pedestal**: male-local = female-local, and the case's exterior floor rests **flush** on the bracket
-  plate — the joint's only designed bearing face (on a TV-mounted bracket the gravity-side flank also
-  bears, R41). Every other face keeps **≥ `MCC_RAIL_MATE_CLR` = 0.5 mm**: normal to the flanks
+  plate — the joint's only designed bearing face (on a TV-mounted bracket the upper flank (rail-local
+  −Y) also bears, R41). Every other face keeps **≥ `MCC_RAIL_MATE_CLR` = 0.5 mm**: normal to the flanks
   (`MCC_RAIL_CLR_HORIZ` = 0.577 horizontal) and at the roof (the male is `MCC_RAIL_MALE_H` = 3.5 tall
-  under the 4.0 groove, and the latch notch runs the full depth over the nub) — **T1-62**. The D34
-  latch is the lock; its plate window also clears the nub. The Fishtail and case-insert reservations
+  under the 4.0 groove, and the lock pocket runs the full depth over the bump) — **T1-62**. The lock
+  is the gravity lock (D48): a rigid bump on the rail's upper flank in a pocket of the groove flank,
+  held by the case's weight — no plate cut, no flexure. The Fishtail and case-insert reservations
   are retired, and D19's exemption with them; the opt-in insert and the rail are mutually exclusive
   (**T1-63**). Printing: the groove roof is a ~66 mm bridge in the base's print pose — a sanctioned
   exception to §5's 10 mm span rule, forced by the width, judged by the slicer gate and the
-  `rail-latch` coupon (R40, M15).
+  `rail-lock` coupon (R40, M15).
   **The device-retention through-bolt is withdrawn from the floor (user decision 2026-09-08, D-09):**
   the floor now carries exactly one 1/4"-20 feature, going *down* into a tripod/cheeseplate. Nothing
   in the floor goes up into the device any more, so the old "two 1/4"-20 features must not coincide"
@@ -1211,6 +1230,11 @@ id.
 **Rev 16 adds T1-62** (rail clearances: `MCC_RAIL_CLR_HORIZ·sin(flank) ≥ MCC_RAIL_MATE_CLR` and
 `MCC_RAIL_DEPTH − MCC_RAIL_MALE_H ≥ MCC_RAIL_MATE_CLR`, D44) and **T1-63** (`tripod_insert` and the rail
 are mutually exclusive, D44). **The next free id is T1-64.**
+**Rev 17 adds T1-64 … T1-66** (D48, the gravity lock: T1-64 the lift budget `MCC_RAIL_LOCK_ENGAGE +
+MCC_RAIL_LOCK_PLAY_MARGIN ≤ 2·MCC_RAIL_CLR_HORIZ`; T1-65 the exit face 75–90°, the entry ramp 15–60° and
+the bump inside the working length; T1-66 the sill wall behind the pocket ≥ `MCC_WALL/2` and the
+lead-in ≤ `MCC_WALL`). T1-67 … T1-69, reserved for rev 17, stay unused; T1-70 … T1-90 are assigned to
+plan D (rev 18). **The next free id is T1-91.**
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
@@ -1671,7 +1695,7 @@ Consequences, and why `MCC_RAIL_Y = −20.0` (not the plan's `+20.0`) is the rul
   (≥ `MCC_FLOOR_FEATURE_MIN_SEP` 15). At `−20` it additionally clears the splitter bay by 9.6 mm
   (compact) / 12.9 mm (plus) and the side-bolt web by ≥ 35 mm.
 - **Residual risk, accepted:** the rail's Y position is still an `assumed` engineering choice, not a
-  computed one, and no load case has been calculated. The `rail-latch` coupon (M15) is what turns it
+  computed one, and no load case has been calculated. The `rail-lock` coupon (M15) is what turns it
   from assumed into measured. **Do not print a full-size bracket before that coupon is pulled.**
 
 **Refined by D44 (rev 16, 2026-09-28).** The rail now sits at `−23.5` with a 65 mm root, so its band
@@ -1695,7 +1719,7 @@ stop. **Ruling: #27 is deferred, not rejected on its merits — it is blocked on
 **R26 — the printed safety-cable eye on an overhead mount. NEW 2026-09-09 (rev 9).** The truss
 bracket's eye is a routing/pass-through feature with **no load rating**, on a bracket that hangs a
 case over people. The plan's own framing (the certified rigging safety cable is the rated secondary
-restraint, and the dovetail+latch is not claimed as the primary fall restraint) is the correct
+restraint, and the dovetail + gravity lock is not claimed as the primary fall restraint) is the correct
 framing — but it is a **user safety decision, not an architect's**. Nothing in `models/brackets/`
 that is intended for overhead use may be printed for real use until the user has signed that framing
 off in writing, and the file's header comment must state that the print is not rigging-certified.
@@ -1774,7 +1798,7 @@ mouth-down and its roof is a flat bridge across the root width plus clearance
 (`MCC_RAIL_ROOT_W + 2·MCC_RAIL_CLR_HORIZ` ≈ 66.2 mm, was ≈ 15 mm) — far past §5's 10 mm span rule, and
 forced by the user's width decision (no roof shape fits 3 mm of residual floor).
 - **Sag eats the roof clearance.** A sagging bridge drops toward the male's flat top, and the 0.5 mm roof
-  gap is the only margin. The `rail-latch` coupon's groove half prints in the same pose (D46 fix) and is
+  gap is the only margin. The `rail-lock` coupon's groove half prints in the same pose (D46 fix) and is
   the gate (M15). If the roof sags into the gap, **raise `MCC_RAIL_ROOF_CLR`** (the male gets shorter)
   — never narrow the rail (user decision). The CI slicer gate reports floating regions and
   cantilevers, not sag.
@@ -1784,15 +1808,19 @@ forced by the user's width decision (no roof shape fits 3 mm of residual floor).
   blocking.
 
 **R41 — clearance means play, and on a TV-mounted bracket a flank carries the weight. NEW 2026-09-28
-(rev 16, D44).** With 0.5 mm normal clearance at 60° flanks the case has ≈ ±0.58 mm lateral and ≈ 1.0 mm
-lift play before the dovetail engages. Lying flat, the floor-on-plate seat bears and the flanks float.
-**Hung on a TV** (the arch bracket, the planned vertical bracket) gravity acts along the case's
-own Y. The lower flank bears — its 60° slope then pulls the case onto the plate with ~0.58 × its weight
-— and all clearance collects on the other side. The out-of-plane moment tilts the case until the upper
-lip engages: about 1° for 1 mm over a ~60 mm band. Acceptable (user decision), but the case can rattle
-within those limits, and the D34 latch holds X only. Measure it on the coupon (M15) and on the first
-bracket print. If it is objectionable the lever is `MCC_RAIL_MATE_CLR` — a **user** decision (D44), not
-a developer tweak.
+(rev 16, D44; flank corrected rev 17).** With 0.5 mm normal clearance at 60° flanks the case has
+≈ ±0.58 mm lateral and ≈ 1.0 mm lift play before the dovetail engages. Lying flat, the floor-on-plate
+seat bears and the flanks float. **Hung on a TV** (the arch bracket, the planned vertical bracket)
+gravity acts along the case's own Y and the **upper flank bears** (rail-local −Y — the brackets'
+`rotate([0,0,180])` puts it on top): the case's upper groove wall hooks over the rail's upper flank like
+a French cleat, loading it with ≈ 1.15 × the case's weight normal to the flank, and the flank's 60°
+slope pulls the case onto the plate with ≈ 0.58 × its weight. The tipping moment of the case's offset
+centre of mass is taken by that hook and by the floor pressing on the plate below the rail. All
+clearance collects at the lower flank (≈ 1.15 mm horizontal), so gravity keeps the case seated; only a
+push against its weight lifts it off the upper flank. Acceptable (user decision), and the gravity lock
+(D48) holds X while the case hangs. Measure it on the coupon (M15) and on the first bracket print. If
+it is objectionable the lever is `MCC_RAIL_MATE_CLR` — a **user** decision (D44), not a developer
+tweak.
 
 **R42 — a sandwiched printed bracket puts ASA in the TV wall-mount's clamp path. NEW 2026-09-28 (rev 16,
 plan-D gate) — ACCEPTED by the user.** In sandwich mode (the vertical VESA-column bracket, and the arch
@@ -1832,6 +1860,23 @@ outboard, slid on from the TV's edge side** — the one layout whose sweep cross
 flat pads at the arm top: `2T ≥ T + t_rail + k_head + ARCH_SWEEP_CLR`, where `t_rail` is the mount
 rail's thickness and `k_head` the bolt-head height, both from M20), and its ≈ 73 mm stack sits between
 the columns, where a wall plate usually is. Plan D's re-plan owns both.
+
+**R44 — the rail lock is gravity-engaged. NEW 2026-09-28 (rev 17, D48/D49).** While the case hangs
+patch-wall down its weight holds the bump in its pocket (≈ 0.6–1.15 × the weight, normal to the flank,
+depending on whether the case yaws about its −X end), and the square exit face stops any axial pull at
+or below the rail line — including every cable load at the patch wall. It does not hold when that
+flank is unloaded: while the case is being hung, when the TV is laid flat, carried or tilted, or when
+the case is pushed upward; then only friction resists sliding. **Take the case off before the TV is
+laid down, carried or tilted — including by a TV lift that tilts or flips it (Q23).** A −X pull on the
+case's top (far-wall) edge can yaw its +X end up and release it at ≈ 3 × the weight — also the natural
+hand release. Mitigation: D49, the install/removal text (brackets README), M21. Accepted by the user.
+
+**R45 — the ride-over needs the printed flank play. NEW 2026-09-28 (rev 17, D48).** The case rides over
+the 0.70 mm bump inside the dovetail's own 1.155 mm horizontal play (0.45 mm margin; T1-64 asserts
+≥ 0.2). A print that comes out more than ≈ 0.1 mm oversize on each of the four flank faces binds —
+nothing is designed to flex. M15 measures the printed play and runs the e-ladder; if it binds, lower
+`MCC_RAIL_LOCK_ENGAGE` (0.5 is still self-locking). Never widen the rail or change `MCC_RAIL_MATE_CLR`
+(user decisions).
 
 ---
 
@@ -1914,12 +1959,11 @@ the columns, where a wall plate usually is. Plan D's re-plan owns both.
     settles whether ASA is really the material being threaded. **No geometry depends on it** (the
     bore is a user decision); it gates the BOM wording, the first physical assembly and M19's
     thread-hold test.
-21. **The rail lock — DP48. NEW 2026-09-28 (rev 16, D44) — open, analysis running.** The user pointed
-    out that the two DP48 bodies do carry a dovetail and a detent (two 0.8 mm bumps into recesses, per
-    the user); a new analysis is running and, once gated, stacks after plan A. Until then the adapted D34
-    latch is the shipped lock (plan A §6 is informational only). Still open with it: does "tool-less, no
-    thumbscrews" rule out a key/lever/pin actuator, or only screwed fasteners? *(Answered 2026-09-28:
-    the groove's closed −X end stays the axial end stop, a contact face, as rev 16 has it.)*
+21. **The rail lock — DP48. Answered 2026-09-28 (rev 17).** The DP48 plate was analysed (scratch F2): a
+    15° dovetail whose two 0.8 mm strips ride inside the dovetail's own play into recesses — a rigid,
+    gravity-seated detent. User decision: **gravity lock only**, the D34 latch removed (D48); a mounted
+    case always hangs patch-wall down (D49). The "tool-less, no thumbscrews" question is moot — the lock
+    has no actuator. *(Also answered: the groove's closed −X end stays the axial end stop.)*
 22. **Plan D (vertical VESA-column bracket) — sandwich decisions. NEW 2026-09-28 (rev 16).** Answers
     (user, 2026-09-28):
     (a) R42: **accept ASA** in the wall mount's clamp path, no steel sleeves (in chat: "accept ASA");
@@ -1928,6 +1972,11 @@ the columns, where a wall plate usually is. Plan D's re-plan owns both.
     (c) **The arch bracket gets a sandwich mode too** — in the plan-D re-plan's scope, not plan A; R43
     records its slide-path and stack constraints.
     (d) GitHub issue for plan D: **open — the user has been asked.**
+23. **Does the user's TV lift ever take the TV out of upright? NEW 2026-09-28 (rev 17, R44) — needs the
+    user.** The gravity lock only holds while the case hangs patch-wall down. A lift that only raises
+    and lowers an upright TV is fine; a ceiling flip-down, tilting or swivelling lift leaves the case
+    unlocked in some poses — then the case must come off before the lift moves, or the lock decision
+    (D48) goes back to the user.
 
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
@@ -1948,11 +1997,12 @@ the columns, where a wall plate usually is. Plan D's re-plan owns both.
 | **M13** | **Temperature of the device's metal top under sustained load in the closed case, ambient ~25 °C and ~35 °C** | R22 — nothing confirms 45 °C is the right trip point for this case/device pair (`poe-splitter-verification.md:234-238`). If the top never reaches 45 °C the fan never runs; if it sits at 45 °C the fan hunts | User, after the first full-size print |
 
 | **M14** | **Buy one 50 mm half coupler (Doughty T57010 / Global Truss equivalent, M12) and measure its mounting-flange bolt pattern, flange plate L × W, and overall depth** | **R25 — BLOCKING for issue #27.** No fetched source publishes the flange pattern; `MCC_TRUSS_MOUNT_PATTERN` cannot be authored honestly without it, and a placeholder produces a plate that does not bolt on. Also fixes the truss plate's own outline, which must be ≥ the case footprint | User, after buying one |
-| **M15** | **Print `models/coupons/rail-latch` (D46 fix: groove half standing on the bed, groove open) and test it:** (a) slide feel and play at `MCC_RAIL_MATE_CLR` = 0.5 (expect ≈ ±0.6 mm lateral, ≈ 1 mm lift — R41); (b) **groove-roof sag** on the groove half — roof height at mid-width vs. 4.0 mm, and the rail's 3.5 mm top must not touch it (R40); (c) the latch arm flexes freely (nub not fused to the plate), clicks at full insertion, and the axial pull-off at disengage meets **≥ 30 N** (`assumed`) | R24/R40/R41 — every `MCC_RAIL_*` figure is `assumed` except the user-decided width and clearance. (b) decides `MCC_RAIL_ROOF_CLR`; (c) tunes `MCC_RAIL_LATCH_ENGAGE`/`_RAMP_OUT`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale and calipers |
+| **M15** | **Print `models/coupons/rail-lock` and test it:** (a) roof sag on the groove half — roof height at mid-width vs 4.0 mm; the rail's 3.5 mm top must not touch it (R40); (b) play with the lock not engaged — expect ≈ 1.15 mm lateral (R41, R45); (c) **the lock, hanging**: rail plate vertical, groove half loaded to the heaviest case (≈ 0.8 kg, `assumed` — weigh one) — it rides over the bump without binding and clicks; an axial pull at the rail line does not release it up to ≥ 50 N; an outward tug at the lower edge does not release it; lifting ≤ 1.2 mm and sliding releases it one-handed; (d) e-ladder `LOCK_E` 0.5 / 0.6 / 0.8; (e) 100 cycles, then (b)–(c) again and inspect the bump and the pocket's +X wall | R40, R41, R44, R45 — every `MCC_RAIL_*` figure is `assumed` except the user-decided width and clearance. (a) decides `MCC_RAIL_ROOF_CLR`; (c)/(d) decide `MCC_RAIL_LOCK_ENGAGE`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale, a dummy mass and calipers |
 
 | **M17** | **Buy one panel switch of the chosen class and measure: actuator height proud of the panel, mounting-hole ⌀, nut across-flats (⇒ circumscribed ⌀), body depth behind the panel, and the panel-clamp thickness range** | **R29 — gates the pocket geometry for issue #32.** All five are `assumed` from a family-analogue datasheet, and all five are load-bearing: the actuator height sets `recess_t` (T1-44), the nut ⌀ sets `pad_d` and therefore whether the part fits the +X band at all (T1-43), and the clamp range decides whether a 2.0 mm residual panel is legal. The plus family's feasible `switch_y` window is 3.2 mm wide — this is not a figure to leave `assumed` through a print | User, after buying one (≈ €1–2) |
 | **M19** | **`neutrik-tile`, both classes (NAHDMI-W-B and NE8FDP-B), printed standing in ASA:** (a) seat-hole and window diameter measured **horizontally and vertically** (sag at the top of the arch, R39); (b) the real connector passes and its flange seats flush; (c) both ⌀2.5 fixing bores aligned with the flange holes, round, and their printed diameter; (d) once §12 Q20 is answered, the chosen thread survives **≥ 5 insert/remove cycles** (R28's acceptance idea, kept) | **R39 + Q20 — gates the first full-size print** (with the other "Coupons before cases" coupons). `MCC_HOLE_COMP` is written back from (a)/(b) as usual; `MCC_FIXING_BORE_D` and the hole shape are user decisions (D40/D41) — report, do not tune | User, calipers + a ⌀2.5 drill shank as a gauge |
 | **M20** | **The user's TV and its wall mount, for the sandwiched brackets (plan D: the vertical bracket and the arch's sandwich mode):** the TV model, its VESA pattern (400 × 300?) and usable M8 thread depth; the wall mount's model, its TV-side rail width and thickness at each hole, the bolt-head height, the TV-back-to-wall standoff, and the footprint and depth of its wall plate and any arms within 450 mm outboard of the +X column and between the columns | R42/R43 — decides whether the ≈ 73 mm case stack fits beside the +X column, `REACH_KEEPOUT` against the mount's rail, the arch sandwich mode's Z clearance over the right-hand column, and the pad/spacer height and M8 bolt length. Blocks plan D's re-plan, not A | User, with the TV and mount in hand — **open, the user has been asked** |
+| **M21** | **First bracket print (arch, direct mode), with a real case and device:** the lock's yaw release force for a −X pull on the case's top (far-wall) edge (≈ 3 × the weight expected), no release for pulls on the patch-wall edge and on the cables, and the one-hand lift-and-slide removal behind a mounted TV | R44 — the 60 mm coupon cannot reproduce the full case's yaw lever | User |
 
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
@@ -1961,6 +2011,7 @@ the columns, where a wall plate usually is. Plan D's re-plan owns both.
 > adds M17 (panel switch, above). **M18a–d** belong to the arch-tv-bracket gate
 > (`docs/plans/2026-09-27-arch-tv-bracket.md` §9) and are not repeated here. **Rev 15** adds M19.
 > **Rev 16** retires M7 (D44) and adds M20 (plan-D gate).
+> **Rev 17** adds M21.
 
 ---
 
@@ -2017,6 +2068,9 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D45** | 2026-09-28 | §6 reservation rule: a reserved bay clears every other feature; §11 R24 claimed the rail "clears the splitter bay by 9.6 mm (compact)" | `lib/mcc/mounts.scad:63-66` draws the rail sill over `x ∈ [−75, +75]`, while the compact family's reserved splitter bay spans `x ≤ −L/2 + MCC_WALL + 20` = −73.95 (L = 193.9) / −74.45 (L = 194.9) — the sill's closed end sits **0.55–1.05 mm inside the bay** for `z ∈ [3, 7]` over the bay's Y overlap. T1-17 (splitter vs. floor keep-outs) was never implemented | A splitter fitted to the reservation would be ~1 mm short of room at its foot. Pre-existing since rev 9; D44 widens the overlapping face but does not cause it | **Open — low severity, separate small ticket.** Either pull the sill's closed end back by the overlap on the compact family, or record the bay as 1 mm shorter; implement T1-17 as a floor-keep-out-vs-splitter-bay assert. Not in plan A |
 | **D46** | 2026-09-28 | §9 Tier 4: a coupon tests the real geometry in the real print pose | `models/coupons/rail-latch.scad` fused the groove plinth ON the shared base plate with its groove mouth facing down into that plate: the groove was a sealed tunnel, so the rail could not be inserted without sawing the plinth off. The file's own comment ("sunk into its own top face") contradicted its code | M15 could not be performed, and after D44 this coupon is also the gate for the ~66 mm roof bridge (R40) | **Fixed in rev 16 (plan A):** the groove half stands directly on the bed, groove open, like the case floor; two snap-off strips beside the groove join the halves into one shell |
 | **D47** | 2026-09-28 | #26 `tv-bracket.scad`: "sandwiched between a TV's own back panel and its existing wall/stand mount", with the case mated on the rail | The rail — and so the mated case, ≈ 211 × 166 mm, centred on the plate — is on the plate's mount-side face, the same face the wall/stand mount's TV-side plate or rails bolt onto at the VESA 100/200 holes (±50/±100), most of which lie under the case's footprint. D44 makes it strictly tighter (the case floor now rests on the plate) | The tv-bracket cannot carry a case while a VESA mount is attached at those holes | **Closed — retired (user decision 2026-09-28: phase the bracket out).** Removed in rev 16 with plan A (its verdict's Amendment 1): `models/brackets/tv-bracket.scad`, its golden, `MCC_BRACKET_PLATE_T` and every doc/skill reference. The arch bracket (horizontal) and the planned vertical VESA-column bracket remain; the arch sandwich mode's sweep past a mount rail is R43 |
+| **D48** | 2026-09-28 | D34 (in-plane snap latch: arm, slot, plate window, nub, notch) and D44 ("the D34 latch stays the lock"); Q21 | **User decision 2026-09-28**, after analysing the specialist's DP48 plate (scratch F2): **gravity lock only**, the D34 latch removed; adopt the DP48's 1 × 45° entry lead-in | D34 released by pulling (≥ 30 N target, never measured; a beam estimate gave ≈ 10–19 N) and needed a window through every consumer plate; with D44's flush seat its nub also sat on the plate plane and left a zero-volume sliver that failed `check` on the arch centre and the coupon | **Done in rev 17 (plan F, `docs/plans/2026-09-28-gravity-lock.md`; shipped in one PR with rev 16).** A rigid bump on the rail's −Y flank (`MCC_RAIL_LOCK_ENGAGE` 0.70 horizontal, 30° entry, 90° exit, exit face `len/2 − 3.0`) drops into a pocket in the groove's −Y flank (the bump grown by `MCC_RAIL_CLR_HORIZ`, full groove depth); nothing flexes — the case rides over it inside the dovetail's own 1.155 mm play (T1-64); square exit face (T1-65); sill wall behind the pocket ≥ 1.5 mm (T1-66); release = lift ≈ 1 mm + slide. Lead-in `MCC_RAIL_LEADIN` = 1.0 at the case's +X face (`mcc_rail_female_cut(entry_x)`). Removed: `_mcc_rail_latch_geom()`, `_mcc_rail_nub_2d()`, `_mcc_rail_latch_cut_2d()`, `mcc_rail_male_window()`, `mcc_rail_male(plate_t)`, every `MCC_RAIL_LATCH_*`, `MCC_SNAP_STRAIN_MAX`. `rail_fit.py` proves the lift, the lock and the full-mate clearance; coupon `rail-latch` → `rail-lock` (snap-off strips 1 mm in from the edges, justified by the lock-only prototype). M15 rewritten, M21, R44, R45, Q23; Q21 closed |
+| **D49** | 2026-09-28 | Issue #26's orientation *convention* ("mount with +Y up so the patch wall hangs down"); the arch README: nothing keys the assembly against a 180° install | **User decision 2026-09-28: a mounted case ALWAYS hangs patch-wall down** — every bracket, the truss use (#27) included, no portrait TV | The gravity lock (D48) only engages when the case's weight rests on the rail's −Y flank | **Fixed decision, rev 17** (CLAUDE.md, brackets README, print-check). Every bracket keeps the `rotate([0,0,180])` rail placement. Take the case off before the TV is laid down, carried or tilted (R44, Q23). Still no physical key against a 180° install — the arch's UP arrow and shape remain cues |
+| **D50** | 2026-09-28 | §3 rail rules: brackets called `mcc_rail_male(plate_t)` + `mcc_rail_male_window()` and built keep-outs from `MCC_RAIL_LATCH_*` | Plan-D gate (F-R1/F-R2): a bracket must not know rail internals | Every rail change would ripple into every bracket file | **Done in rev 17 (plan F).** `mcc_rail_male_keepout(len)` (pure, `rail.scad`) returns the rail-local plate-side keep-out `[[x_min, x_max], [y_min, y_max]]`, bump included; a bracket unions `mcc_rail_male(len)` onto its plate (no cut), never passes `lock_e`, and reads only that accessor. The arch migrated (`RAIL_KEEPOUT_X/Y`); plan D (rev 18) uses only these two |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---

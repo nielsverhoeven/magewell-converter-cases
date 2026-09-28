@@ -64,7 +64,7 @@ connector count varies 3–4 by SKU.)*
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
 | ~~1/4"-20 brass heat-set insert~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D35):** the case has no floor insert any more — the side bolt (above) is the only screw. `cfg["tripod_insert"]` can bring it back per variant, but only together with `["rail", false]` (D44, assert T1-63). | architecture.md §13 D35 |
-| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**; widened and made flush by D44: 65 mm root, the case floor sits flush on the bracket plate, ≥ 0.5 mm clearance on every non-bearing face) needs no BOM hardware of its own: the female groove (case floor) and the male rail + snap latch are printed features. See `## Mounting brackets` for bracket hardware. The Magewell-Fishtail M4 reservation is **dropped** (D44) — no Fishtail hardware | `.claude/knowledge/architecture.md` §6 floor rule (rev 16), §13 D44; `lib/mcc/rail.scad` |
+| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**; widened and made flush by D44: 65 mm root, the case floor sits flush on the bracket plate, ≥ 0.5 mm clearance on every non-bearing face) needs no BOM hardware of its own: the female groove (case floor, with the lock pocket) and the male rail (with the rigid gravity-lock bump, D48) are printed features. See `## Mounting brackets` for bracket hardware. The Magewell-Fishtail M4 reservation is **dropped** (D44) — no Fishtail hardware | `.claude/knowledge/architecture.md` §6 floor rule (rev 16), §13 D44; `lib/mcc/rail.scad` |
 | Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside — **free-standing use only**: never on a case that mounts on a bracket, where feet would hold the floor off the plate that D44 requires it to sit flush on | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
 | Cable zip tie / adhesive mount base | generic | as needed | Internal cable dressing | `knowledge/components/fasteners-and-hardware.md:215-222` |
 
@@ -136,8 +136,9 @@ sections below from a device's port map + variant config; a bracket has neither
 
 The VESA 100×100/200×200 sandwich plate `tv-bracket.scad` (issue #26) was **retired** on 2026-09-28
 (user decision, `.claude/knowledge/architecture.md` §13 D47): a mated case covered the VESA mount
-interface it was sandwiched to. The case side of every bracket needs no hardware: the rail/latch
-interface is tool-less (see `models/coupons/rail-latch.scad` for the retention target it depends on).
+interface it was sandwiched to. The case side of every bracket needs no hardware: the rail/lock
+interface is tool-less — a rigid gravity lock, released by lifting the case about 1 mm (D48; its
+tests: `models/coupons/rail-lock.scad`, M15).
 
 Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
 user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
@@ -146,7 +147,7 @@ user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
 
 `arch-tv-bracket.scad` screws **directly** onto a TV's top two VESA 400 screw positions (M8); no
 VESA plate. Printed once per mounting point, not per case. **Do not print for use before M15
-(rail-latch), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
+(rail-lock), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
 defect tracked as issue #48) are closed** — see `models/brackets/README.md`.
 
 | Item | Part number | Qty | Notes | Source |

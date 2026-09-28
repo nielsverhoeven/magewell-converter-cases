@@ -1,5 +1,9 @@
 # Patch-wall layout contract
 
+Status: **revision 17, 2026-09-28** (aligned with `architecture.md` rev 17 — D48, the gravity lock). **§9**
+gains **T1-64 … T1-66**, and the T1-62 row's mate check now covers the lock bump. No envelope figure
+moves on any SKU.
+
 Status: **revision 16, 2026-09-28** (aligned with `architecture.md` rev 16 — D44, the wide, flush rail).
 What changes here: **§7.1's floor keep-out table** — the case-insert and Fishtail rows are struck, and
 the mount-rail row carries the new width, position and clearances; **§9** gains **T1-62** and **T1-63**;
@@ -1372,8 +1376,11 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | ~~**T1-42c**~~ | ~~`$slop` has not erased the thread~~ | **RETIRED rev 15 (D41).** The lesson stays in `architecture.md` rev 10: a BOSL2 internal thread grows by `4·$slop` in diameter |
 | **T1-47 … T1-60** | owned by `models/brackets/arch-tv-bracket.scad` (its A1 … A13 plus B3; e.g. T1-48 = "the case stays fully behind the TV") | **assigned 2026-09-27** by the arch-tv-bracket gate (`docs/plans/2026-09-27-arch-tv-bracket.md` B4), recorded here only in rev 15 (`architecture.md` §13 D42). They live in that file; do not reuse these ids |
 | **T1-61** | *the connector fixing bores leave wall* — for each of the two bores at the Neutrik diagonal (`MCC_D_SCREW_PITCH/2`): distance from the bore axis to the seat-hole circle and to the window circle, minus `MCC_FIXING_BORE_D/2`, ≥ `MCC_WALL_BORE_WEB_MIN` (1.2, `assumed`) | **new rev 14 (D36) as "T1-48"; renumbered rev 15 (D42) and re-scoped to the plain bore (D41).** 24-class window (⌀24.8): `2.91 − 1.25 = 1.66 ≥ 1.2` ✓; 23.6-class (⌀24.4): `3.11 − 1.25 = 1.86` ✓. Evaluated in `mcc_neutrik_d_wall_cut()`. **The next free id is T1-62** |
-| **T1-62** | *the rail joint keeps its clearance* — `MCC_RAIL_CLR_HORIZ·sin(MCC_RAIL_FLANK_ANGLE) ≥ MCC_RAIL_MATE_CLR` (0.5, normal to the flanks) **and** `MCC_RAIL_DEPTH − MCC_RAIL_MALE_H ≥ MCC_RAIL_MATE_CLR` (roof) | **new rev 16** (D44, user decision: ≥ 0.5 mm on every non-bearing face). Evaluated in `mcc_rail_female_cut()` and in `tests/test_rail.scad`. The geometry-level mate (no interference at full insertion, the end stop works, only the nub overlaps while sliding) is checked by `scripts/rail_fit.py` against a real base |
+| **T1-62** | *the rail joint keeps its clearance* — `MCC_RAIL_CLR_HORIZ·sin(MCC_RAIL_FLANK_ANGLE) ≥ MCC_RAIL_MATE_CLR` (0.5, normal to the flanks) **and** `MCC_RAIL_DEPTH − MCC_RAIL_MALE_H ≥ MCC_RAIL_MATE_CLR` (roof) | **new rev 16** (D44, user decision: ≥ 0.5 mm on every non-bearing face). Evaluated in `mcc_rail_female_cut()` and in `tests/test_rail.scad`. The geometry-level mate (no interference at full insertion, the end stop works, only the lock bump overlaps while sliding, and the lift it needs stays inside the flank play (T1-64)) is checked by `scripts/rail_fit.py` against a real base |
 | **T1-63** | *the opt-in case insert and the rail are mutually exclusive* — `!(cfg["tripod_insert"] && rail_on)`, with `"rail"` defaulting to true | **new rev 16** (D44). The wide rail covers the floor centre the insert boss needs, and its keep-out row is gone. Evaluated in `mcc_cradle()`. **The next free id is T1-64** |
+| **T1-64** | *the case rides over the lock bump inside the flank play* — `MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_LOCK_PLAY_MARGIN ≤ 2·MCC_RAIL_CLR_HORIZ` (0.70 + 0.2 ≤ 1.155) | **new rev 17** (D48). Evaluated in `mcc_rail_male()` and `tests/test_rail.scad`; `scripts/rail_fit.py` measures the real lift (0.70 ± 0.02) against a rendered base |
+| **T1-65** | *the lock is self-locking and fits the rail* — exit face 75–90° to the slide axis, entry ramp 15–60°, the bump inside `(−len/2 + 5, len/2 − 1)` | **new rev 17** (D48). Evaluated in `mcc_rail_male()` and `tests/test_rail.scad` |
+| **T1-66** | *the case keeps wall around the lock* — sill wall behind the pocket `MCC_RAIL_SILL_SIDE_W − MCC_RAIL_CLR_HORIZ − lock_e ≥ MCC_WALL/2` (1.72 ≥ 1.5); lead-in `MCC_RAIL_LEADIN ≤ MCC_WALL` | **new rev 17** (D48). Evaluated in `mcc_rail_female_cut()` and `tests/test_rail.scad`. T1-67 … T1-69 stay unused; T1-70 … T1-90 belong to plan D; **the next free id is T1-91** |
 
 ---
 

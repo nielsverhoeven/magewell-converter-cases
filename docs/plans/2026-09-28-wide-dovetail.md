@@ -546,7 +546,7 @@ python scripts/build.py all
 
 # Architect verdict — Plan A (rev 2): wide, flush dovetail
 
-> **Amended 2026-09-28 — read "Amendment 1" at the end first.** It retires `tv-bracket` inside this PR, voids B8 and D.2, and replaces several Appendix E/G texts.
+> **Amended 2026-09-28 — read Amendments 1 and 2 at the end first.** Amendment 1 retires `tv-bracket` inside this PR, voids B8 and D.2, and replaces several Appendix E/G texts. Amendment 2 corrects R41's flank; its AM2-1 (coupon strips) is **withdrawn** — see the note at its end. A ships inside plan F's PR.
 
 Gate: `solution-architect`, 2026-09-28. Plan: `scratchpad/plans/A-wide-dovetail.md`.
 Checked against:
@@ -2247,6 +2247,8 @@ this block (starting with a blank line):
 - Unchanged: C → A (now including AM-3) → D.
 - The DP48 lock analysis stacks after A (Q21).
 - Plan D's rev 2 now also covers the arch sandwich mode. The D verdict carries a matching Amendment 1.
+
+---
 
 ## Amendment 2 (2026-09-28): two fixes found while prototyping plan F
 

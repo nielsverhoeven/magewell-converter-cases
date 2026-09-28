@@ -40,7 +40,7 @@ the top of the file).
   case's own leading end wall must clear the rail's open end before the rail can begin engaging)
   of free space to the right of its final position, from 22 to 73 mm off the TV back (D44: 11 mm plates, the case floor flush on the centre).
 - Print table: `arm` — **TV face on the bed**, ribs/pad boss/insert bores up, no supports;
-  `centre` — **flat (TV-side) face on the bed**, rail up (same convention as the `rail-latch`
+  `centre` — **flat (TV-side) face on the bed**, rail up (same convention as the `rail-lock`
   coupon), no supports.
 - Render: `python scripts/build.py render brackets/arch-tv-bracket --format both`. The released STL
   is rendered for the **placeholder** `TV_TOP_CLEAR = 150` (`unknown` → `assumed`, measurement
@@ -48,10 +48,10 @@ the top of the file).
   `-D TV_TOP_CLEAR=<mm>` and re-golden before printing for use.
 - Assembly order: heat-set inserts into both arms → bolt both arms to the centre (M3×12, from the
   top, on a table) → offer the assembled bracket to the TV → two M8 screws through the pads (length
-  MEASURE, see `BOM.md`) → click the case on.
+  MEASURE, see `BOM.md`) → hang the case on and slide it until the lock clicks (see "Installing and removing a case").
 - The TV's top two VESA 400 holes must not also carry another mount — this is a **direct** mount,
   by user decision (2026-09-27, #47).
-- **Do not print for use** before M15 (rail-latch pull test), M18 (the TV measurements: top-screw-
+- **Do not print for use** before M15 (rail-lock coupon tests), M18 (the TV measurements: top-screw-
   to-edge clearance, VESA insert thread depth, sweep-band obstacles, and post-print rail tilt) and
   R38 (an inherited rail-interface defect, tracked as issue #48 — the female groove has no entry
   path today) are closed. See `docs/plans/2026-09-27-arch-tv-bracket.md` §9/§12.3 for the full risk
@@ -64,6 +64,22 @@ Every bracket places the rail with `rotate([0,0,180])`, so a case slid onto it h
 arch up, UP arrow). Verify it with the bracket file's `part == "assembly"` preview (a ghost case mated
 onto the rail) rather than trusting the transform algebra alone; `.claude/skills/print-check/SKILL.md`
 carries the one-line go/no-go version.
+
+**A mounted case always hangs patch-wall down** (user decision 2026-09-28, architecture.md D49) — on
+every bracket, the planned truss bracket (#27) included, and never on a TV turned to portrait. The
+rail's gravity lock (D48) only engages in that pose: the case's weight must rest on the rail's upper
+flank, where the lock bump is.
+
+## Installing and removing a case
+
+- **Install:** hold the case patch-wall down, with its +X end wall (the fan end, where the floor
+  groove opens) toward the rail's free end; set the groove onto the rail's end — the 45° lead-in at
+  the groove entrance guides it — and slide the case along until it stops and the lock clicks (the
+  case rises about 0.7 mm over the lock bump on the way and drops into place).
+- **Remove:** lift the case until it stops (about 1 mm — the dovetail itself limits it), then slide it
+  back off the way it went on. A plain pull along the rail does not release a hanging case.
+- **Before the TV moves:** take the case off before the TV is laid down, carried or tilted — including
+  by a TV lift that tilts or flips it. The lock only holds while the case hangs patch-wall down (R44).
 
 ## Render
 
@@ -81,4 +97,4 @@ carries the one-line go/no-go version.
 | Bracket | Orientation | Why |
 |---|---|---|
 | `arch-tv-bracket` `arm` | **TV face down on the bed** — pad boss, edge ribs and insert bores all print up, no supports. | Flat bar, minimal warp; the M8 counterbore and insert bores open upward, printable without bridging. |
-| `arch-tv-bracket` `centre` | **Flat (TV-side, standoff) face down on the bed, rail up** — the same rail orientation as the `rail-latch` coupon. | The dovetail taper and the latch nub's 2 mm ledge are the only overhangs (D34, D44); the latch arm's leg stands on the bed through the plate window; the tabs print flat with the body. |
+| `arch-tv-bracket` `centre` | **Flat (TV-side, standoff) face down on the bed, rail up** — the same rail orientation as the `rail-lock` coupon. | The dovetail taper and the lock bump that follows its upper flank are the only overhangs (D44, D48), both self-supporting at 30° from vertical; the rail needs no plate window (D50); the tabs print flat with the body. |

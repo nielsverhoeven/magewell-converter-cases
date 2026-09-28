@@ -62,8 +62,11 @@ Two knowledge trees, do not merge them:
   features (one owner, `mounts.scad`): the dovetail mount-rail groove (D-15/D34), strap slots,
   stacking profile. **Wide, flush dovetail** (user decision 2026-09-28, D44): 65 mm root at
   `MCC_RAIL_Y` = −23.5; the case's exterior floor sits flush on the bracket plate (no pedestal) and
-  every non-bearing face of the joint keeps ≥ 0.5 mm clearance (flanks and roof); the D34 latch is
-  the lock. **No floor insert and no floor reservations** (D35, D44): the side bolt is the only
+  every non-bearing face of the joint keeps ≥ 0.5 mm clearance (flanks and roof). **The lock is a
+  gravity lock** (user decision 2026-09-28, D48): a rigid 0.7 mm bump on the rail's upper flank drops
+  into a pocket in the groove flank and is held there by the case's own weight; nothing flexes, there
+  is no latch and no actuator — remove a case by lifting it about 1 mm and sliding it back off. The
+  groove's entrance through the +X wall has a 1 × 45° lead-in. **No floor insert and no floor reservations** (D35, D44): the side bolt is the only
   screw; the Magewell-Fishtail M4 and 1/4"-20 insert reservations are dropped because the rail covers
   the floor centre — `cfg["tripod_insert"]` stays available only with `["rail", false]` (assert
   T1-63). Hole position per SKU is
@@ -76,6 +79,10 @@ Two knowledge trees, do not merge them:
   seen from behind the TV). In sandwich mode a bracket is clamped between the TV and the TV's own
   wall mount on longer M8 bolts, and **printed ASA in that clamp path is accepted** (architecture.md
   §11 R42). The VESA 100/200 `tv-bracket` is **retired** (D47) — do not reintroduce it.
+  **A mounted case always hangs patch-wall down** (user decision 2026-09-28, D49) — on every bracket,
+  the truss mount (#27) included, and never on a TV turned to portrait: the gravity lock only engages
+  when the case's weight rests on the rail's upper flank. Take the case off before the TV is laid
+  down, carried or tilted (R44).
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
   behind a shell bezel. **The connectors mount straight into the patch wall** (user decision
   2026-09-28, D36 — no separate panel plate): a 3 mm bezel recess, a 2 mm flange seat with a
@@ -97,7 +104,8 @@ Two knowledge trees, do not merge them:
   project (architecture.md §8 rev 13). Never ship a part the slicer user has to re-orient.
 - Third-party reference assets live in `knowledge/**/assets/` with attribution, nowhere else.
 - **Coupons before cases** — `neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`,
-  `tolerance-ladder` are printed and measured before any full-size case is printed.
+  `tolerance-ladder` and `rail-lock` are printed and measured before any full-size case is printed.
+  The rail-lock coupon is the physical gate for the case's groove roof (R40), pocket and lead-in (M15).
 
 ## Standard commands
 
@@ -143,7 +151,7 @@ Studio project; every part (8 cases as base + lid, coupons, `arch-tv-bracket` ar
 six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry evolutions since — the
 connectors mount straight into the patch wall, no panel part (D36), no floor insert (D35), no
 floor-pad island (D37), boss-wide lid-boss webs (D38), the rail
-latch redesign (D34), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47) — are in architecture.md §13. Slicer rules and the
+gravity lock that replaced the D34 latch (D48), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47) — are in architecture.md §13. Slicer rules and the
 debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio` skill.
 
 **All eight priority cases exist and are on `main`** (`models/<slug>/case.scad` for HDMI/SDI TX,
