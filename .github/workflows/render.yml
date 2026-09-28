@@ -111,10 +111,9 @@ jobs:
 
       - name: Upload exports
         # if: !cancelled() (not always()) — B8, issue #47: uploads the partial exports/summaries
-        # even when `build.py all` fails (e.g. a missing golden, issue #47 §7.2's own route to
+        # even when a part group fails (e.g. a missing golden, issue #47 §7.2's own route to
         # producing one from CI), but the workflow's own cancel-in-progress:true must still be able
         # to skip a superseded run's partial output, which always() would upload too.
-        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
