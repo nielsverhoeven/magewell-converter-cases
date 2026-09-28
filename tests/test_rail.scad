@@ -22,7 +22,9 @@ include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
 // --- mcc_rail_sill_size() -- pure function, no geometry ----------------------------------------
 _sill = mcc_rail_sill_size();
 assert(_sill[0] == MCC_RAIL_LEN, str("mcc_rail_sill_size len=", _sill[0]));
-assert(_sill[1] == MCC_RAIL_ROOT_W, str("mcc_rail_sill_size width=", _sill[1]));
+assert(_sill[1] == MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W, str("mcc_rail_sill_size width=", _sill[1]));
+// D30: the sill's side walls beside the groove root must be real walls, not knife edges.
+assert(MCC_RAIL_SILL_SIDE_W >= MCC_WALL - MCC_EPS, str("D30: MCC_RAIL_SILL_SIDE_W=", MCC_RAIL_SILL_SIDE_W, " below MCC_WALL"));
 assert(_sill[2] == MCC_RAIL_SILL_H, str("mcc_rail_sill_size height=", _sill[2]));
 
 // --- T1-38: MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T, checked directly (not just via the

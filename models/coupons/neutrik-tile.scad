@@ -7,6 +7,10 @@
 // Render:
 //   openscad --backend=Manifold -o out/neutrik-tile.stl models/coupons/neutrik-tile.scad
 //   openscad --backend=Manifold -D 'connector="NE8FDP-B"' -o out/neutrik-tile-ne8fdp.stl models/coupons/neutrik-tile.scad
+// build.py: print_pose = neutrik-tile:flip
+//   (2026-09-27) the tile is authored like the panel plate — front/flange face at Z=0, rear
+//   bosses toward -Z — so it must be flipped to print flange-down, bosses up (print-check §3).
+//   Exported unflipped it printed the whole plate on top of its bosses (Bambu "floating cantilever").
 //////////////////////////////////////////////////////////////////////
 
 $fa = 1; $fs = 0.4;

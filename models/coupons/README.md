@@ -65,7 +65,7 @@ about the other.
 
 | Coupon | Orientation | Why |
 |---|---|---|
-| `neutrik-tile` | **Flange (front) face down on the bed.** As modeled: the tile's Z axis (connector-cutout axis) is already vertical when the part sits on its large flat face, so no rotation is needed — just place it flange-down, rear screw bosses pointing up. | The Ø23.8/24.2 mm cutout prints as a true circle with no bridging; the flange seat prints against the bed as a smooth, flat surface (print-check §3). |
+| `neutrik-tile` | **Flange (front) face down on the bed, rear screw bosses pointing up** — the exported `.stl`/`.3mf` are already in this pose (`// build.py: print_pose = neutrik-tile:flip`; the tile is authored front-face-at-Z=0 like the panel plate, so it needs the same flip). | The Ø23.8/24.2 mm cutout prints as a true circle with no bridging; the flange seat prints against the bed as a smooth, flat surface (print-check §3). |
 | `depth-mockup` | **Flat, floor plate down on the bed**, walls rising vertically out of the floor. No supports needed. | A flat-printing U-channel: the floor plate is the bed-contact face, and both the panel wall and the mock-face wall stack directly on top of the floor (and of each other's ribs), so every layer has full support from the layer below. The only overhang is the connector cutout's horizontal hole, which prints with a short self-supporting bridge at its top — expected, not a defect (print-check §8 exception, noted in the coupon's own header comment). |
 | `tg-ladder` | **Flat, base plate down.** | Base is a simple flat plate; tongues/grooves project upward, no bridging. Brim recommended — base footprint is 230×36 mm, the longest single dimension of any coupon here. |
 | `insert-boss` | **Flat, base plate down**, boss bores facing up. | `mcc_heat_set_boss()` bores open upward (blind bore, axis vertical) — true-circle print, no bridging, matches the "hole axis vertical" rule for any boss/insert hole. |
@@ -220,6 +220,11 @@ number under a stale `confidence: "drawing"` still reads as unverified.
   bump `confidence` from `"assumed"` toward `"measured"` as each figure is confirmed.
 
 ### rail-latch
+
+> **Latch disabled for now** (2026-09-27, `MCC_RAIL_LATCH_ENABLED = false`, architecture.md D28):
+> the spring-lip arm as modelled printed in mid-air and did not clear the groove, so it is left off
+> the male rail until it is redesigned. Test the slide fit and the end-stop; skip the click,
+> pull-test and thumb-release steps below.
 
 - Hardware needed: a luggage/fish scale (or similar) and a temporary loop (string/cable tie) through
   the male half's end-stop flange, for the pull test.

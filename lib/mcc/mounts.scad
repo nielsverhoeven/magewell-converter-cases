@@ -36,7 +36,8 @@ use <rail.scad>         // mcc_rail_female_cut() -- D-15, rev 9, issue #25
 //   mcc_floor_features_add(dev, cfg);
 // Description:
 //   ADDITIVE floor features: the mount-rail sill (D-15, rev 9, issue #25 — replaces VESA), a plain
-//   MCC_RAIL_LEN x MCC_RAIL_ROOT_W x MCC_RAIL_SILL_H solid block at (0, MCC_RAIL_Y), skipped
+//   MCC_RAIL_LEN x (MCC_RAIL_ROOT_W + 2*MCC_RAIL_SILL_SIDE_W) x MCC_RAIL_SILL_H solid block at
+//   (0, MCC_RAIL_Y), skipped
 //   entirely when `cfg`'s "rail" key is explicitly false (default true, mirroring the old "vesa"
 //   flag's off-switch convenience). Split into an ADD (here) + a separate CUT
 //   (mcc_rail_features_cut(), below) for the same non-manifold reason documented at the top of this
@@ -60,7 +61,9 @@ module mcc_floor_features_add(dev, cfg) {
                 mcc_dev_slug(dev), "\" (L=", L, ")"));
 
         translate([0, MCC_RAIL_Y, 0])
-            _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN, MCC_RAIL_ROOT_W], MCC_RAIL_SILL_H);
+            // Width: root + a full side wall each side (MCC_RAIL_SILL_SIDE_W, D30) — never just
+            // the root width, which leaves knife-edge sill walls and an unsupported groove roof.
+            _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], MCC_RAIL_SILL_H);
     }
 }
 

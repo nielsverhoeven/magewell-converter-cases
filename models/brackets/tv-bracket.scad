@@ -114,6 +114,14 @@ VESA_HOLES = concat(
 // fdm-rugged-enclosure-guidelines.md:68, D22). Arms run along the two centrelines only (never off-
 // axis), so they clear every VESA hole above by construction (every hole sits at |x| or |y| in
 // {50, 100}, never at 0) without needing a per-hole relief cut.
+// RIBS OFF (2026-09-27, architecture.md D31): with the rail on one face and a 9 mm rib cross on the
+// other, the plate had no printable pose — whichever face went down, the 230 x 230 plate hung 9 mm
+// above the bed on ribs or rail (Bambu Studio: "floating cantilever"; ~51 000 mm2 of overhang). With
+// the ribs off, the TV-facing face is flat and prints on the bed, rail up — the pose models/brackets/
+// README.md already asks for. The 6 mm ASA plate carries a < 1 kg case on 4 VESA screws without
+// them (assumed; the ribs were never load-calculated either). Flip back only with ribs that live on
+// a printable face.
+RIBS      = false;
 RIB_T     = MCC_WALL;                             // = 3.0
 RIB_H     = MCC_RIB_HEIGHT_RATIO_MAX * RIB_T;     // = 9.0 (the practical ceiling, not a margin)
 RIB_ARM_L = 2 * (VESA200_PITCH / 2);              // = 200: full centreline span, 15 mm short of
@@ -124,9 +132,9 @@ RIB_ARM_L = 2 * (VESA200_PITCH / 2);              // = 200: full centreline span
 // Tier-1 asserts (architecture.md §9) -- evaluated at include time, before any geometry is drawn.
 // -----------------------------------------------------------------------------------------
 
-assert(mcc_bbox_ok([PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T + MCC_RAIL_SILL_H + RIB_H]),
+assert(mcc_bbox_ok([PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T + MCC_RAIL_SILL_H + (RIBS ? RIB_H : 0)]),
     str("mcc: tv-bracket bbox exceeds the printable envelope: ",
-        [PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T + MCC_RAIL_SILL_H + RIB_H]));
+        [PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T + MCC_RAIL_SILL_H + (RIBS ? RIB_H : 0)]));
 
 assert(RIB_T <= 0.6 * MCC_BRACKET_PLATE_T,
     str("mcc: tv-bracket rib thickness ", RIB_T, " exceeds 0.6x the plate thickness ",
@@ -175,7 +183,7 @@ module mcc_tv_bracket_plate() {
     difference() {
         union() {
             cuboid([PLATE_SIZE, PLATE_SIZE, MCC_BRACKET_PLATE_T], anchor = TOP);
-            _mcc_tv_bracket_ribs();
+            if (RIBS) _mcc_tv_bracket_ribs();
             // Rail: rotate([0,0,180]) -- see this file's header comment "Derivation of the
             // rotate([0,0,180])" for why. mcc_rail_male()'s own local Z=0 (pedestal foot) already
             // sits exactly on this plate's own rail face (local Z=0) with no extra translate.

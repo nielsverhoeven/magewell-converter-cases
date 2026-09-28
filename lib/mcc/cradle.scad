@@ -65,6 +65,25 @@ function _mcc_cradle_deck_grid(lo, hi) =
     )
     [for (i = [1:1:n_ribs]) lo + MCC_WALL + i * step];
 
+// Function: _mcc_gap_centres()
+// Description:
+//   Private, pure. `walls` = list of [lo, hi] solid intervals along one axis (any order, may
+//   overlap). Returns the centre of every open gap (> 1 mm) between the merged intervals — the bay
+//   centres of a rib lattice. Used to put exactly one vent in the middle of each bay (D33).
+function _mcc_gaps(walls) =
+    let(w = sort(walls, idx = 0))
+    [for (i = [0:1:len(w) - 2])
+        let(end = max([for (j = [0:1:i]) w[j][1]]), nxt = w[i + 1][0])
+        if (nxt - end > MCC_EPS) [end, nxt]];
+// Solid intervals along one deck axis: the lattice frame, its ribs, and the island skirt's two
+// walls (island starting at `c`), along either axis.
+function _mcc_island_walls(deck, c) = concat(
+    [[deck[0], deck[0] + MCC_WALL], [deck[1] - MCC_WALL, deck[1]]],
+    [for (g = _mcc_cradle_deck_grid(deck[0], deck[1])) [g - MCC_CRADLE_RIB_T / 2, g + MCC_CRADLE_RIB_T / 2]],
+    [[c, c + MCC_CRADLE_RIB_T],
+     [c + MCC_CRADLE_FLOOR_PAD_MIN - MCC_CRADLE_RIB_T, c + MCC_CRADLE_FLOOR_PAD_MIN]]);
+function _mcc_gap_centres(walls) = [for (g = _mcc_gaps(walls)) if (g[1] - g[0] > 1) (g[0] + g[1]) / 2];
+
 // Module: _mcc_cradle_deck_lattice()
 // Usage:
 //   _mcc_cradle_deck_lattice(deck_x, deck_y, deck_h, dev);
@@ -205,12 +224,58 @@ module mcc_cradle(dev, cfg) {
                 // the two share the exact XY footprint by construction.
                 translate([x_dev_c, y_dev_c, MCC_FLOOR_T + deck_h - pad_island_h])
                     cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, pad_island_h]);
+
+                // Sliver fill (D33): where a skirt wall lands within a rib's width of a lattice rib
+                // the slot between them is too narrow to vent — fill it solid instead.
+                for (g = _mcc_gaps(_mcc_island_walls(deck_y, y_dev_c)))
+                    if (g[1] - g[0] < MCC_CRADLE_RIB_T && g[0] >= y_dev_c - MCC_EPS &&
+                        g[1] <= y_dev_c + MCC_CRADLE_FLOOR_PAD_MIN + MCC_EPS)
+                        translate([x_dev_c, g[0] - MCC_EPS, MCC_FLOOR_T])
+                            cube([MCC_CRADLE_FLOOR_PAD_MIN, g[1] - g[0] + 2 * MCC_EPS, deck_h - pad_island_h + MCC_EPS]);
+                for (g = _mcc_gaps(_mcc_island_walls(deck_x, x_dev_c)))
+                    if (g[1] - g[0] < MCC_CRADLE_RIB_T && g[0] >= x_dev_c - MCC_EPS &&
+                        g[1] <= x_dev_c + MCC_CRADLE_FLOOR_PAD_MIN + MCC_EPS)
+                        translate([g[0] - MCC_EPS, y_dev_c, MCC_FLOOR_T])
+                            cube([g[1] - g[0] + 2 * MCC_EPS, MCC_CRADLE_FLOOR_PAD_MIN, deck_h - pad_island_h + MCC_EPS]);
+
+                // Island skirt (2026-09-27, architecture.md D33): a MCC_CRADLE_RIB_T-walled square
+                // tube from the floor up to the island's underside, around its whole edge. Without
+                // it the island started deck_h - pad_island_h above the floor and hung off whichever
+                // lattice ribs happened to cross under it, its edges 6-8 mm out over open bays
+                // (Bambu Studio "floating cantilever"). With it every bay under the island is
+                // closed on all four sides, i.e. a plain bridge, and the pad's load goes straight
+                // to the floor.
+                translate([x_dev_c, y_dev_c, MCC_FLOOR_T])
+                    difference() {
+                        cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, deck_h - pad_island_h + MCC_EPS]);
+                        translate([MCC_CRADLE_RIB_T, MCC_CRADLE_RIB_T, -MCC_EPS])
+                            cube([MCC_CRADLE_FLOOR_PAD_MIN - 2 * MCC_CRADLE_RIB_T,
+                                  MCC_CRADLE_FLOOR_PAD_MIN - 2 * MCC_CRADLE_RIB_T,
+                                  deck_h - pad_island_h + 3 * MCC_EPS]);
+                    }
             }
 
             // Compliant floor-pad pocket, centred at (x_dev_c, y_dev_c) — inside the device's own
             // footprint by construction (layout-patch-wall.md §7).
             translate([x_dev_c, y_dev_c, MCC_FLOOR_T + deck_h - MCC_CRADLE_FLOOR_PAD_T])
                 cube([MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_MIN, MCC_CRADLE_FLOOR_PAD_T + MCC_EPS]);
+
+            // Vent channels (D33): with the skirt, every lattice bay under the island is closed on
+            // all sides — sealed voids inside the part (build.py check: parts > 1). They are opened
+            // SIDEWAYS, not through the island: any hole in the island's bridge over a bay (tried
+            // both as a fixed grid and one per bay centre) makes Bambu Studio read that bridge as a
+            // "floating cantilever". One 3 x 2 mm channel per row of bays runs along X through the
+            // ribs and the skirt, above the rail sill and below the island, so every bay under the
+            // island breathes into the open deck and each wall crossing is a plain 3 mm bridge.
+            vy_c = _mcc_gap_centres(_mcc_island_walls(deck_y, y_dev_c));
+            ch_z0 = MCC_RAIL_SILL_H + 0.5;                     // clear of the rail sill / groove roof
+            ch_z1 = MCC_FLOOR_T + deck_h - pad_island_h - 1.0;  // 1 mm of wall left under the island
+            assert(ch_z1 - ch_z0 >= 1.5,
+                str("mcc: D33 vent channel only ", ch_z1 - ch_z0, " mm tall on \"", mcc_dev_slug(dev), "\""));
+            for (cy = vy_c)
+                if (cy > y_dev_c + MCC_CRADLE_RIB_T && cy < y_dev_c + MCC_CRADLE_FLOOR_PAD_MIN - MCC_CRADLE_RIB_T)
+                    translate([x_dev_c - MCC_CRADLE_DECK_GRID_PITCH_MIN, cy - 1.5, ch_z0])
+                        cube([MCC_CRADLE_FLOOR_PAD_MIN + 2 * MCC_CRADLE_DECK_GRID_PITCH_MIN, 3, min(2, ch_z1 - ch_z0)]);
         }
 
         // --- Case tripod-mount insert boss (T1-32): a PLAIN solid cylinder (no internal bore —

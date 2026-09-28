@@ -60,7 +60,7 @@ jobs:
       - name: Setup OpenSCAD
         uses: ./.github/actions/setup-openscad
 
-      - name: Build (smoke -> render --all -> check --all -> golden)
+      - name: Build (smoke -> render --all -> check --all -> golden -> review)
         run: |
           set -euo pipefail
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then

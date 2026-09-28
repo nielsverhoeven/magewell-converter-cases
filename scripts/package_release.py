@@ -9,7 +9,8 @@ Usage:
     python scripts/package_release.py <version>      # e.g. v0.1.0
 
 Writes:
-    dist/<slug>-<version>.zip    one per discovered model — STL + 3MF + STEP + manifest for every
+    dist/<slug>-<version>.zip    one per discovered model — the <slug>.3mf Bambu Studio project for
+                                  the whole case, plus STL + 3MF + STEP + manifest for every
                                   part (base/lid/panel), plus a README.txt naming the device, the
                                   version, and the git SHA (and a PRE-RELEASE notice when any of
                                   that model's ports are below "measured" confidence — see
@@ -27,6 +28,8 @@ Writes:
                                   the pre-v0.1.0 release collided across models, since GitHub
                                   release assets must be unique repo-wide (issue #10). See
                                   `_step_asset_name()`.
+    dist/review-<version>.3mf    every design in one Bambu Studio project (`build.py review`), for
+                                  checking the whole generated set in the slicer at once.
     dist/SHA256SUMS.txt          one line per file under dist/ (the zips above and every
                                   dist/step/*.step), `<sha256>  <relative/path>`, sorted by path —
                                   lets anyone verify a downloaded release asset wasn't corrupted or
@@ -95,12 +98,15 @@ def _write_readme(
         "Contents:",
         *[f"  {c}" for c in contents],
         "",
-        "Open in Bambu Studio: File -> Import -> Import 3MF/STL/STEP (Ctrl+I). Pick the Bambu Lab",
-        "X1 Carbon 0.4mm-nozzle printer profile and a Bambu/Generic ASA filament profile. base/lid",
-        "print open-side-up as exported; the panel plate prints face-down. The .3mf carries plain",
-        "geometry only (no print settings baked in); the .step is a faceted B-rep (planar facets",
-        "merged, curved surfaces stay faceted) for use in other CAD tools. See this repository's",
-        "README.md \"Open in Bambu Studio\" section for the full how-to.",
+        "Open in Bambu Studio: double-click a .3mf (or File -> Open Project, Ctrl+O). In a device zip",
+        "<slug>.3mf is the whole case, <part>.3mf one part. Every .3mf is a Bambu Studio project, ready",
+        "to slice: Bambu Lab X1 Carbon 0.4 nozzle, Bambu ASA, 0.20mm Standard + 5 walls and an 8 mm",
+        "outer brim; every part already in its print pose (base open side up, lid open side up, panel",
+        "face down), on its own plate or sharing one where it fits. The <part>.stl files carry the",
+        "same print pose and sit on the bed centre, for any other slicer. The <part>.step files are",
+        "in the ASSEMBLY frame (parts mate when imported together) for other CAD tools; they are",
+        "faceted B-reps converted from the mesh, not parametric solids. See README.md \"Open in",
+        "Bambu Studio\".",
     ]
     if prerelease:
         lines += ["", "PRE-RELEASE: dimensions assumed, coupons not yet measured."]
@@ -114,6 +120,9 @@ def package_model(target: build.Target, version: str, sha: str) -> Path | None:
     prerelease = _model_is_prerelease(target)
 
     all_files: list[Path] = []
+    project = export_dir / f"{target.name}.3mf"  # build.py write_model_project(): the whole case
+    if project.is_file():
+        all_files.append(project)
     for part in target.parts:
         all_files += _collect_part_files(export_dir, part)
 
@@ -275,6 +284,15 @@ def main(argv: list[str] | None = None) -> int:
     zp = package_brackets(brackets, version, sha)
     if zp is not None:
         made.append(zp)
+
+    review = build.REVIEW_PROJECT
+    if review.is_file():
+        dest = DIST_DIR / f"review-{version}.3mf"
+        shutil.copy2(review, dest)
+        made.append(dest)
+        print(f"  [OK]   review: {dest.relative_to(build.REPO_ROOT)} (every design in one Bambu Studio project)")
+    else:
+        print("  [SKIP] review: no exports/review.3mf — run `build.py review` first")
 
     step_files = collect_step_files(models + coupons + brackets)
     if step_files:

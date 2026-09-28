@@ -50,4 +50,4 @@ this ticket's scope.
 
 | Bracket | Orientation | Why |
 |---|---|---|
-| `tv-bracket` | **Flat, rail face up on the bed is easiest to print without supports on the taper's own 45°-ish flanks** — either face can print down since the plate is flat and thin, but printing rail-face-up keeps the dovetail taper and latch tab the only overhanging features, both within this repo's normal self-supporting-angle budget (same class of feature as `models/coupons/rail-latch.scad`'s own male half). | Flat plate, minimal warp risk at 6 mm thick; matches the existing rail-latch coupon's own proven orientation for the same dovetail profile. |
+| `tv-bracket` | **Flat, TV-facing face down on the bed, rail up** — exported that way (`tv-bracket.stl`/`.3mf`). The stiffening-rib cross is switched off (`RIBS = false`, architecture.md D31): with ribs on the TV face and the rail on the other, neither face could lie flat, so the plate always hung 9 mm above the bed. | Flat plate, minimal warp risk at 6 mm thick; matches the existing rail-latch coupon's own proven orientation for the same dovetail profile. |

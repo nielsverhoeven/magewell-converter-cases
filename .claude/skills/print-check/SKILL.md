@@ -16,7 +16,13 @@ python scripts/build.py check
 python scripts/build.py golden
 ```
 
-All three must pass before you even open Bambu Studio. `render` failing means the geometry is broken
+All three must pass before you even open Bambu Studio. `check` includes the **printability gate**
+(`scripts/printability.py`): it slices every print-pose STL at 0.2 mm and fails on any floating
+island — the exact condition behind Bambu Studio's "It seems object X has floating regions" warning
+(architecture.md §8 rev 13, deviations D26–D33) plus Bambu's 3 mm "floating cantilever" rule. The
+ground truth is `python scripts/build.py slicer-check` — every part sliced headlessly by the local
+Bambu Studio, failing on any slicer warning. Then `python scripts/build.py review` and open
+`exports/review.3mf` to see every design on its plates in one go. `render` failing means the geometry is broken
 — fix that first, nothing below matters yet. `check` failing (non-watertight, inconsistent winding,
 `len(split()) != 1`) means the mesh has a real defect the slicer will either silently repair badly or
 choke on — do not "just try slicing it anyway" to see if it works. `golden` failing means the geometry
@@ -54,10 +60,16 @@ stop and check the layout before committing plate time.
 
 ## 3. Orientation rules
 
+**The exports already carry these poses** (architecture.md §8 rev 13): `<part>.stl` / `<part>.3mf` /
+`<slug>.3mf` are in the print pose below, on the X1C bed centre — do **not** re-orient them in the
+slicer. `build.py print_pose()` owns the table in code (a model's `lid` and `panel` are flipped; a
+`.scad` can override a part with `// build.py: print_pose = <part>:<pose>`). If an export ever needs
+turning by hand, that is a bug in the pose table, not a slicer step.
+
 | Part | Orientation | Why |
 |---|---|---|
 | Connector panel plate | **Face-down, flat on the bed** | The ⌀23.8/24.2 mm holes print as true circles with no bridging; the flange seat is a true bed-flat surface. The same hole cut vertically is a 24 mm bridge that droops at the top (architecture.md §5 point 2). |
-| Shell base/lid | **Open side up** | Keeps the aperture rabbet's ≤45° chamfer self-supporting and avoids printing the deepest cavity upside down into supports. |
+| Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The patch-wall rabbet is open to the top of the base wall; the top of the panel frame is a lip on the lid, which stands upright in the lid's pose (architecture.md D32 — the old 6 mm base-side bezel lip was an unprintable cantilever). |
 | Any part with a boss/insert hole | Hole axis vertical (printing top-down through the hole), not horizontal | A horizontal insert hole is a small bridge/overhang per hole and prints out-of-round; a vertical hole prints as a clean circular wall. |
 | `models/brackets/tv-bracket.scad` | Flat, either face down — but **mount with the plate's own +Y axis up** (not a print-orientation choice; see `models/brackets/README.md` "Orientation") so the mated case hangs with its patch/cable wall down, not the fan/vent side against the TV. |
 
@@ -127,8 +139,12 @@ minimum bar for "this is one printable solid," not an arbitrary strictness knob.
 
 Before slicing for real, in Bambu Studio:
 
+- Open the **project** `.3mf` (`<slug>.3mf` for a whole case) rather than importing STLs — it
+  already selects X1C 0.4 + Bambu ASA + the process overrides (5 walls, 8 mm outer brim). After
+  *Slice all*, no plate may show a "floating regions" or "too close to exclusion area" notice.
 - Confirm the imported STL's bounding box in the object manipulation panel matches what `--summary`
-  reported at render time — a mismatch usually means the wrong export file (stale `exports/` output
+  reported at render time (note: the print pose swaps the panel's/lid's Z-extent orientation, not
+  its size) — a mismatch usually means the wrong export file (stale `exports/` output
   from an earlier render) got imported.
 - Use the slicer's built-in overhang/support painting view to visually confirm the ≤45° self-
   supporting claim for any new geometry before trusting it blindly — a computed angle in OpenSCAD and

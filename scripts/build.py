@@ -6,7 +6,7 @@ implementation, per .claude/knowledge/architecture.md §8 (export policy) and §
 policy). scripts/render.ps1 is a thin PowerShell wrapper over this file — do not duplicate this
 logic there.
 
-Subcommands: render, step, smoke, check, golden, confidence, all, doctor. Run `build.py --help` or
+Subcommands: render, step, review, smoke, check, golden, confidence, all, doctor. Run `build.py --help` or
 `build.py <subcommand> --help` for details.
 
 Requires Python 3.11+, stdlib + trimesh (see requirements.txt). `step` additionally needs a STEP
@@ -32,7 +32,9 @@ try:
 except ImportError:  # trimesh is optional for `doctor`; required for `check`/`golden`/`render`'s
     trimesh = None   # mesh measurement and for `all`.
 
+import bambu_project  # sibling module in scripts/ — print poses + Bambu Studio project 3MF writer
 import mesh_to_step  # sibling module in scripts/ — STL -> STEP conversion, both backends
+import printability  # sibling module in scripts/ — layer-by-layer floating-island / overhang check
 
 # -----------------------------------------------------------------------------------------
 # Constants (single source of truth for build-time policy numbers; keep this the only place
@@ -63,6 +65,11 @@ GOLDEN_AREA_TOL = 0.01      # 1 % relative
 RELEASE_WARNING_MARKER = "WARNING: unmeasured"
 
 EXPORT_EXT = {"stl": ".stl", "3mf": ".3mf"}
+
+# OpenSCAD's own output, in the model (assembly) frame. Goldens are measured on it and STEP is
+# converted from it (a CAD user wants parts that mate when imported together). The user-facing
+# `<part>.stl` / `<part>.3mf` are derived from it in the print pose — see scripts/bambu_project.py.
+MODEL_FRAME_SUFFIX = ".model.stl"
 
 # Mirrors lib/mcc/constants.scad:622 MCC_CONFIDENCE_ORDER. Python can't evaluate OpenSCAD, so
 # `confidence` (below) reads device data files as text instead of asking OpenSCAD to render them —
@@ -123,7 +130,12 @@ class MeshCheck:
     parts_ok: bool = False
     extents: tuple[float, float, float] = (0.0, 0.0, 0.0)
     bbox_ok: bool = False
+    printability: "printability.PrintabilityReport | None" = None
     error: str | None = None
+
+    @property
+    def printable_ok(self) -> bool:
+        return self.printability is None or self.printability.ok
 
     @property
     def ok(self) -> bool:
@@ -134,6 +146,7 @@ class MeshCheck:
             and self.volume_ok
             and self.parts_ok
             and self.bbox_ok
+            and self.printable_ok
         )
 
 
@@ -209,6 +222,48 @@ def _extra_parts(case_scad_text: str) -> list[str]:
             if name and name not in names:
                 names.append(name)
     return names
+
+
+# Print pose per part (scripts/bambu_project.py POSES). Defaults: a model's "lid" and "panel" are
+# flipped (print-check §3 — panel face-down, shells open-side-up; the lid is authored in its
+# assembled pose, exterior on top), everything else prints as modelled. A .scad file overrides with
+# `// build.py: print_pose = <part>:<pose>[, <part>:<pose>...]`, e.g. a variant part such as
+# `lid_novent:flip`, or a coupon authored upside-down.
+_PRINT_POSE_MARKER_RE = re.compile(r"//\s*build\.py:\s*print_pose\s*=\s*(.+)")
+
+
+def print_pose(target: Target, part: str) -> str:
+    try:
+        text = target.scad_path.read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+    for m in _PRINT_POSE_MARKER_RE.finditer(text):
+        for raw in m.group(1).split(","):
+            name, sep, pose = raw.strip().partition(":")
+            if sep and name.strip() == part:
+                pose = pose.strip()
+                if pose not in bambu_project.POSES:
+                    raise SystemExit(f"error: {target.scad_path}: print_pose '{pose}' for part '{part}' "
+                                     f"is not one of {bambu_project.POSES}")
+                return pose
+    if target.kind == "model":
+        return bambu_project.DEFAULT_POSE_BY_PART.get(part, "as-modelled")
+    return "as-modelled"
+
+
+def print_set(target: Target) -> list[str]:
+    """The parts one physical case is printed from — a model's base/lid(/panel), without the
+    `extra_parts` variants (e.g. base_fan is an *alternative* base, not an extra part to print).
+    Ordered base, panel, lid so the shelf layout puts the small panel beside the base on plate 1."""
+
+    try:
+        extras = set(_extra_parts(target.scad_path.read_text(encoding="utf-8")))
+    except OSError:
+        extras = set()
+    # Always the discovered part list — a `render --part base` run must not shrink the project.
+    full = next((t for t in discover_models() if t.name == target.name), target)
+    order = {"base": 0, "panel": 1, "lid": 2}
+    return sorted((p for p in full.parts if p not in extras), key=lambda p: order.get(p, 9))
 
 
 def discover_all() -> list[Target]:
@@ -409,6 +464,14 @@ def check_mesh(path: Path) -> MeshCheck:
     check.extents = extents  # type: ignore[assignment]
     check.bbox_ok = all(x <= MAX_AXIS_MM + 1e-6 for x in extents)
 
+    # Printability only means something in the print pose — i.e. on the user-facing STL, not on
+    # OpenSCAD's model-frame output.
+    if not path.name.endswith(MODEL_FRAME_SUFFIX) and check.watertight:
+        try:
+            check.printability = printability.analyse(mesh)
+        except Exception as exc:  # noqa: BLE001
+            check.error = f"printability analysis failed: {exc}"
+
     return check
 
 
@@ -435,14 +498,10 @@ def render_part(
     defines = {"part": f'"{part}"'}
     defines.update(extra_defines)
 
-    # Ensure we always have an STL on disk to measure, even if only 3mf was requested — trimesh's
-    # STL loader is the reliable path; 3MF loading pulls in extra optional deps.
-    measure_stl = export_dir / f"{part}.stl" if "stl" in formats else export_dir / f"{part}._measure.stl"
-    render_outputs = list(outputs)
-    if "stl" not in formats:
-        render_outputs = render_outputs + [measure_stl]
-
-    ok, lines = run_openscad(exe, target.scad_path, defines, render_outputs, summary_path)
+    # OpenSCAD always writes the model-frame STL; the user-facing STL/3MF are derived from it in
+    # the print pose below (write_print_artefacts()), never exported by OpenSCAD directly.
+    measure_stl = export_dir / f"{part}{MODEL_FRAME_SUFFIX}"
+    ok, lines = run_openscad(exe, target.scad_path, defines, [measure_stl], summary_path)
 
     if release:
         if any(RELEASE_WARNING_MARKER in ln for ln in lines):
@@ -457,9 +516,12 @@ def render_part(
         volume_mm3, area_mm2, mesh_facets = measure_mesh(measure_stl)
     except Exception as exc:  # noqa: BLE001
         return RenderResult(target=target.name, part=part, ok=False, error=f"mesh measurement failed: {exc}")
-    finally:
-        if "stl" not in formats and measure_stl.exists():
-            measure_stl.unlink()
+
+    pose = print_pose(target, part)
+    try:
+        write_print_artefacts(target, part, pose, formats)
+    except Exception as exc:  # noqa: BLE001
+        return RenderResult(target=target.name, part=part, ok=False, error=f"print artefacts failed: {exc}")
 
     summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.exists() else {}
     summary["mesh_volume_mm3"] = volume_mm3
@@ -477,6 +539,8 @@ def render_part(
         "openscad_version": openscad_version(exe),
         "defines": defines,
         "formats": formats,
+        "print_pose": pose,
+        "model_frame_stl": str(measure_stl.relative_to(REPO_ROOT).as_posix()),
         "outputs": [str(p.relative_to(REPO_ROOT).as_posix()) for p in outputs],
         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "bbox": bbox,
@@ -489,6 +553,180 @@ def render_part(
         target=target.name, part=part, ok=True, outputs=outputs,
         summary_path=summary_path, manifest_path=manifest_path,
     )
+
+
+def _object_name(target: Target, part: str) -> str:
+    stem = Path(target.name).name
+    return stem if part == stem else f"{stem}-{part}"
+
+
+def _print_pose_mesh(target: Target, part: str, pose: str) -> "bambu_project.PrintObject":
+    mesh = trimesh.load(str(target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"), force="mesh")
+    vertices = bambu_project.to_print_pose(mesh.vertices, pose)
+    return bambu_project.PrintObject(name=_object_name(target, part), vertices=vertices, faces=mesh.faces)
+
+
+def write_print_artefacts(target: Target, part: str, pose: str, formats: list[str]) -> None:
+    """<part>.stl (print pose, on the X1C bed centre) and/or <part>.3mf (single-plate Bambu Studio
+    project) from the already-rendered <part>.model.stl."""
+
+    _require_trimesh()
+    obj = _print_pose_mesh(target, part, pose)
+    plates = bambu_project.layout_plates([obj])
+    if "stl" in formats:
+        # Same spot the project uses: bed centre, or nudged clear of the exclusion pad.
+        spot = plates[0][0]
+        out = target.export_dir / f"{part}.stl"
+        trimesh.Trimesh(obj.vertices + [spot.x, spot.y, 0.0], obj.faces, process=False).export(str(out))
+    if "3mf" in formats:
+        bambu_project.write_project(
+            target.export_dir / f"{part}.3mf", plates,
+            title=obj.name, description=f"magewell-converter-cases {target.name} part={part} pose={pose}",
+        )
+
+
+def write_model_project(target: Target) -> Path | None:
+    """<export_dir>/<slug>.3mf — the model's whole print set (print_set()) as one Bambu Studio
+    project, one plate per bed-load. Skipped (None) when a print-set part was not rendered."""
+
+    parts = print_set(target)
+    if any(not (target.export_dir / f"{p}{MODEL_FRAME_SUFFIX}").is_file() for p in parts):
+        return None
+    objects = [_print_pose_mesh(target, p, print_pose(target, p)) for p in parts]
+    plates = bambu_project.layout_plates(objects)
+    out = target.export_dir / f"{Path(target.name).name}.3mf"
+    bambu_project.write_project(
+        out, plates, title=Path(target.name).name,
+        description=f"magewell-converter-cases {target.name}: " + ", ".join(parts),
+    )
+    layout = "; ".join(f"plate {i + 1}: {', '.join(pl.obj.name for pl in plate)}" for i, plate in enumerate(plates))
+    print(f"-> project {out.relative_to(REPO_ROOT)}  ({layout})")
+    return out
+
+
+REVIEW_PROJECT = EXPORTS_DIR / "review.3mf"
+
+
+def cmd_review(args: argparse.Namespace) -> int:
+    """exports/review.3mf — every discovered design in one Bambu Studio project, for checking the
+    whole generated set in the slicer in one go (open it, slice all plates, read the warnings).
+    Each model's print set starts on its own plate(s); coupons and brackets are packed together.
+    Built from already-rendered `<part>.model.stl` files — run `render --all` first. Not committed
+    (CLAUDE.md: STL/3MF are never committed; user decision 2026-09-27: generator only)."""
+
+    _require_trimesh()
+    targets = resolve_targets(args.targets, None) if args.targets else discover_all()
+    plates: list[list] = []
+    missing: list[str] = []
+    loose: list = []
+    for target in targets:
+        parts = print_set(target) if target.kind == "model" else target.parts
+        objs = []
+        for part in parts:
+            if not (target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}").is_file():
+                missing.append(f"{target.name}:{part}")
+                continue
+            objs.append(_print_pose_mesh(target, part, print_pose(target, part)))
+        if target.kind == "model":
+            plates += bambu_project.layout_plates(objs) if objs else []
+        else:
+            loose += objs
+    if loose:
+        plates += bambu_project.layout_plates(loose)
+
+    if missing:
+        print("WARNING: not rendered (run `build.py render --all`): " + ", ".join(missing))
+    if not plates:
+        print("nothing rendered — nothing to put in the review project")
+        return 1
+    bambu_project.write_project(
+        REVIEW_PROJECT, plates, title="magewell-converter-cases review",
+        description=f"all generated designs, git {git_head_sha() or 'unknown'}",
+    )
+    print(f"review project: {REVIEW_PROJECT.relative_to(REPO_ROOT)}  ({len(plates)} plates)")
+    for i, plate in enumerate(plates):
+        print(f"  plate {i + 1:2d}: {', '.join(pl.obj.name for pl in plate)}")
+    return 1 if missing else 0
+
+
+WINDOWS_BAMBU_DEFAULT = Path(r"C:\Program Files\Bambu Studio\bambu-studio.exe")
+
+
+def find_bambu_studio() -> Path | None:
+    env = os.environ.get("MCC_BAMBU_STUDIO")
+    if env and Path(env).is_file():
+        return Path(env)
+    if WINDOWS_BAMBU_DEFAULT.is_file():
+        return WINDOWS_BAMBU_DEFAULT
+    which = shutil.which("bambu-studio")
+    return Path(which) if which else None
+
+
+def slicer_check_project(exe: Path, project: Path, stats: dict | None = None) -> tuple[bool, list[str]]:
+    """Slice every plate of a project headlessly with Bambu Studio's own CLI and return
+    (sliced_ok, warning messages). This is the ground truth the printability gate approximates.
+    If `stats` is given it is filled with {"grams": total filament, "seconds": total print time}."""
+
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="mcc_slice_") as tmp:
+        try:
+            proc = subprocess.run(
+                [str(exe), "--slice", "0", "--outputdir", tmp, str(project.resolve())],
+                capture_output=True, text=True, check=False, timeout=900,
+                cwd=tmp,  # the CLI also drops a result.json in its working directory
+            )
+        except subprocess.TimeoutExpired:
+            return False, ["Bambu Studio CLI did not finish within 900 s (hung slicer process)"]
+        result_path = Path(tmp) / "result.json"
+        if not result_path.is_file():
+            return False, [f"no result.json (exit {proc.returncode})"]
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+    plates = result.get("sliced_plates", [])
+    warnings = [p["warning_message"] for p in plates if p.get("warning_message")]
+    if stats is not None:
+        stats["grams"] = sum(f.get("total_used_g", 0.0) for p in plates for f in p.get("filaments", []))
+        stats["seconds"] = sum(p.get("total_predication", 0.0) for p in plates)
+    ok = result.get("return_code", 1) == 0
+    if not ok:
+        warnings.insert(0, result.get("error_string", "slicing failed"))
+    return ok, warnings
+
+
+def cmd_slicer_check(args: argparse.Namespace) -> int:
+    """Local-only Tier-3 companion: slice every rendered <part>.3mf with the installed Bambu Studio
+    (CLI, no GUI) and fail on any slicer warning ("floating regions", "floating cantilever",
+    "too close to exclusion area", ...). Skipped with a notice when Bambu Studio is not installed —
+    CI has no slicer; `check`'s printability gate is the CI-side approximation."""
+
+    exe = find_bambu_studio()
+    if exe is None:
+        print("Bambu Studio not found (set MCC_BAMBU_STUDIO) — slicer-check skipped")
+        return 0
+    targets = resolve_targets(args.targets, None) if args.targets else discover_all()
+    rows: list[tuple[str, bool, list[str], dict]] = []
+    for target in targets:
+        for part in target.parts:
+            project = target.export_dir / f"{part}.3mf"
+            label = f"{target.name}:{part}"
+            if not project.is_file():
+                rows.append((label, False, ["not rendered — run `render` first"], {}))
+                continue
+            print(f"-> slice {label}", flush=True)
+            stats: dict = {}
+            ok, warnings = slicer_check_project(exe, project, stats)
+            rows.append((label, ok and not warnings, warnings, stats))
+
+    print("\nslicer-check results (Bambu Studio CLI):")
+    width = max((len(r[0]) for r in rows), default=10)
+    for label, ok, warnings, stats in rows:
+        extra = (f"  {stats['grams']:7.1f} g  {stats['seconds'] / 3600:5.2f} h" if "grams" in stats else "")
+        print(f"  [{'PASS' if ok else 'FAIL'}] {label.ljust(width)}{extra}")
+        for w in warnings:
+            print(f"           {w}")
+    n_ok = sum(r[1] for r in rows)
+    print(f"  {n_ok}/{len(rows)} passed")
+    return 0 if n_ok == len(rows) else 1
 
 
 def cmd_render(args: argparse.Namespace) -> int:
@@ -512,6 +750,11 @@ def cmd_render(args: argparse.Namespace) -> int:
     for target in targets:
         for part in target.parts:
             results.append(render_part(target, part, args.format, extra_defines, args.release, exe))
+        if target.kind == "model" and args.format in ("3mf", "both"):
+            try:
+                write_model_project(target)
+            except Exception as exc:  # noqa: BLE001
+                results.append(RenderResult(target=target.name, part="<project>", ok=False, error=f"project 3mf failed: {exc}"))
 
     _print_result_table("render", results)
     return 0 if all(r.ok for r in results) else 1
@@ -592,7 +835,9 @@ def cmd_step(args: argparse.Namespace) -> int:
     results: list[StepBuildResult] = []
     for target in targets:
         for part in target.parts:
-            stl_path = target.export_dir / f"{part}.stl"
+            # Model (assembly) frame, so a CAD user's imported parts mate; the print pose is the
+            # slicer's business (<part>.stl / .3mf).
+            stl_path = target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}"
             if not stl_path.is_file():
                 results.append(StepBuildResult(
                     target=target.name, part=part, ok=False,
@@ -669,7 +914,8 @@ def cmd_smoke(_args: argparse.Namespace) -> int:
 
 def cmd_check(args: argparse.Namespace) -> int:
     if args.all:
-        paths = sorted(EXPORTS_DIR.glob("**/*.stl"))
+        # The print-pose STLs — the model-frame twins are the same mesh rigidly moved.
+        paths = sorted(p for p in EXPORTS_DIR.glob("**/*.stl") if not p.name.endswith(MODEL_FRAME_SUFFIX))
     else:
         if not args.stl:
             raise SystemExit("error: check needs --all or at least one <stl> path")
@@ -697,7 +943,19 @@ def cmd_check(args: argparse.Namespace) -> int:
             f"volume={c.volume_mm3:.1f}mm3 parts={c.n_parts} "
             f"extents=({c.extents[0]:.1f},{c.extents[1]:.1f},{c.extents[2]:.1f})mm"
         )
+        if c.printability is not None:
+            detail += f" floating_islands={len(c.printability.islands)} cantilevers={len(c.printability.cantilevers)}"
         print(f"  [{status}] {name.ljust(width)}  {detail}")
+        if c.printability is not None:
+            for isl in c.printability.islands:
+                print(f"           FLOATING island z={isl.z}mm area={isl.area}mm2 at xy={isl.centroid} "
+                      f"bounds={isl.bounds} (Bambu Studio: 'has floating regions')")
+            for cl in c.printability.cantilevers:
+                print(f"           CANTILEVER z={cl.z}mm area={cl.area}mm2 reach={cl.reach}mm "
+                      f"bounds={cl.bounds} (Bambu Studio: 'floating cantilever')")
+            if args.verbose:
+                for oh in c.printability.overhangs:
+                    print(f"           (info) >45deg overhang z={oh.z}mm area={oh.area}mm2 bounds={oh.bounds}")
     n_ok = sum(c.ok for c in checks)
     print(f"  {n_ok}/{len(checks)} passed  (bbox ceiling {MAX_AXIS_MM:.0f} mm per axis)")
 
@@ -954,17 +1212,20 @@ def cmd_all(args: argparse.Namespace) -> int:
 
     print("\n=== render --all ===")
     render_ns = argparse.Namespace(
-        all=True, targets=[], format="stl", part=None, defines=[], release=args.release,
+        all=True, targets=[], format="both", part=None, defines=[], release=args.release,
     )
     overall_ok &= cmd_render(render_ns) == 0
 
     print("\n=== check --all ===")
-    check_ns = argparse.Namespace(all=True, stl=[])
+    check_ns = argparse.Namespace(all=True, stl=[], verbose=False)
     overall_ok &= cmd_check(check_ns) == 0
 
     print("\n=== golden ===")
     golden_ns = argparse.Namespace(update=False, targets=[])
     overall_ok &= cmd_golden(golden_ns) == 0
+
+    print("\n=== review ===")
+    overall_ok &= cmd_review(argparse.Namespace(targets=[])) == 0
 
     if args.with_step:
         print("\n=== step --all ===")
@@ -1032,7 +1293,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_render = sub.add_parser("render", help="render coupons/models to STL/3MF via OpenSCAD")
     p_render.add_argument("targets", nargs="*", help='coupons/<name>, <model-slug>, or a .scad path')
     p_render.add_argument("--all", action="store_true", help="render every discovered target")
-    p_render.add_argument("--format", choices=["stl", "3mf", "both"], default="stl")
+    p_render.add_argument("--format", choices=["stl", "3mf", "both"], default="both",
+                          help="print-ready outputs: <part>.stl (print pose, on the bed) and/or <part>.3mf "
+                               "(Bambu Studio project); models also get <slug>.3mf. <part>.model.stl is always written")
     p_render.add_argument("--part", action="append", help="override part list (repeatable)")
     p_render.add_argument("-D", "--define", dest="defines", action="append", metavar="k=v",
                            help="extra -D override forwarded to OpenSCAD (repeatable)")
@@ -1046,12 +1309,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_step.add_argument("--part", action="append", help="override part list (repeatable)")
     p_step.set_defaults(func=cmd_step)
 
+    p_review = sub.add_parser("review", help="write exports/review.3mf: every rendered design in one Bambu Studio project")
+    p_review.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
+    p_review.set_defaults(func=cmd_review)
+
+    p_slice = sub.add_parser("slicer-check", help="slice every rendered <part>.3mf with the local Bambu Studio CLI; fail on any slicer warning")
+    p_slice.add_argument("targets", nargs="*", help="limit to these targets (default: all discovered)")
+    p_slice.set_defaults(func=cmd_slicer_check)
+
     p_smoke = sub.add_parser("smoke", help="Tier 2: run every tests/test_*.scad with -o *.csg")
     p_smoke.set_defaults(func=cmd_smoke)
 
     p_check = sub.add_parser("check", help="Tier 3: trimesh mesh checks on exported STL(s)")
     p_check.add_argument("stl", nargs="*", help="STL file(s) to check")
-    p_check.add_argument("--all", action="store_true", help="check every exports/**/*.stl")
+    p_check.add_argument("--all", action="store_true", help="check every print-pose exports/**/*.stl")
+    p_check.add_argument("--verbose", action="store_true", help="also list >45 deg overhang layers (informational)")
     p_check.set_defaults(func=cmd_check)
 
     p_golden = sub.add_parser("golden", help="Tier 3: compare/update geometry goldens")
@@ -1067,7 +1339,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p_confidence.add_argument("--json", action="store_true", help="emit JSON instead of a human-readable table")
     p_confidence.set_defaults(func=cmd_confidence)
 
-    p_all = sub.add_parser("all", help="smoke -> render --all -> check --all -> golden")
+    p_all = sub.add_parser("all", help="smoke -> render --all -> check --all -> golden -> review")
     p_all.add_argument("--release", action="store_true")
     p_all.add_argument("--with-step", action="store_true", help="also run step --all at the end")
     p_all.set_defaults(func=cmd_all)

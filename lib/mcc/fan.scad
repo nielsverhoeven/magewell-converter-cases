@@ -84,18 +84,17 @@ module _mcc_fan_grille_2d(d) {
     // into one big island instead of 18 small ones).
     pitch = r_max / n_rings;
 
-    // Spoke start angle offset by half the angular pitch (30 deg at n_spokes=6) so no spoke lands
-    // exactly horizontal (0/180 deg) at the widest point of the aperture. Not load-bearing for
-    // connectivity (every spoke already overlaps every ring regardless of angle) — this is purely
-    // the print-orientation call from the task brief: the base prints open-side-up with the fan in
-    // a VERTICAL +X end wall (mcc_vents() rotate([0,90,0]) — the aperture's own axis is horizontal
-    // in X), so a spoke running dead level at the very top of the hole is the single worst-case
-    // unsupported horizontal member. It is not actually necessary here — every open (cut) span
-    // between adjacent rings is a radial gap of at most `pitch - ring_w` <= ~4.5 mm on this SKU's
-    // 38 mm aperture (n_rings=3, pitch=19/3=6.33), and full rings self-support like any round hole
-    // (continuous loop, no flat bridge) — well inside the <=10 mm ceiling either way. The offset is
-    // cheap belt-and-braces, not a substitute for the pitch/ring math above.
-    spoke_offset = 360 / n_spokes / 2;
+    // Spoke angles are chosen for the print pose, not for looks: the base prints open-side-up with
+    // the fan in a VERTICAL +X end wall, and the only caller (mcc_vents(), rotate([0,90,0])) maps
+    // this 2-D frame's +X to world -Z (straight DOWN) and +Y to world +Y (horizontal). A spoke must
+    // therefore run along local +X: it is the only thing under each ring's lowest point. Without it
+    // (the previous 30 deg offset, which also left spokes at local 90/270 deg = dead horizontal) the
+    // bottom of every inner ring started in mid-air — Bambu Studio's "floating regions" warning on
+    // every fan=true base (2026-09-27, scripts/printability.py: islands at z=12.9/19.3 on
+    // pro-convert-for-ndi-to-hdmi base_fan). Offset 0 puts spokes at straight down/up and +-60 deg
+    // from vertical — none horizontal. Connectivity does not depend on the angle (every spoke
+    // overlaps every ring).
+    spoke_offset = 0;
 
     union() {
         for (i = [1 : 1 : n_rings]) {

@@ -12,6 +12,36 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Fixed
+
+- **Exports are now usable in Bambu Studio as delivered** (user report 2026-09-27: a senior Bambu
+  modeller could do nothing with them). Every `<part>.stl`/`<part>.3mf` is in its print pose on the
+  X1C bed (lid and panel were upside-down / floating at assembly height, all parts landed stacked in
+  the exclusion zone); each `.3mf` is a real Bambu Studio project (X1C 0.4 + Bambu ASA, 5 walls,
+  8 mm outer brim); each case also ships `<slug>.3mf` with the whole print set on its plates; the
+  `.3mf` files are actually in the release zips now (`build.py all` used to render STL only).
+- "Floating regions" in every base: the upper patch-wall relief left a hanging lip tooth
+  (`shell.scad`, D26) and the fan grille had no spoke under its ring bottoms (`fan.scad`, D27).
+- "Floating cantilever" in every base, found with headless Bambu Studio slicing: the rail sill had
+  knife-edge side walls under a 150 mm groove roof (D30, `MCC_RAIL_SILL_SIDE_W`), the panel-fixing
+  bosses stuck straight out of the wall (D29, 45° chin), the cradle pad island hung over open bays
+  (D33, skirt), and the 6 mm top bezel lip over the panel could not print (D32: the rabbet is now
+  open-topped and the **lid carries the top of the panel frame**).
+- `tv-bracket` had no printable pose (ribs on one face, rail on the other): ribs removed (D31).
+  `neutrik-tile` now exports flange-down like the panel; `depth-mockup` lost its optional,
+  unprintable horizontal screw pads (D29).
+
+### Changed
+
+- Rail spring-lip latch disabled (`MCC_RAIL_LATCH_ENABLED = false`, D28) — it printed in mid-air and
+  did not clear the groove; redesign tracked in issue #46.
+
+### Added
+
+- `build.py review` → `exports/review.3mf` (every design in one Bambu Studio project; released as
+  `review-<version>.3mf`), a floating-island + cantilever printability gate in `build.py check`
+  (`scripts/printability.py`), and `build.py slicer-check` (local headless Bambu Studio slicing). STEP stays in the assembly frame, converted from `<part>.model.stl`.
+
 ### Added
 
 - Sourced knowledge base under `knowledge/**` (Magewell device dimensions, Neutrik connector
