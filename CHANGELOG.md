@@ -27,6 +27,9 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 - **Lid-boss webs** (D38) are as wide as the boss and merge into it; they used to touch it only
   along a tangent line.
 - Material: base + lid ≈ 262 g (was ≈ 272 g with the panel).
+- **STEP files carry real circles** (D39): the STEP is rebuilt from OpenSCAD's CSG tree
+  (`scripts/csg_to_step.py`), so holes and roundings are true cylinders/arcs in CAD instead of
+  dozens of flat facets. The faceted mesh converter remains only as a reported fallback.
 
 ### Fixed (mount rail, issue #46)
 

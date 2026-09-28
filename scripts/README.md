@@ -8,8 +8,12 @@ One build implementation, two entry points, per `.claude/knowledge/architecture.
   activates `.venv` if present and forwards every argument unchanged. It must never gain logic
   of its own — if you find yourself editing `render.ps1` to change behaviour, that behaviour
   belongs in `build.py` instead.
-- `mesh_to_step.py` — STL → STEP conversion (`cadquery-ocp` or FreeCAD `freecadcmd` backend),
-  used by `build.py step`. Can also be run standalone for one file — see its own `--help`.
+- `csg_to_step.py` — the exact STEP path (D39): rebuilds OpenSCAD's `<part>.csg` tree as an
+  OpenCascade B-rep, so holes and roundings are real cylinders/circles, and cross-checks the volume
+  against the rendered mesh. Used by `build.py step`/`ci`; standalone: `csg_to_step.py part.csg
+  part.step --mesh part.model.stl`.
+- `mesh_to_step.py` — STL → faceted STEP (`cadquery-ocp` or FreeCAD `freecadcmd` backend), now only
+  the fallback for a part `csg_to_step.py` cannot convert (e.g. an engraved `text()` label).
 - `release_version.py` — computes the next `vX.Y.Z` from Conventional Commits since the last
   `v*` tag. Used by `.github/workflows/release.yml`; see "Release tooling" below.
 - `package_release.py` — builds the per-device, coupon, and bracket release zips from `exports/`.

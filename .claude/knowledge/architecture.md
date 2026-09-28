@@ -1053,9 +1053,15 @@ rendered STL only), and nothing carried a printer/filament/process. The export c
   (`scripts/bambu/x1c-0.4-asa.project_settings.json`, Bambu Studio 02.08.02.61) with the overrides
   in `scripts/bambu_project.py PROCESS_OVERRIDES`, recorded in `different_settings_to_system` the
   way the GUI records a user edit. Refresh the dump when Bambu Studio's presets move on.
-- STEP remains a *faceted* B-rep of the mesh — usable for fit checks and as a reference body in
-  CAD, **not** an editable parametric model (OpenSCAD has no B-rep kernel). A parametric STEP would
-  need a B-rep-native source (e.g. CadQuery) — an open, separate decision.
+- **STEP is exact (rev 14, 2026-09-28, D39):** `render` also writes `<part>.csg` (OpenSCAD's
+  evaluated CSG tree, same run), and `scripts/csg_to_step.py` rebuilds that tree in OpenCascade —
+  `cylinder`/`circle`/`sphere` with ≥ 16 fragments become true cylinders/cones/circles, polygon runs
+  on one circle become arcs, `linear_extrude`/`rotate_extrude`/`offset` stay exact, 2-D/3-D `hull`
+  is the children fused with their convex hull, `polyhedron` (threads, BOSL2 VNFs) stays planar.
+  The result is cross-checked against the rendered mesh volume (1 %). Only an unsupported node
+  (`text`, `minkowski`, `import`, …) falls back to `mesh_to_step.py`'s faceted B-rep, and the
+  part's manifest says so (`step.backend`). Still not a parametric feature tree — OpenSCAD has none.
+  Booleans are fused pairwise: one OCCT Fuse with many overlapping tools silently lost volume.
 
 **Branching (user decision 2026-09-08 — the `develop` branch is dropped):** work happens on
 `feature/*` and merges to `main` by CI-green PR; a release is an annotated `vX.Y.Z` tag on `main`,
@@ -1793,6 +1799,7 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D36** | 2026-09-28 | CLAUDE.md fixed decision "the connector panel is a separate 2 mm flat-printed plate in a rabbet" (§5) | The modeller's review: the connectors do not need a separate panel, and the plate's two rear M3 thread pads per connector (⌀8.28 at 15.3 mm from the centre) reached ~1 mm into the ⌀24.3 D hole — "the screw pillars sit in the D opening" | Flat plate + rabbet + 4 retention inserts/screws + D32 lid lip; pads added to the plate *after* the hole was cut | **Done (user decision 2026-09-28).** §5 rev 14: bezel recess + teardropped seat hole/window + printed M3 threads straight into the 8 mm patch wall; `mcc_panel_plate()`, `mcc_neutrik_d_bosses()`, `mcc_panel_fixing_pos()`, the rabbet, windows, fixing bosses and lid lip removed; `panel` part and its goldens gone; `neutrik-tile` coupon rebuilt as a standing wall section. New assert T1-48. Base+lid ≈ 262 g vs ≈ 272 g with the plate |
 | **D37** | 2026-09-28 | T1-40 (compliant floor-pad island in the cradle) and D33 (its skirt, vent channels and sliver fill) | The modeller asked what the 40 × 40 mm "square" in the cradle is for: it was the island for a floor EPDM pad that §11 R8 had already moved to the side-bolt boss face (D-09) — a leftover | — | **Done.** Island, skirt, vent channels, sliver fill, `MCC_CRADLE_FLOOR_PAD_*` and the floor-pad BOM row removed; the device rests on the rib lattice, located by the far-flank ribs and the side bolt |
 | **D38** | 2026-09-28 | shell.scad `_mcc_gusset_web()` (lid-fastener boss webs) | The modeller: "the vertical supports for the screw pillars barely make contact". The web was a 3 mm bar that started at the boss's outer edge, so it touched the boss only along a tangent line | — | **Done.** The web is now a boss-wide stadium (hull of the boss circle and a boss-wide bar into the wall), overlapping the boss by `MCC_WEB_BORE_KEEP` short of its insert bore |
+| **D39** | 2026-09-28 | §8 "STEP remains a faceted B-rep of the mesh" | The modeller: every round object arrived in CAD as dozens of flat rectangles — unusable for post-processing | STEP converted from the tessellated mesh | **Done.** `scripts/csg_to_step.py` (CSG tree → exact OCCT B-rep), wired into `build.py step`/`ci` with the faceted converter as a reported fallback; §8 updated |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
