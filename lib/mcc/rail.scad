@@ -49,7 +49,7 @@ use <util.scad>
 //   use. NOT `use`d by layout.scad itself (architecture.md §3 rev 9 — that file builds its
 //   "mount_rail" keep-out row from the MCC_RAIL_* constants directly, never from this function, so
 //   layout.scad never gains an L1 geometry-provider dependency).
-function mcc_rail_sill_size() = [MCC_RAIL_LEN, MCC_RAIL_ROOT_W, MCC_RAIL_SILL_H];
+function mcc_rail_sill_size() = [MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W, MCC_RAIL_SILL_H];
 
 // Module: _mcc_rail_taper()
 // Description:
@@ -135,8 +135,10 @@ module mcc_rail_male(len = MCC_RAIL_LEN) {
         translate([len / 2, 0, MCC_FLOOR_T])
             cuboid([MCC_RAIL_END_STOP_L, MCC_RAIL_ROOT_W, MCC_RAIL_DEPTH + MCC_RAIL_END_STOP_H],
                 anchor = LEFT + BOTTOM);
-        // Latch tab (see module doc comment above for the geometry rationale).
-        _mcc_rail_latch_tab(latch_x);
+        // Latch tab (see module doc comment above for the geometry rationale). Currently disabled
+        // (MCC_RAIL_LATCH_ENABLED, constants.scad / architecture.md D28): as modelled it prints in
+        // mid-air and does not clear the groove above its mouth — pending a redesign.
+        if (MCC_RAIL_LATCH_ENABLED) _mcc_rail_latch_tab(latch_x);
     }
 }
 

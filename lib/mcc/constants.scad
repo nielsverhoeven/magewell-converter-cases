@@ -657,6 +657,13 @@ MCC_RAIL_ROOT_W = MCC_RAIL_MOUTH_W + 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANG
                             // dovetail root width (wide end, deepest into the case floor / at the
                             // bracket rail's base), mm. DERIVED, not hand-typed (architecture.md §3
                             // "formulas not magic numbers") = 10.0 + 2*4.0/tan(60) ~= 14.6188.
+MCC_RAIL_SILL_SIDE_W = MCC_WALL; // side wall of the floor sill beside the groove root, mm
+                            // (2026-09-27, architecture.md D30). The sill used to be exactly
+                            // MCC_RAIL_ROOT_W wide, i.e. its side walls ran out to a 0 mm knife
+                            // edge at the groove root (the groove is deeper than MCC_FLOOR_T), so
+                            // the 150 mm roof over the groove hung only on the cradle-rib crossings
+                            // (Bambu Studio: "floating cantilever" on every base). A full MCC_WALL
+                            // each side lets the roof bridge flank-to-flank over its whole length.
 MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-local X), mm. assumed —
                             // fixed across every SKU (one interface, every case; layout-patch-wall.md
                             // §17.2 R4/§1.4). Fits the smallest family (compact, L=194.9) with
@@ -670,6 +677,15 @@ MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-loca
 // 19.31) so the disc/rect clearance in §1.4 (2.69 mm) comfortably exceeds MCC_FLOOR_FEATURE_EDGE_MIN.
 MCC_RAIL_Y = -20.0;
 
+// Spring-lip latch on the MALE rail: DISABLED (user decision 2026-09-27, architecture.md §13 D28).
+// As modelled, _mcc_rail_latch_tab() starts 1 mm above the bracket plate and hangs only from the
+// dovetail's top edge (the 60 deg flank touches the arm nowhere else), so it prints entirely in
+// mid-air (Bambu Studio "floating regions" on the rail-latch coupon and the tv-bracket), and above
+// the groove mouth it sits outside the flank, where the case floor is. It returns via a redesign
+// (fixed root, free tip, printable without support, clear of the groove) — flip this back only
+// together with that redesign. The female latch pocket in the case floor stays cut (inert without
+// the arm) so re-enabling needs no case reprint and no case golden moves.
+MCC_RAIL_LATCH_ENABLED = false;
 MCC_RAIL_LATCH_ARM_L = 14.0;  // spring-lip latch cantilever arm length, mm. assumed — matches the
                                // T_L=14 flexure-feature precedent (models/coupons/tg-ladder.scad) and
                                // clears the L/t >= 8:1 rule below.

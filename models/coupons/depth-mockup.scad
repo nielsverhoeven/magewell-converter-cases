@@ -16,8 +16,8 @@
 //   panel wall's connector hole, which is bored horizontally (see the comment at that cutout) and
 //   prints with a short self-supporting bridge at its very top — expected, not a defect.
 //
-//   Use: seat a real connector in the panel-wall cutout (screw it to the rear bosses if convenient
-//   — not required for this measurement), plug the real patch cable into its rear, bend the cable
+//   Use: seat a real connector in the panel-wall cutout (hold it by hand — no rear screw bosses
+//   since 2026-09-27, they are not needed for this measurement), plug the real patch cable into its rear, bend the cable
 //   90 degrees toward the mock face wall, and read the ruler tick where the plug/cable seats
 //   comfortably against the mock face. Write that reading into
 //   MCC_PANEL_PARTS[connector].plug_len (constants.scad) in place of the current `assumed` value —
@@ -122,15 +122,12 @@ difference() {
                     mcc_panel_cutout(connector, seat_t = MCC_PANEL_SEAT_T, panel_t = MCC_WALL);
                 }
 
-        // Rear screw bosses at the pocket floor (local Z = panel_t - seat_t), same placement
-        // convention neutrik-tile.scad uses — panel.scad has no boss dispatcher (architecture.md
-        // §5), so calling the neutrik.scad boss module directly here mirrors that coupon. Kept
-        // because it is trivial to add and gives the jig a physically realistic mounting, even
-        // though this coupon does not require the connector to be screwed down.
-        translate([MCC_WALL, 0, MCC_FLOOR_T + JIG_SIZE / 2])
-            rotate([0, -90, 0])
-                translate([0, 0, MCC_WALL - MCC_PANEL_SEAT_T])
-                    mcc_neutrik_d_bosses(connector);
+        // No rear screw bosses (removed 2026-09-27, architecture.md D29). They were optional here
+        // ("this coupon does not require the connector to be screwed down") and, sticking straight
+        // out of this VERTICAL wall, their undersides started in mid-air on every layer (Bambu
+        // Studio "floating regions" at z ~17.4); a 45 deg keel under the upper pad would run into
+        // the connector's own rear body. Screw-down fit is neutrik-tile.scad's job, where the pads
+        // print vertically.
 
         // Mock device-face wall at X=[X_FACE, X_FACE+MCC_WALL].
         translate([X_FACE, -JIG_SIZE / 2, MCC_FLOOR_T])

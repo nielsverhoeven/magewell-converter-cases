@@ -15,6 +15,10 @@
 //   this directory already satisfies via its own shared base). Snap or saw the thin bridging plate
 //   between the two halves apart after printing, before the pull test.
 //
+//   LATCH CURRENTLY DISABLED (MCC_RAIL_LATCH_ENABLED = false, 2026-09-27, architecture.md D28): the
+//   male rail prints without its spring-lip arm/nub until the latch is redesigned, so today this
+//   coupon verifies the dovetail slide fit, the end-stop and MCC_CLR_SLIDE only.
+//
 // Render:
 //   openscad --backend=Manifold -o out/rail-latch.stl models/coupons/rail-latch.scad
 //////////////////////////////////////////////////////////////////////

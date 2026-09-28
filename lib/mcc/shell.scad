@@ -129,7 +129,7 @@ module _mcc_tg_frame(cav, r_lo, r_hi, z0, height) {
 //   rim_w      = plate rim width, mm (matches mcc_panel_plate()'s own default, 6).
 //   y_outer    = the patch wall's outer face Y, mm (= +W/2).
 //   z_c        = the panel band's Z centre (z_conn_c), mm.
-module _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c) {
+module _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c, wall_top) {
     w = plate_size[0] + 2 * MCC_CLR_SLIDE;
     h = plate_size[1] + 2 * MCC_CLR_SLIDE;
     fw = plate_size[0] - 2 * rim_w; // field width (no extra clearance -- an internal step boundary)
@@ -145,6 +145,16 @@ module _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c) {
     // Full-footprint cut, 5 mm deep (the field's own depth).
     translate([-w / 2, y_outer - field_depth, z_c - h / 2])
         cube([w, field_depth + MCC_EPS, h]);
+
+    // Open top (D32, 2026-09-27): the rabbet runs out through the top of the wall. Its old roof —
+    // a 2.7 mm lip hanging 6 mm out from the wall over the plate's top edge — was a cantilever
+    // Bambu Studio refuses to print without support ("floating cantilever", tree support from the
+    // bed all along the patch wall), and there is no height for a self-supporting slope (a 45 deg
+    // roof needs 6 mm, only 2.7 mm sit above the plate). The top of the frame is now the LID's
+    // patch-wall lip (mcc_shell_lid(), MCC_LID_PANEL_LIP), which prints standing up in the lid's
+    // open-side-up pose — the plate stays framed on all four sides.
+    translate([-w / 2, y_outer - rim_depth, z_c + h / 2 - MCC_EPS])
+        cube([w, rim_depth + MCC_EPS, wall_top - (z_c + h / 2) + MCC_TG_H + 1]);
 
     // Rim-frame extra 1 mm, from 5 mm to 6 mm depth -- only over the border ring.
     difference() {
@@ -210,6 +220,33 @@ module _mcc_patch_wall_window(part, y_lo, y_hi, x_c, z_c) {
                         // "screw holes look rotated 90 deg vs the holes in the base").
                         translate([-sx, -sz]) circle(d = d_rel, $fn = 64);
                         translate([sx, sz]) circle(d = d_rel, $fn = 64);
+                        // Upper relief vs. the body opening's 45 deg flank (2026-09-27, D26). The
+                        // (+sx, +sz) relief circle crosses the teardrop's right flank just below the
+                        // cap, leaving a sliver of lip between the flank and the circle whose lowest
+                        // point is a downward tooth — a region that starts in mid-air (Bambu Studio:
+                        // "floating regions" on every base). Fill: hull the relief circle with the
+                        // cap's LEFT corner. The window roof then runs from that corner straight up
+                        // to the relief's top tangent, so every layer's new roof edge is a thin
+                        // sliver hung on the layer below. (Hulling to the RIGHT corner instead —
+                        // this fix's first cut — left the flat cap attached on its left end only:
+                        // a 9.6 mm "floating cantilever".) Everything added lies above the cap /
+                        // flank, i.e. beyond mcc_cutout_d(part)/2 from the slot centre, so it hides
+                        // behind the plate like the rest of the window (the rev-5 objection was a
+                        // hull *across* the opening that narrowed its visible outline — not this).
+                        // The lower (-sx, -sz) relief forms only upward-pointing cusps.
+                        if (!is_blank) {
+                            corner = [-w_flat / 2, cap_h];
+                            v = [sx, sz] - corner;
+                            assert(norm(v) > d_rel / 2,
+                                str("mcc: window cap corner lies inside the upper relief circle for \"", part, "\""));
+                            rise = atan2(v[1], v[0]) + asin((d_rel / 2) / norm(v));
+                            assert(rise > 0,
+                                str("mcc: upper-relief roof tangent does not rise (", rise, " deg) for \"", part, "\""));
+                            hull() {
+                                translate([sx, sz]) circle(d = d_rel, $fn = 64);
+                                translate(corner) circle(d = 0.02, $fn = 8);
+                            }
+                        }
                     }
 }
 
@@ -235,7 +272,7 @@ module _mcc_patch_wall_aperture(l, dev) {
     y_lip_lo = W / 2 - MCC_T_PATCH; // patch-wall inner face
     y_lip_hi = W / 2 - MCC_T_PATCH + MCC_WALL; // = rabbet floor at field depth (5mm in), i.e. y_outer-5
 
-    _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c);
+    _mcc_patch_wall_rabbet(plate_size, rim_w, y_outer, z_c, struct_val(l, "H") - MCC_LID_T);
 
     for (i = [0:1:n_slots - 1]) {
         s = slots[i];
@@ -303,11 +340,31 @@ module _mcc_patch_wall_fixing_bosses(plate_size, rim_w, y_outer, z_c) {
         str("mcc: T1-35 fixing-boss thru_depth=", thru_depth, " negative — boss_h=", boss_h,
             " too short for insert_bore_depth=", insert_bore_depth));
 
+    // 45 deg chin (2026-09-27, architecture.md D29): each boss is a horizontal cylinder standing
+    // boss_h off a vertical wall, so without it every layer of its underside hangs up to boss_h
+    // out of the wall with nothing below (Bambu Studio "floating regions"/"floating cantilever" on
+    // every base). The chin is the boss's own OD hulled down the wall face by boss_h, so its
+    // underside rises at exactly 45 deg from the wall to the boss tip; clipped at the case bottom
+    // (z = 0) for the low bosses, where it simply lands in the floor.
     for (p = mcc_panel_fixing_pos(plate_size, rim_w))
         translate([p[0], y_lip_inner - boss_h, z_c + p[1]])
             rotate([-90, 0, 0])
                 difference() {
-                    cyl(h = boss_h, d = boss_od, circum = true, anchor = BOTTOM, $fn = 64);
+                    union() {
+                        cyl(h = boss_h, d = boss_od, circum = true, anchor = BOTTOM, $fn = 64);
+                        // Local frame after rotate([-90,0,0]): +Z = toward the wall (world +Y),
+                        // local +Y = world -Z (down). Wall face at local Z = boss_h.
+                        intersection() {
+                            hull() {
+                                cyl(h = boss_h, d = boss_od, circum = true, anchor = BOTTOM, $fn = 64);
+                                translate([-boss_od / 2, 0, boss_h - MCC_EPS])
+                                    cube([boss_od, boss_od / 2 + boss_h, MCC_EPS + 0.5]);
+                            }
+                            // world z >= 0  <=>  local y <= z_c + p[1]
+                            translate([-boss_od, -boss_od, -1])
+                                cube([2 * boss_od, boss_od + z_c + p[1], boss_h + 2]);
+                        }
+                    }
                     // Insert bore: opens past the rear tip (Z=-MCC_EPS, anchor=BOTTOM) so it
                     // genuinely punches through rather than kissing the boss's own end cap, and
                     // extends forward by insert_bore_depth.
@@ -507,9 +564,25 @@ module mcc_shell_lid(dev, cfg) {
     assert(struct_val(l, "vent_exhaust_z")[1] <= z_top,
         "mcc: exhaust vent band crosses into the lid on this SKU -- lid-side venting is not implemented");
 
+    // Patch-wall lip (D32, 2026-09-27): the top of the panel's frame, hanging from the lid into the
+    // base's open-topped rabbet (_mcc_patch_wall_rabbet()). Same footprint as the rabbet's rim-depth
+    // opening less MCC_CLR_SLIDE on its three inner faces, flush with the outer face, reaching down to
+    // the rabbet's old roof height (plate top + MCC_CLR_SLIDE). It stands upright in the lid's print
+    // pose, so the frame no longer has a 6 mm overhang anywhere.
+    plate_size = struct_val(l, "plate_size");
+    z_c = struct_val(l, "z_conn_c");
+    lip_w = plate_size[0];                                   // rabbet w (= plate + 2*clr) - 2*clr
+    lip_z0 = z_c + plate_size[1] / 2 + MCC_CLR_SLIDE;        // the rabbet's old roof
+    lip_d = MCC_PANEL_BEZEL_T + MCC_WALL - MCC_CLR_SLIDE;    // rim depth less the back clearance
+    assert(z_top - lip_z0 > 0, str("mcc: lid panel lip height ", z_top - lip_z0, " <= 0"));
+
     difference() {
-        translate([-L / 2, -W / 2, z_top])
-            cube([L, W, MCC_LID_T]);
+        union() {
+            translate([-L / 2, -W / 2, z_top])
+                cube([L, W, MCC_LID_T]);
+            translate([-lip_w / 2, W / 2 - lip_d, lip_z0])
+                cube([lip_w, lip_d, z_top - lip_z0 + MCC_EPS]);
+        }
 
         // Groove (D-07): the picture-frame-shaped cut that receives the base's tongue. MCC_CLR_TG
         // wider on BOTH its inner and outer edge than the tongue — "groove width = tongue width +

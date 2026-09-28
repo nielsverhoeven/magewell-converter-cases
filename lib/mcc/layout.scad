@@ -284,8 +284,10 @@ function mcc_floor_keepout(dev, cfg) =
         [floor_center[0], floor_center[1], "rect", MCC_FISHTAIL_BAND, "fishtail_reserve"],
         // Mount rail (D-15, rev 9 — replaces VESA): MCC_RAIL_Y is already negative (R2/R24,
         // layout-patch-wall.md §17.2) — under the cradle deck and the device, not free-standing in
-        // the connector bay. Size is the sill footprint [MCC_RAIL_LEN, MCC_RAIL_ROOT_W] (the wider
-        // of the groove's two widths, so the keep-out covers the whole sill, not just the mouth).
+        // the connector bay. Size is the groove CUT's footprint [MCC_RAIL_LEN, MCC_RAIL_ROOT_W] (the
+        // wider of the groove's two widths, so the keep-out covers the whole cut, not just the
+        // mouth). The sill's MCC_RAIL_SILL_SIDE_W side walls (D30) are interior-only solid material
+        // with no cut of their own, so they need no floor keep-out.
         [0, MCC_RAIL_Y, "rect", [MCC_RAIL_LEN, MCC_RAIL_ROOT_W], "mount_rail"],
         [strap_x_pos, strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_y"],
         [strap_x_pos, -strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_neg_y"],

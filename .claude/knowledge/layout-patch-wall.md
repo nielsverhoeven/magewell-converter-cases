@@ -378,6 +378,12 @@ into a connector bay.
 
 ### 2.5 The patch-wall aperture — ONE rabbet, `n_slots` ROUND WINDOWS + 2 BOSS RELIEFS (rev 6, 2026-09-08)
 
+> **2026-09-27 (architecture.md §13 D26, D29, D32):** the rabbet is now **open to the top of the
+> wall** — the top of the panel frame is a lip on the lid (`mcc_shell_lid()`), because the old 2.7 mm
+> base-side lip hanging 6 mm over the plate was an unprintable cantilever. The upper boss relief is
+> hulled with the teardrop cap's left corner (no hanging tooth), and the four plate-fixing bosses
+> carry a 45° chin down the wall. Everything below describes the rev-6 layout these amend.
+
 > **Rev 6 replaces rev 5's `hull()`ed "crown" window.** Rev 5's shape was the convex hull of the
 > connector circle and the two rear-boss relief circles — a 27.9 × 32.4 mm diagonal blob. The user
 > rejected it on sight ("the 4 D-slots must be exactly round — not the weird round/diamond-like
