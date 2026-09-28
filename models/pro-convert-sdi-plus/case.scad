@@ -48,7 +48,7 @@ explode = 0;
 //               `-D splitter=true`.
 //   "rail"      (bool, optional, default true) -- cuts the tool-less dovetail mount-rail groove in
 //               the floor (mounts.scad, D-15/rev 9, issue #25 -- replaces VESA). Pass false to omit.
-//   "tripod_insert" (bool, optional, default true, D-16) -- draws the case's own 1/4"-20
+//   "tripod_insert" (bool, optional, default false since D35; was true, D-16) -- draws the case's own 1/4"-20
 //               floor-mount insert boss (cradle.scad, T1-32), braced into the deck lattice with
 //               a collar (T1-41). Pass false to omit both the boss and its bore cut.
 //   "fan_y"     (mm, optional, default the device's own Y centreline, R20) -- shell parameter for
@@ -73,7 +73,7 @@ variant = [
     ["fan",         fan],
     ["splitter",    splitter],
     ["fan_switch",  fan],
-    ["tripod_insert", true],
+    ["tripod_insert", false], // user decision 2026-09-28 (D35): no floor insert — the side bolt is the only screw
     ["lid_vents", lid_vents],
 ];
 

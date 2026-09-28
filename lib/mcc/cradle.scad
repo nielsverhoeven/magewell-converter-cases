@@ -35,10 +35,10 @@ use <fasteners.scad> // mcc_side_bolt_keepout(), mcc_case_tripod_insert_bore()
 //   mounts.scad's own mcc_rail_features_cut() guard pattern.
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default true).
+//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default false — D35, 2026-09-28).
 module mcc_tripod_insert_bore_cut(dev, cfg) {
     tripod_flag = struct_val(cfg, "tripod_insert");
-    tripod_on = is_undef(tripod_flag) ? true : tripod_flag;
+    tripod_on = is_undef(tripod_flag) ? false : tripod_flag;
     if (tripod_on) {
         translate([0, 0, MCC_EPS])
             rotate([180, 0, 0])
@@ -181,7 +181,7 @@ function _mcc_far_flank_rib_x(x_dev_lo, x_dev_hi, x_bolt) =
 //   (default true, D-16).
 // Arguments:
 //   dev = device record.
-//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default true).
+//   cfg = variant-config assoc-list. Optional key "tripod_insert" (default false — D35, 2026-09-28).
 module mcc_cradle(dev, cfg) {
     l = mcc_case_layout(dev, cfg);
     x_dev_lo = struct_val(l, "x_dev_lo"); x_dev_hi = struct_val(l, "x_dev_hi");
@@ -191,7 +191,7 @@ module mcc_cradle(dev, cfg) {
     x_bolt   = struct_val(l, "side_bolt_x");
 
     tripod_flag = struct_val(cfg, "tripod_insert");
-    tripod_on = is_undef(tripod_flag) ? true : tripod_flag; // D-16, rev 9: default true.
+    tripod_on = is_undef(tripod_flag) ? false : tripod_flag; // D-16, rev 9: default true.
 
     LIP = MCC_WALL; // deck footprint margin beyond the device's own XY extent, mm — a small
                      // locating lip (this file's module contract), also wide enough that the
