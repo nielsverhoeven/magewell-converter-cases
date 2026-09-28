@@ -7,3 +7,4 @@ numpy>=1.26
 scipy>=1.11      # trimesh needs this for some checks (e.g. convex hull / watertight repair paths)
 networkx>=3.2     # required by trimesh's Trimesh.split()
 shapely>=2.0      # layer polygons for scripts/printability.py (floating-island check in `build.py check`)
+rtree>=1.2        # spatial index trimesh needs for mesh.section_multiplane() (printability gate)
