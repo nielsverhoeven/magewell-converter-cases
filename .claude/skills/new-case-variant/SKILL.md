@@ -286,3 +286,6 @@ may be *developed* in parallel; it is the **merge order** that matters.
 - [ ] `BOM.md`'s `### <slug>` section added (`bom-update`).
 - [ ] README status line updated (only this SKU's row).
 - [ ] Touched only the files §16.5 allows for a variant branch.
+- [ ] If the new case can hang on `models/brackets/arch-tv-bracket.scad`, add its device include and
+      record to `_ARCH_TV_DEVS`, then re-golden `brackets/arch-tv-bracket` (issue #47 B7 — otherwise
+      that bracket's own "fully behind the TV" assert silently ignores the new SKU).

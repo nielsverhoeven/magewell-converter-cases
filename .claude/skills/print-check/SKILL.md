@@ -72,6 +72,7 @@ turning by hand, that is a bug in the pose table, not a slicer step.
 | Shell base/lid | **Open side up** | Avoids printing the deepest cavity upside down into supports. The patch-wall rabbet is open to the top of the base wall; the top of the panel frame is a lip on the lid, which stands upright in the lid's pose (architecture.md D32 — the old 6 mm base-side bezel lip was an unprintable cantilever). |
 | Any part with a boss/insert hole | Hole axis vertical (printing top-down through the hole), not horizontal | A horizontal insert hole is a small bridge/overhang per hole and prints out-of-round; a vertical hole prints as a clean circular wall. |
 | `models/brackets/tv-bracket.scad` | Flat, either face down — but **mount with the plate's own +Y axis up** (not a print-orientation choice; see `models/brackets/README.md` "Orientation") so the mated case hangs with its patch/cable wall down, not the fan/vent side against the TV. |
+| `models/brackets/arch-tv-bracket.scad` | `arm`: **TV face down**; `centre`: **flat face down, rail up**. Mount with the **arch up** (UP arrow on the centre); patch wall then hangs down. **Do not print for use before M15 (rail-latch), M18 (TV measurements) and R38 (rail entry/interference, issue #48) are closed** (`models/brackets/README.md`). |
 
 No unsupported span over **10 mm** anywhere (the general shell rule, architecture.md §5) — check any
 new rabbet roof, vent hood, or aperture chamfer against this before slicing. Roofs ≤45° from vertical
