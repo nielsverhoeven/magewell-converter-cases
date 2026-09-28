@@ -274,6 +274,33 @@ def print_pose(target: Target, part: str) -> str:
     return "as-modelled"
 
 
+# How many copies of a part one physical assembly needs, e.g. arch-tv-bracket's arm (left + right):
+# `// build.py: print_count = arm:2`. Part 3MFs and the review project carry that many copies, so a
+# slicer user prints the right quantity without duplicating anything by hand. Default 1.
+_PRINT_COUNT_MARKER_RE = re.compile(r"//\s*build\.py:\s*print_count\s*=\s*(.+)")
+
+
+def print_count(target: Target, part: str) -> int:
+    try:
+        text = target.scad_path.read_text(encoding="utf-8")
+    except OSError:
+        return 1
+    for m in _PRINT_COUNT_MARKER_RE.finditer(text):
+        for raw in m.group(1).split(","):
+            name, sep, n = raw.strip().partition(":")
+            digits = re.match(r"\s*(\d+)", n)
+            if sep and name.strip() == part and digits:
+                return max(1, int(digits.group(1)))
+    return 1
+
+
+def _copies(obj: "bambu_project.PrintObject", n: int) -> list:
+    if n == 1:
+        return [obj]
+    return [bambu_project.PrintObject(name=f"{obj.name} ({i + 1} of {n})", vertices=obj.vertices, faces=obj.faces)
+            for i in range(n)]
+
+
 def print_set(target: Target) -> list[str]:
     """The parts one physical case is printed from — a model's base/lid(/panel), without the
     `extra_parts` variants (e.g. base_fan is an *alternative* base, not an extra part to print).
@@ -595,10 +622,11 @@ def write_print_artefacts(target: Target, part: str, pose: str, formats: list[st
 
     _require_trimesh()
     obj = _print_pose_mesh(target, part, pose)
-    plates = bambu_project.layout_plates([obj])
+    plates = bambu_project.layout_plates(_copies(obj, print_count(target, part)))
     if "stl" in formats:
-        # Same spot the project uses: bed centre, or nudged clear of the exclusion pad.
-        spot = plates[0][0]
+        # One copy, on the spot a single-copy project would use: bed centre, or nudged clear of
+        # the exclusion pad.
+        spot = bambu_project.layout_plates([obj])[0][0]
         out = target.export_dir / f"{part}.stl"
         trimesh.Trimesh(obj.vertices + [spot.x, spot.y, 0.0], obj.faces, process=False).export(str(out))
     if "3mf" in formats:
@@ -649,7 +677,7 @@ def cmd_review(args: argparse.Namespace) -> int:
             if not (target.export_dir / f"{part}{MODEL_FRAME_SUFFIX}").is_file():
                 missing.append(f"{target.name}:{part}")
                 continue
-            objs.append(_print_pose_mesh(target, part, print_pose(target, part)))
+            objs += _copies(_print_pose_mesh(target, part, print_pose(target, part)), print_count(target, part))
         if target.kind == "model":
             plates += bambu_project.layout_plates(objs) if objs else []
         else:

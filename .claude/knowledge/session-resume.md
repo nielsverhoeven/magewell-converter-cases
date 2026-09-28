@@ -1,4 +1,4 @@
-# Project status and next milestone — updated 2026-09-08 (evening)
+# Project status and next milestone — updated 2026-09-28
 
 Working memory for agents resuming this repo. Keep it short and current; history lives in
 `CHANGELOG.md` and the GitHub Releases, decisions in `architecture.md` / `layout-patch-wall.md`.
@@ -8,13 +8,23 @@ Working memory for agents resuming this repo. Keep it short and current; history
 | Area | State | Notes |
 |---|---|---|
 | `knowledge/**` | done | Magewell (22 files + Fishtail STL), Neutrik (drawings/STEP), components (fans, fasteners, cables, PoE splitters, Mini-DIN8), design (FDM + thermal). Sources cited; `unknown` where unverifiable. |
-| Software | done | OpenSCAD nightly 2025.09.07, Bambu Studio 02.08.02, BOSL2 submodule (pinned), `.venv` with trimesh, pyyaml, cadquery-ocp (STEP). |
-| `.claude/skills/*` (9) | done | knowledge-lookup, openscad-authoring, openscad-render, neutrik-panel, device-portmap, new-case-variant, print-check, bom-update, git-flow. |
+| Software | done | OpenSCAD nightly 2026.09.23 (local + CI), Bambu Studio 02.08.02.61 (local + CI AppImage), BOSL2 submodule (pinned), `.venv` from requirements.txt (trimesh, shapely, rtree, manifold3d, mapbox-earcut). cadquery-ocp (STEP) has no wheel for local Python 3.14 — STEP runs in CI only. |
+| `.claude/skills/*` (10) | done | knowledge-lookup, openscad-authoring, openscad-render, neutrik-panel, device-portmap, new-case-variant, print-check, bom-update, git-flow, **bambu-studio** (CLI slicer gate, warning probes, opening projects for review). |
 | Library `lib/mcc/**` | done, verified | L0 constants/util/ports/layout, L1 neutrik/fasteners/fan/poe_splitter/ghost, L2 shell/panel/cradle/mounts/vents; 8 device data files (positions `photo`/`assumed`). |
 | Cases `models/<slug>/case.scad` (8) | done, verified | HDMI TX, SDI TX (compact, 3 slots); NDI to HDMI, NDI to SDI, NDI to AIO (compact, 4 slots); HDMI Plus, SDI Plus, NDI to HDMI 4K (Plus, fan fitted). Goldens for base/lid/panel (+ `base_fan` on NDI to HDMI). |
 | Coupons `models/coupons/*.scad` (6) | done, verified | neutrik-tile, depth-mockup, tg-ladder, insert-boss, tolerance-ladder, side-bolt — **not yet printed**. |
-| Tooling / CI / releases | done, verified | `build.py all --with-step` green; `render.yml` = PR gate (required check on protected `main`); `release.yml` = automatic pre-release per merge with per-device zips (STL + 3MF + STEP + manifest), slug-prefixed STEPs, SHA256SUMS. Releases v0.1.0 … v0.8.x. |
+| Print-ready exports | done, verified (2026-09-28) | Print pose + Bambu Studio projects per part and per case, `review.3mf`; **all 36 parts slice with zero Bambu Studio warnings** (architecture §8 rev 13, §13 D26–D33). Top of the panel frame is now a lid lip (D32); tv-bracket ribs off (D31); rail latch off pending #46 (D28). Empirical slicer rules: `bambu-slicer.md`. |
+| Tooling / CI / releases | done, verified | `render.yml` = PR gate: smoke + six parallel "Validate parts — group k of 6" jobs (`build.py ci`: render → check → golden → Bambu slicer → STEP per part) + `render` aggregator (required check), ≈ 3 min; `release.yml` = automatic pre-release per merge with per-device zips (STL + 3MF + STEP + manifest), slug-prefixed STEPs, SHA256SUMS. Releases v0.1.0 … v0.8.x. |
 | Architecture records | rev 7 | `architecture.md` + `layout-patch-wall.md` (§16 fit-check of all 8 SKUs). Open non-blocking: R20 intake vent margin (~1.6 % on BNC compact SKUs), T1-30 not in-model, `mounts.scad` floor non-overlap assert missing, `mcc_warn_unmeasured()` not wired (build.py `confidence` parses device files instead). |
+
+## Open decisions for the user (2026-09-28)
+
+- **Material saving** (measured: compact case ≈ 272 g, Plus ≈ 296 g; process settings move < 2 %,
+  so savings are geometric). Within fixed decisions: A) lid-fastener bosses wall-hung instead of
+  floor-to-top pillars (~6 g/case), C) deck rib pitch 22 → 30 mm (~5 g). Touching fixed decisions:
+  B) deck ribs 3 → 2 mm (~8 g, D22), D) 4 walls (~6 g), E) floor 3 → 2 mm (~24 g), F) lid 3 → 2 mm +
+  ribs (~20 g) — E/F need a drop-test coupon first. Awaiting the user's pick.
+- **Rail latch redesign** — issue #46 (D28).
 
 ## Next milestone: Tier 4 — measure, then print
 

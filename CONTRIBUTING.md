@@ -167,6 +167,8 @@ merges to `main` like any other PR and the next push-to-`main` release picks it 
 ## Definition of done (PR into `main`)
 
 - [ ] `python scripts/build.py all` passes locally.
+- [ ] `python scripts/build.py slicer-check <touched targets>` passes locally (zero Bambu Studio
+      warnings — CI enforces the same gate on every part).
 - [ ] `python scripts/build.py step --all` succeeds locally, or the STEP backend genuinely isn't
       available on your machine (`build.py doctor` reports which) — CI always has one and will
       catch a broken conversion either way (`render.yml` runs `step --all` on every PR).
