@@ -6,7 +6,7 @@
 //   the retired tv-bracket.scad (#26, D47); consumes lib/mcc/rail.scad's mount-rail interface (#25)
 //   UNCHANGED -- the inherited rail-interface defect F1 (§12.3, proposed R38) is tracked separately
 //   (issue #48) and is NOT fixed here; every rail-dependent value in this file (keep-out rectangle,
-//   Z stack, RAIL_X, slide_clear) derives from MCC_RAIL_* so a future rail fix is absorbed by a
+//   Z stack, RAIL_X, slide_clear) derives from MCC_RAIL_* or mcc_rail_male_keepout(), so a future rail fix is absorbed by a
 //   re-golden, no code edit.
 //
 //   Mounts directly on a TV's TOP TWO VESA 400 M8 screws (no VESA plate -- unlike the retired tv-bracket.scad's
@@ -56,7 +56,7 @@
 //   .claude/knowledge/architecture.md after merge (§12.5 bottom) -- this file cites the PROPOSED
 //   ids in comments only.
 //
-//   PRINT GATE (B10): do not print this bracket FOR USE before M15 (rail-latch pull test), M18 (the
+//   PRINT GATE (B10): do not print this bracket FOR USE before M15 (rail-lock coupon), M18 (the
 //   TV measurements below) and R38/F1 (rail entry/interference) are closed. The released STL is
 //   rendered for the PLACEHOLDER TV_TOP_CLEAR=150; a measured TV needs
 //   `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
@@ -125,10 +125,11 @@ ARM_W = 40.0; // mm. assumed -- arm width; carries the 2x2 joint pattern, two ed
                // pad.
 PAD_BOSS_D = 30.0; // mm. assumed -- >= counterbore diameter (16.6) + 2 x 2*MCC_WALL; asserted
                     // (T1-58).
-CENTRE_W = 92.0; // mm. D44: must hold the 65 mm rail's keep-out Y span [-32.5, +36.1] (T1-53, needs
-                  // >= 72.2) AND the UP arrow above it (T1-60: 36.1 + 1 + 6 + 1 = 44.1 <= CENTRE_W/2,
-                  // minimum 88.2) -- 92 leaves 0.95 mm on both T1-60 bounds. Was 40 (= ARM_W) for the
-                  // 14.6 mm rail.
+CENTRE_W = 92.0; // mm. D44: holds the rail keep-out Y span (T1-53) and the UP arrow above it
+                  // (T1-60). Sized for the D34 latch's [-32.5, +36.1]; since D48 the keep-out
+                  // (mcc_rail_male_keepout()) is [-32.5, +33.2], so T1-60 needs only
+                  // 2 x (33.2 + 1 + 6 + 1) = 82.4 and 92 leaves 2.4 mm on both of its bounds.
+                  // Kept at 92 so D48 moves no bracket outline. Was 40 for the 14.6 mm rail.
 C_HALF = 90.0; // mm. assumed -- centre-body half-length. Rail footprint half-length is
                // MCC_RAIL_LEN/2 + MCC_RAIL_END_STOP_L = 81, leaving a 9 mm end web (>= MCC_WALL,
                // asserted T1-53).
@@ -168,11 +169,13 @@ ARROW_W = 6.0; // mm. assumed (B3).
 // A13/T1-59. If F1's eventual fix drops the end-stop flange, this becomes 0 automatically.
 RAIL_X = MCC_RAIL_END_STOP_L / 2; // = 3.0
 
-// Rail keep-out rectangle, centre-local frame, B1-shifted (plan §3.2, rail-local -> centre-local
-// after the rotate([0,0,180]) rail placement below): the latch arm/nub stand on the rail-local -Y
-// flank, i.e. +Y here (rail.scad:151-175). Built from MCC_RAIL_* constants only, never hand-typed.
-RAIL_KEEPOUT_X = [RAIL_X - MCC_RAIL_LEN / 2 - MCC_RAIL_END_STOP_L, RAIL_X + MCC_RAIL_LEN / 2];
-RAIL_KEEPOUT_Y = [-MCC_RAIL_ROOT_W / 2, MCC_RAIL_ROOT_W / 2 + MCC_RAIL_LATCH_ARM_T + MCC_RAIL_LATCH_ENGAGE];
+// Rail keep-out rectangle, centre-local frame, B1-shifted: the rail's own plate-side keep-out
+// (mcc_rail_male_keepout(), rail-local) mapped through this file's rotate([0,0,180]) rail
+// placement, which negates and swaps both ranges -- the lock bump on the rail-local -Y flank
+// lands at +Y here. D50 / F-R1: never built from MCC_RAIL_* internals.
+_RAIL_KO = mcc_rail_male_keepout(MCC_RAIL_LEN);
+RAIL_KEEPOUT_X = [RAIL_X - _RAIL_KO[0][1], RAIL_X - _RAIL_KO[0][0]];
+RAIL_KEEPOUT_Y = [-_RAIL_KO[1][1], -_RAIL_KO[1][0]];
 
 // reused from constants.scad, no new library constant: MCC_M8_CLR_D, MCC_M3_CLR_D, MCC_INSERT_M3,
 // MCC_CLR_SLIDE, MCC_RAIL_*, MCC_WALL, MCC_BUILD, MCC_BED_MARGIN, MCC_EPS,
@@ -579,8 +582,7 @@ module mcc_arch_tv_centre(g) {
     m3_counterbore_depth = M3_COUNTERBORE_DEPTH;
     arrow_y = (RAIL_KEEPOUT_Y[1] + CENTRE_W / 2) / 2;
 
-    // The rail is unioned AFTER the plate's own cuts: its latch arm's leg fills the window
-    // mcc_rail_male_window() cuts through this plate (issue #46, D34) down to the bed.
+    // The rail is unioned after the plate's own cuts; it needs no cut of its own in the plate (D50).
     union() {
     difference() {
         union() {
@@ -594,7 +596,6 @@ module mcc_arch_tv_centre(g) {
                     translate([struct_val(g, "arm_len"), 0, 0])
                         cuboid([LAP_L, ARM_W, ARCH_PLATE_T], anchor = BOTTOM);
         }
-        translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male_window(plate_t = ARCH_PLATE_T);
         // 4 M3 counterbored clearance holes per tab, same placement transform as the tabs above.
         for (side = [-1, 1], h = _mcc_arch_tv_joint_holes(g)) {
             p = _mcc_arch_tv_xform(h, side, g);
@@ -610,8 +611,8 @@ module mcc_arch_tv_centre(g) {
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }
     // Rail (B1: RAIL_X-centred on this plate) -- the standard rotate([0,0,180]) rail call, lifted
-    // onto this plate's own top face; plate_t lets the latch arm's leg reach the bed.
-    translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male(plate_t = ARCH_PLATE_T);
+    // onto this plate's own top face (D50: one union, no plate cut).
+    translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male();
     }
 }
 

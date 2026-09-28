@@ -111,10 +111,11 @@ module mcc_rail_features_cut(dev, cfg) {
     rail_flag = struct_val(cfg, "rail");
     rail_on = is_undef(rail_flag) ? true : rail_flag;
     if (rail_on) {
-        // Open at +X through the case wall (D34): the groove's closed -X end is the end stop.
+        // Open at +X through the case wall (D34): the groove's closed -X end is the end stop. The
+        // +X outer face (x = L/2) gets the 45-degree lead-in (D48).
         L = struct_val(mcc_case_layout(dev, cfg), "L");
         translate([0, MCC_RAIL_Y, 0])
-            mcc_rail_female_cut(len = MCC_RAIL_LEN, open_ext = L / 2 - MCC_RAIL_LEN / 2 + 1);
+            mcc_rail_female_cut(len = MCC_RAIL_LEN, open_ext = L / 2 - MCC_RAIL_LEN / 2 + 1, entry_x = L / 2);
     }
 }
 
