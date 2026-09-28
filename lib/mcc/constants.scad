@@ -780,6 +780,23 @@ MCC_FANS = [
 // literal (architecture.md §3 "no magic numbers").
 MCC_FAN_DEFAULT = "NF-A4x10";
 
+// Intake clearance beyond the fan's own frame depth, mm. assumed -- generic unobstructed-intake
+// allowance; no sourced figure in knowledge/components/fans.md (frame/pitch/hole_d only). Single
+// source of truth for the figure previously duplicated as a bare literal `5` at fan.scad's
+// mcc_fan_envelope() and inside shell.scad's T1-18(c) block. architecture.md §13 D23, issue #36.
+MCC_FAN_INTAKE_CLR = 5.0;
+
+// Minimum clearance between the reserved fan bay (frame + MCC_FAN_INTAKE_CLR) and any OTHER
+// feature: the (+X,-Y) corner lid-fastener boss/gusset on -Y, the connector bay's plug envelope
+// on +Y (T1-46a/b, layout-patch-wall.md §9). assumed -- this repo's recurring 2 mm keep-out web
+// (knowledge/design/fdm-rugged-enclosure-guidelines.md:127), the same 2.0 that gives
+// MCC_SIDE_BOLT_KEEPOUT_D its `+ 2 * 2.0` and MCC_APERTURE_LIP_WEB_MIN its value (both above).
+// Deliberately NOT applied to the bay's Z bounds (T1-46c/d): those bound the bay against the
+// interior CAVITY surface, and a reserved volume may touch the shell it bolts to. Rule
+// (architecture.md §6 rev 12): clearance is required against another FEATURE, never against the
+// cavity boundary.
+MCC_FAN_BAY_CLR = 2.0;
+
 // Function: mcc_fan_spec()
 // Usage:
 //   spec = mcc_fan_spec(name);

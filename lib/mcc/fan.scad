@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/fan.scad
-//   L1. Fan bay envelope (reservation keep-out), cutout (mounting holes + opening/grille).
+//   L1. Fan bay review ghost (mcc_fan_envelope(), NOT the reservation -- see its doc), cutout
+//   (mounting holes + opening/grille).
 //   knowledge/components/fans.md. `use`d by lib/mcc/mcc.scad.
 // Includes:
 //   include <mcc/mcc.scad>
@@ -10,9 +11,13 @@ include <BOSL2/std.scad>
 include <constants.scad>
 use <util.scad>
 
-// Z-axis convention: the fan's mounting wall spans Z=[0, wall_t] (matching neutrik.scad/
-// fasteners.scad); the fan envelope's local frame has Z=0 at the mounting plane, growing toward
-// +Z (into the case interior) by the fan's own frame depth plus intake clearance.
+// Z-axis convention -- the two modules below use OPPOSITE senses:
+//   - mcc_fan_cutout(): local Z = [0, wall_t] spans the mounting wall (matching neutrik.scad/
+//     fasteners.scad); callers place it with rotate([0,90,0]) so local +Z -> world +X, outward
+//     (vents.scad).
+//   - mcc_fan_envelope(): local Z = 0 at the fan's mounting plane (the wall's INNER face), growing
+//     toward +Z INTO the case interior by the fan's own frame depth plus MCC_FAN_INTAKE_CLR;
+//     callers place it with rotate([0,-90,0]) so local +Z -> world -X, inward (shell.scad).
 
 // mcc_fan_spec() MOVED to constants.scad (L0), rev 11 (#32, architect verdict B7) — it is a pure
 // function over an L0 table, and layout.scad (which may not `use` this L1 file) needs it too. This
@@ -21,22 +26,30 @@ use <util.scad>
 
 // Module: mcc_fan_envelope()
 // Usage:
-//   mcc_fan_envelope(name);
+//   mcc_fan_envelope([name]);
 // Description:
-//   Pure keep-out reservation box: the fan's own frame footprint extruded to its frame depth
-//   plus a 5 mm intake clearance beyond it. architecture.md:234-238 "the reservation rule ...
-//   shell.scad always reserves the fan bay ... even when fan=false"; this module is the thing
-//   `shell.scad` (not built in this session) reserves against — separate from the module that
-//   cuts real geometry (mcc_fan_cutout(), below), per architecture.md:236-238.
+//   REVIEW-ONLY ghost of the fan bay's reserved keep-out volume: the fan's own frame footprint
+//   extruded to its frame depth plus MCC_FAN_INTAKE_CLR. `%`-ed and gated behind MCC_SHOW_GHOST
+//   (default false), like every other ghost in this repo -- architecture.md §7 "Ghost rendering",
+//   both belts: `%` is the mechanism, the flag is the review signal.
+//   THIS MODULE IS NOT THE RESERVATION. The reservation of record is numeric: fan_bay_x/y/z from
+//   mcc_case_layout() (layout.scad), enforced by T1-46a-d there and by T1-18(c) in shell.scad.
+//   architecture.md §6 rev 12 / §13 D23 -- a solid box cannot be the reservation, because §3
+//   forbids layout.scad (where the checks live) from `use`-ing this file at all.
+//   LOCAL FRAME: Z = 0 at the fan's mounting plane (the wall's INNER face), growing toward +Z INTO
+//   the case interior. That is the OPPOSITE sense to mcc_fan_cutout() below, whose local
+//   Z = [0, wall_t] spans the wall outward. Callers therefore need rotate([0,-90,0]) for this
+//   module and rotate([0,90,0]) for the cutout -- see shell.scad's and vents.scad's call sites.
 // Arguments:
-//   name = fan name, key into MCC_FANS.
-module mcc_fan_envelope(name) {
+//   name = fan name, key into MCC_FANS. Default: MCC_FAN_DEFAULT.
+module mcc_fan_envelope(name = MCC_FAN_DEFAULT) {
     spec  = mcc_fan_spec(name);
     frame = struct_val(spec, "frame");
-    clr   = 5; // intake clearance, mm. assumed — generic unobstructed-intake allowance; no sourced
-               // figure in knowledge/components/fans.md (which gives frame/pitch only).
-    translate([0, 0, (frame[2] + clr) / 2])
-        cube([frame[0], frame[1], frame[2] + clr], center = true);
+    depth = frame[2] + MCC_FAN_INTAKE_CLR;
+    if (MCC_SHOW_GHOST) {
+        %translate([0, 0, depth / 2])
+            cube([frame[0], frame[1], depth], center = true);
+    }
 }
 
 // Module: _mcc_fan_grille_2d()
@@ -127,10 +140,10 @@ module _mcc_fan_grille_2d(d) {
 //   as one solid, fused to the wall along the full aperture rim (see _mcc_fan_grille_2d()'s own
 //   comment for why the outer ring must land exactly on r_max for that fusion to hold).
 // Arguments:
-//   name    = fan name, key into MCC_FANS.
+//   name    = fan name, key into MCC_FANS. Default: MCC_FAN_DEFAULT.
 //   wall_t  = wall thickness at the fan bay, mm. Default: MCC_WALL.
 //   grille  = cut an integral finger-guard grille instead of one open hole. Default: false.
-module mcc_fan_cutout(name, wall_t = MCC_WALL, grille = false) {
+module mcc_fan_cutout(name = MCC_FAN_DEFAULT, wall_t = MCC_WALL, grille = false) {
     spec      = mcc_fan_spec(name);
     frame     = struct_val(spec, "frame");
     pitch     = struct_val(spec, "pitch");

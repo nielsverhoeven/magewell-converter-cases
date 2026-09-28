@@ -12,12 +12,15 @@ description: >-
 inputs:
   appimage-url:
     description: >-
-      URL of the pinned OpenSCAD nightly AppImage snapshot. Default is the newest Linux build with
-      the OpenSCAD-2025.09 prefix (closest available Linux build to the pinned Windows dev nightly,
-      "2025.09.07", per .claude/knowledge/architecture.md §2/§12 Q1) as of the date this action was
-      authored (2026-09-08). Source: https://files.openscad.org/snapshots/
+      URL of the pinned OpenSCAD nightly AppImage snapshot. Re-pinned 2026-09-27 to the newest
+      Linux x86_64 build then listed at https://files.openscad.org/snapshots/, because the previous
+      pin (OpenSCAD-2025.09.12.ai27378) had been pruned from that server and returned 404. The
+      snapshot server does not keep old builds forever, so this pin will 404 again once pruned:
+      re-pin, or mirror the file as a release asset. The Windows dev pin (scripts/build.py
+      WINDOWS_OPENSCAD_DEFAULT, "2025.09.07") is still open under
+      .claude/knowledge/architecture.md §12 Q1.
     required: false
-    default: https://files.openscad.org/snapshots/OpenSCAD-2025.09.12.ai27378-x86_64.AppImage
+    default: https://files.openscad.org/snapshots/OpenSCAD-2026.09.23-x86_64.AppImage
   sha256:
     description: >-
       Expected sha256 of the file at appimage-url, from the matching .sha256 file at the same
@@ -25,7 +28,7 @@ inputs:
       re-checking the sum), verification is skipped but the computed sha256 is still printed so it
       can be pinned back in.
     required: false
-    default: 54aed756e9dbd5ea059c6ed4741ab803100d31f8239712a9887dbebe1fbd2850
+    default: 033762f4e0b0de7a2c6cf2b5a12febb29d60ba62ede227d57b1c8b675a94710a
 
 runs:
   using: composite

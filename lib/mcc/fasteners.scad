@@ -330,14 +330,14 @@ module mcc_side_bolt_keepout_2d(axis_z, od = MCC_SIDE_BOLT_BOSS_OD, strip_w = MC
 //   Ghosted (%) review-only visualization of the mcc_side_bolt_keepout() disc, swept the full
 //   length of the boss (layout-patch-wall.md §7.1 "the same disc swept through the duct"), in the
 //   same local frame as mcc_captive_side_bolt_boss() so a caller can place both identically.
-//   Mirrors the mcc_fan_envelope()/mcc_splitter_envelope() reservation-box pattern (fan.scad,
-//   poe_splitter.scad) in spirit, but this feature's real non-intersection checks use the plain
-//   `disc_d` from mcc_side_bolt_keepout() against other features' own geometry, not a
+//   Same role as mcc_fan_envelope() (fan.scad): this feature's real non-intersection checks use
+//   the plain `disc_d` from mcc_side_bolt_keepout() against other features' own geometry, not a
 //   CSG-intersected solid — this box is for visual review only (it does not attempt to sweep the
-//   strip too — the strip is a 2D wall-plane feature, see mcc_side_bolt_keepout_2d()), so (unlike
-//   the fan/splitter envelopes) it is `%`-ghosted and gated behind MCC_SHOW_GHOST like every other
-//   ghost in this repo (architecture.md §3 "Ghosts" — both belts: `%` is the mechanism, the flag is
-//   the review signal).
+//   strip too — the strip is a 2D wall-plane feature, see mcc_side_bolt_keepout_2d()), so it is
+//   `%`-ghosted and gated behind MCC_SHOW_GHOST like every other ghost in this repo
+//   (architecture.md §3 "Ghosts" — both belts: `%` is the mechanism, the flag is the review
+//   signal) — unlike mcc_splitter_envelope() (poe_splitter.scad), which is not gated yet
+//   (deviation D24, architecture.md §13).
 // Arguments:
 //   proud, wall_t, gap_far, pad_t, od = same meaning/defaults as mcc_captive_side_bolt_boss().
 module mcc_side_bolt_envelope(
