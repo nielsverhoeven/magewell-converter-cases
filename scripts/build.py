@@ -71,6 +71,11 @@ EXPORT_EXT = {"stl": ".stl", "3mf": ".3mf"}
 # `<part>.stl` / `<part>.3mf` are derived from it in the print pose — see scripts/bambu_project.py.
 MODEL_FRAME_SUFFIX = ".model.stl"
 
+# Print-pose files that get the accidental see-through check (architecture.md §8, #62, D62.1): every
+# case lid. Name-based on purpose -- `check <path>` knows only the file. A new lid-like part (e.g. an
+# extra_parts lid variant) must be added here in the same change.
+SEE_THROUGH_FILE_NAMES = ("lid.stl",)
+
 # Mirrors lib/mcc/constants.scad:622 MCC_CONFIDENCE_ORDER. Python can't evaluate OpenSCAD, so
 # `confidence` (below) reads device data files as text instead of asking OpenSCAD to render them —
 # this list must be kept in sync with constants.scad by hand if that ever changes.
@@ -131,11 +136,16 @@ class MeshCheck:
     extents: tuple[float, float, float] = (0.0, 0.0, 0.0)
     bbox_ok: bool = False
     printability: "printability.PrintabilityReport | None" = None
+    see_through: "list[printability.SeeThrough] | None" = None   # case lids only
     error: str | None = None
 
     @property
     def printable_ok(self) -> bool:
         return self.printability is None or self.printability.ok
+
+    @property
+    def see_through_ok(self) -> bool:
+        return not self.see_through
 
     @property
     def ok(self) -> bool:
@@ -147,6 +157,7 @@ class MeshCheck:
             and self.parts_ok
             and self.bbox_ok
             and self.printable_ok
+            and self.see_through_ok
         )
 
 
@@ -520,6 +531,12 @@ def check_mesh(path: Path) -> MeshCheck:
         except Exception as exc:  # noqa: BLE001
             check.error = f"printability analysis failed: {exc}"
 
+    if path.name in SEE_THROUGH_FILE_NAMES and check.watertight:
+        try:
+            check.see_through = printability.non_prismatic_see_through(mesh)
+        except Exception as exc:  # noqa: BLE001
+            check.error = f"see-through analysis failed: {exc}"
+
     return check
 
 
@@ -812,7 +829,8 @@ def cmd_ci(args: argparse.Namespace) -> int:
             errors.append("check: " + (c.error or
                 f"watertight={c.watertight} winding={c.winding_consistent} parts={c.n_parts} "
                 f"bbox_ok={c.bbox_ok} islands={len(c.printability.islands) if c.printability else '?'} "
-                f"cantilevers={len(c.printability.cantilevers) if c.printability else '?'}"))
+                f"cantilevers={len(c.printability.cantilevers) if c.printability else '?'} "
+                f"see_through={len(c.see_through) if c.see_through is not None else '-'}"))
         errors += [f"golden: {m}" for m in golden_check_part(target, part)]
         if not args.no_slice:
             ok, warnings = slicer_check_project(bambu, target.export_dir / f"{part}.3mf", stats)
@@ -1140,6 +1158,10 @@ def cmd_smoke(_args: argparse.Namespace) -> int:
             err = "" if ok else "\n".join(ln for ln in lines if "ERROR:" in ln) or "openscad failed"
             results.append((str(test_file.relative_to(REPO_ROOT)), ok, err))
 
+    _require_trimesh()
+    problems = printability.selftest_see_through()
+    results.append(("scripts/printability.py selftest_see_through()", not problems, "; ".join(problems)))
+
     print("\nsmoke results:")
     width = max(len(name) for name, _, _ in results)
     for name, ok, err in results:
@@ -1189,7 +1211,12 @@ def cmd_check(args: argparse.Namespace) -> int:
         )
         if c.printability is not None:
             detail += f" floating_islands={len(c.printability.islands)} cantilevers={len(c.printability.cantilevers)}"
+        if c.see_through is not None:
+            detail += f" accidental_openings={len(c.see_through)}"
         print(f"  [{status}] {name.ljust(width)}  {detail}")
+        for st in (c.see_through or []):
+            print(f"           ACCIDENTAL OPENING area={st.area}mm2 at xy={st.centroid} (print-pose frame): "
+                  f"you can see through the lid where two features overlap")
         if c.printability is not None:
             for isl in c.printability.islands:
                 print(f"           FLOATING island z={isl.z}mm area={isl.area}mm2 at xy={isl.centroid} "

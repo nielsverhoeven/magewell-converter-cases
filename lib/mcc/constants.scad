@@ -364,7 +364,7 @@ MCC_END_ZONE_MIN = 20.0;   // floor for a cable end zone even with no ports on t
                             // assumed — layout-patch-wall.md §4.
 MCC_GAP_DEV = 2.0;         // clearance between the deepest plug envelope and the device's patch-side
                             // flank, mm. assumed — layout-patch-wall.md §4.
-MCC_LID_SPAN_MAX = 180.0;  // lid span threshold above which 6 (not 4) captive thumbscrews are used,
+MCC_LID_SPAN_MAX = 180.0;  // lid span threshold above which 6 (not 4) lid thumbscrews are used,
                             // mm. Architect-derived, user-reviewed, ACCEPTED 2026-09-08 (D-04) —
                             // layout-patch-wall.md §6 / §10.
 MCC_WEB_BORE_KEEP = 0.8; // how far a lid-boss web reaches INTO its boss (radially, from the boss's
@@ -376,7 +376,7 @@ MCC_LID_FASTENER_CLR_MIN =
     MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od") / 2 + 2.0;
                             // minimum clearance from a lid-fastener boss to the nearest D-flange
                             // edge, mm. DERIVED — layout-patch-wall.md §6 "boss_od/2 + 2.0" using
-                            // the same M3 heat-set boss geometry as every other captive thumbscrew
+                            // the same M3 heat-set boss geometry as every other lid thumbscrew
                             // in this repo (MCC_BOSS_MIN_RATIO * insert od = 8.28 mm boss_od).
                             // Evaluates to 6.14 (the doc's own worked table rounds this to "6.15";
                             // this is the exact value the code computes — layout-patch-wall.md §15's
@@ -504,10 +504,28 @@ MCC_CRADLE_DECK_GRID_PITCH_MAX = 32.0; // T1-39 assert upper bound on achieved g
 // 4 mm-deep groove cuts clean through the lid, and a *centred* 3.0 mm-wide tongue does not fit a
 // 3.0 mm wall either (0.8+0.25+w+0.25+0.8 <= 3.0 -> w <= 0.9). Ruling: an OFFSET/SHIPLAP tongue
 // flush with the wall's INNER face, sized so it fits inside the lid with >= 1.0 mm of lid material
-// left above the groove.
+// left above the groove. #62 (D62.1): on the 8 mm +Y patch wall the frame sits MCC_TG_PATCH_INSET
+// from the OUTER face instead, so the lid groove clears the thumbscrew counterbores (T1-62.1) -- the
+// ruling's reason (a centred tongue does not fit a 3 mm wall) binds only the 3 mm walls.
 MCC_TG_W = 1.6; // tongue/groove nominal width, mm. layout-patch-wall.md §15 ruling 4.
 MCC_TG_H = 2.0; // tongue/groove depth, mm. Same ruling — leaves MCC_LID_T - MCC_TG_H = 1.0 mm of
                  // lid material above the groove (T1-33).
+MCC_TG_PATCH_INSET = 4.5; // +Y patch wall only (D62.1): distance from the wall's outer face to the
+                           // tongue's inner edge, mm (tongue at [inset - MCC_TG_W, inset], groove
+                           // +-MCC_CLR_TG); the other three walls keep the tongue flush with their inner
+                           // face. Largest 0.5 mm step that keeps MCC_LID_CB_WEB_MIN at the fastener
+                           // ring: MCC_FASTENER_INSET 10 - counterbore rim 4.005 - MCC_CLR_TG 0.25 - 1.2
+                           // = 4.545; it also keeps the tongue (all but its outer 0.1 mm) on the
+                           // full-height wall behind the bezel-recess floor. T1-62.1, T1-62.2. Any change
+                           // is an architect re-gate (architecture.md R62.1), not a tweak.
+MCC_LID_CB_D = 8.0; // lid thumbscrew counterbore diameter, mm. assumed -- no sourced figure (was the
+                     // literal `head_d = 8` in fasteners.scad). User decision 2026-09-29: keep 8 for
+                     // a small knurled head, 7-8 mm (architecture.md D62.2); measure the bought screw
+                     // (M62.1). Modelled circum=true, $fn=64 (mcc_thumbscrew_hole_rim_r()). T1-62.1
+                     // caps it at ~8.09 while MCC_TG_PATCH_INSET = 4.5 (R62.1).
+MCC_LID_CB_WEB_MIN = 1.2; // minimum lid material between a counterbore rim and the groove, mm: three
+                           // 0.4 mm perimeters, same rule as MCC_WALL_BORE_WEB_MIN. assumed --
+                           // knowledge/design/fdm-rugged-enclosure-guidelines.md:35. T1-62.1.
 
 MCC_LID_CLEAR = 2.0; // minimum plenum between the cradle deck top + device height and the lid
                       // underside, mm. layout-patch-wall.md §15 ruling 3 (ACCEPTED) — mirrors this
