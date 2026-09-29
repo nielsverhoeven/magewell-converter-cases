@@ -25,6 +25,10 @@ Runs every `tests/test_*.scad` with `openscad -o <tmp>.csg`. CSG export evaluate
 every public module it covers at its default, minimum, and maximum parameters. Non-zero exit on
 any failure; the command prints a pass/fail table naming every test file.
 
+`smoke` also runs `scripts/printability.py selftest_see_through()` — two synthetic lids, one whose
+groove crosses a counterbore and one whose groove does not — so the lid see-through check (Tier 3)
+cannot silently stop finding openings (architecture.md §9, #62).
+
 If no `tests/test_*.scad` files exist yet, `smoke` prints a note and exits 0 (nothing to fail).
 
 ## Tier 3 — geometry goldens and mesh checks
@@ -43,6 +47,10 @@ boss that floated free after a parameter change), and a bounding-box ceiling of 
 `scripts/build.py`). Automated minimum-wall-thickness measurement is deliberately **not**
 attempted in trimesh — architecture.md calls it unreliable. Rely on the Tier-1 assert plus a
 visual/slicer check for wall thickness.
+
+Print-pose STLs also get the printability gate (`scripts/printability.py`: no floating island, no
+> 3 mm cantilever), and every `lid.stl` gets the **lid see-through check** — no region open along Z
+that is not one drawn cut (architecture.md §8, #62, D62.1).
 
 `golden` compares bbox/volume/area/facet-count from each render's `<part>.summary.json` against
 the committed golden in `tests/golden/**`. See `tests/golden/README.md` for the tolerance policy
@@ -78,9 +86,9 @@ section for the rest of the release pipeline (`release_version.py`, `confidence`
 
 ## "Green" means
 
-- `smoke`: every `tests/test_*.scad` ran to completion with no `ERROR:` (or there were none yet).
+- `smoke`: every `tests/test_*.scad` ran to completion with no `ERROR:` (or there were none yet), and `selftest_see_through()` passed.
 - `check --all`: every exported STL is watertight, winding-consistent, positive-volume, a single
-  connected shell, and within the 244 mm/axis bbox ceiling.
+  connected shell, and within the 244 mm/axis bbox ceiling; print-pose STLs have no floating island or cantilever, and no case lid has an accidental see-through opening.
 - `golden`: every rendered target's bbox is within 0.1 mm/axis, volume within 0.5%, and area
   within 1% of its committed golden (facet-count differences are printed but never fail the
   check).

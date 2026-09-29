@@ -26,7 +26,7 @@ One section per `models/<slug>/`, driven by that model's device data file
 | Neutrik NAHDMI-W-B | 1 | hdmi_in port | knowledge/neutrik/connectors/hdmi.md |
 | Neutrik DBA-BL-B | 1 | blanks the unused <port id> position | knowledge/neutrik/connectors/blanking-and-caps.md |
 | M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | <n> | panel screw bosses + lid thumbscrew bosses | knowledge/components/fasteners-and-hardware.md:17 |
-| M3 knurled thumbscrew | <n> (4, or 6 on lids >~180 mm per architecture §11 R7) | captive lid fastening | knowledge/components/fasteners-and-hardware.md §2 |
+| M3 knurled thumbscrew (small Ø7–8 mm head, ≤ 8 mm under the head) | <n> (4, or 6 on lids >~180 mm per architecture §11 R7) | lid fastening — non-captive (architecture D62.2) | knowledge/components/fasteners-and-hardware.md §2 |
 | 1/4"-20 bolt, ~<length> mm | 1 | device retention through the floor | architecture.md §Decision 5/7 |
 | 1/4"-20 nylon-insert (nyloc) nut | 1 | vibration-resistant retention, per architecture §11 R8 | — |
 | M4×12 screw + M4 nut | 2 each, if VESA/Fishtail mount used | floor mounting pattern | knowledge/magewell/housing-families.md (Fishtail bracket hardware, e.g. MECO0067/68) |
@@ -98,7 +98,7 @@ kept internal per the fixed decision; `rotary`/`tripod` not panel-mounted):
 | Neutrik NAUSB-W-B | 1 | usb_b port, power + USB-NET config | knowledge/neutrik/connectors/usb.md:10 |
 | Neutrik NE8FDP-B | 1 | rj45 port, PoE/network | knowledge/neutrik/connectors/ethercon.md:11 |
 | M3×5.7 heat-set insert | 6 | 2 per connector rear boss (3 connectors) | knowledge/components/fasteners-and-hardware.md:17 |
-| M3 knurled thumbscrew + M3×5.7 insert | 4 | captive lid fastening | knowledge/components/fasteners-and-hardware.md §2 |
+| M3 knurled thumbscrew + M3×5.7 insert | 4 | lid fastening — non-captive (architecture D62.2) | knowledge/components/fasteners-and-hardware.md §2 |
 | 1/4"-20 bolt + nylon-insert nut | 1 each | device retention (housing-families.md:132, hole position `assumed`) | knowledge/magewell/housing-families.md:132 |
 | HDMI patch cable, short | 1 | length per `mcc_bay_depth("NAHDMI-W-B")` = 75.65 mm bay | knowledge/components/cables.md §3 |
 | USB 2.0 A-to-B cable, short | 1 | length per `mcc_bay_depth("NAUSB-W-B")` = 60.55 mm bay | knowledge/components/cables.md §5 |

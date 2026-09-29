@@ -36,6 +36,10 @@ Working memory for agents resuming this repo. Keep it short and current; history
    `MCC_CLR_SLIDE/PRESS`, side-bolt stack + E-clip figures.
 3. **User measurements** (architecture §12 M1–M6): side 1/4"-20 hole X/Z/side per SKU (R17: |v| ≤ 1.7 mm
    for the ⌀18 pad), thread depth, dongle splitter dimensions, E-clip, screw head, BNC plug body.
+   Also **M62.1** (issue #62, R62.1): buy the lid thumbscrew (small knurled M3, head Ø7–8 mm, ≤ 8 mm
+   under the head, M3×6 recommended) and measure head ⌀ across the knurl, head height and length; try it
+   in a printed ⌀8 × 1.5 counterbore. A head over ≈ 7.8 mm means a bigger counterbore — an architect
+   re-gate (T1-62.1 fires above ⌀8.09), not a constant tweak. Feeds `MCC_LID_CB_D`.
 4. Update the device files (`side_bolt` `pos`, `confidence`), re-render, `golden --update` with
    justification, then `print-check` and the **first full-size print** (NDI to HDMI first).
 5. A release with every exported port at `measured` becomes a normal (non-pre) release automatically.

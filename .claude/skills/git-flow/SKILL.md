@@ -19,9 +19,8 @@ on something already released — is a `feature/*` branch off `main`, merged bac
 
 | Task | Naming |
 |---|---|
-| Ordinary work | `feature/<kebab-topic>` |
-| Work tracked by a GitHub issue | `feature/issue-<n>-<topic>` |
-| An urgent fix on something already released | `feature/hotfix-<topic>` (or `feature/issue-<n>-<topic>` if an issue tracks it) |
+| Any feature, bug or task — its GitHub issue exists first (user rule, #68) | `feature/issue-<n>-<topic>` |
+| An urgent fix on something already released — also with its issue | `feature/issue-<n>-<topic>` |
 
 A hotfix is **not** a separate branch type — same branch-from-`main`, same PR-into-`main`, same
 CI gate as everything else. There's no separate hotfix workflow to remember.
@@ -36,7 +35,7 @@ core.
 
 **Start a feature:**
 ```
-git switch -c feature/<kebab-topic> main
+git switch -c feature/issue-<n>-<topic> main
 ```
 
 **Commit on the feature branch** — this is fine to do locally without asking, once the user has
@@ -58,7 +57,7 @@ Never rebase a branch that's already been pushed or has an open PR — merge `ma
 
 **Publish + PR** (always ask first — see "When to ask" below):
 ```
-git push -u origin feature/<kebab-topic>
+git push -u origin feature/issue-<n>-<topic>
 gh pr create --base main --title "..." --body "... 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 ```
 
@@ -100,10 +99,10 @@ expected `*.stl`/`*.3mf`/`*.manifest.json` assets before announcing it.
 
 ## Naming rules
 
-- `feature/<kebab-topic>`, or `feature/issue-<n>-<topic>` when a GitHub issue exists
-  (`.claude/knowledge/ticket-source.md`). Don't invent an issue number — check with `gh issue list`
-  first if unsure whether one exists.
-- `feature/hotfix-<topic>` for an urgent fix on something already released.
+- `feature/issue-<n>-<topic>` — every feature, bug and task has its GitHub issue first (user rule
+  2026-09-29, #68; `.claude/knowledge/ticket-source.md`), hotfixes included. Don't invent an issue
+  number — check with `gh issue list`, and open the issue (or ask the teamlead to) if none exists.
+  The PR closes it (`Closes #<n>`); the records the work creates are numbered after it (CLAUDE.md).
 - Tags: annotated, `vX.Y.Z`, message `vX.Y.Z` or a short release summary. Never a lightweight tag.
 
 ## Commit messages

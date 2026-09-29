@@ -26,6 +26,15 @@ Two knowledge trees, do not merge them:
 | `knowledge/**` | Sourced product/domain research (Magewell devices, Neutrik connectors, components, design guidelines). Stable, cited, third-party. Index: `knowledge/README.md`. |
 | `.claude/knowledge/**` | Agent working memory for *this* repo: `architecture.md`, `testing.md`, `ticket-source.md`, `bambu-slicer.md` (how Bambu Studio judges parts, learned empirically), `session-resume.md`. Not sourced research — don't put product facts here. |
 
+**Record ids follow GitHub issues** (user rule 2026-09-29, issue #68). Every feature, bug and task gets
+a GitHub issue first; its branch is `feature/issue-<N>-<topic>` and its PR closes the issue. The records
+it creates are numbered after the issue — for issue N: decisions **DN.x**, risks **RN.x**, measurements
+**MN.x**, open questions **QN.x** and Tier-1 asserts **T1-N.x** (also in the assert messages in code),
+x = 1, 2, … within that issue. `architecture.md` no longer bumps a revision number; a change names its
+issue. History stays as it is: rev ≤ 19, D1–D52, T1-01–T1-90, R1–R47, M1–M22 and Q1–Q23 keep their
+numbers, and no new sequential number is allocated. A new id always carries its `.x`: `T1-62` is an old
+assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
+
 ## Fixed decisions (do not re-open without a user decision)
 
 - **Priority devices**: Pro Convert HDMI Plus / SDI Plus (Plus chassis 117.5×66.7×23.4 mm), HDMI TX
@@ -53,8 +62,11 @@ Two knowledge trees, do not merge them:
   stays convertible — architecture.md §5 rev 8), encoders from Mini-DIN-8 pin 8 VCC / pin 4 GND
   (port stays `panel:"none"`), each in series with a KSD9700 45 °C normally-open thermoswitch; no
   PoE splitter is fitted by default on any SKU (architecture.md §5 §6, §11 R21–R23).
-- **Closure**: tongue-and-groove lid, 6 captive M3 knurled thumbscrews into M3 heat-set inserts
-  (rule: 6 above 180 mm lid span; both families are above it). **Retention: captive 1/4"-20
+- **Closure**: tongue-and-groove lid, 6 **non-captive** M3 knurled thumbscrews into M3 heat-set
+  inserts — a **small head, Ø7–8 mm, recessed in a Ø8 counterbore** in the lid, not DIN 653's Ø12
+  (user decision 2026-09-29, D62.2); rule: 6 above 180 mm lid span, both families are above it. On the
+  patch wall the tongue-and-groove sits 4.5 mm from the outer face so the lid groove clears those
+  counterbores (architecture.md D62.1). **Retention: captive 1/4"-20
   SLOTTED bolt + DIN 6799 E-clip through the far (non-patch) long wall into the device's side
   thread** — the user verified the device's 1/4"-20 hole is on a long side face; the bolt must stay
   in the case when unscrewed; the boss is **flush** (far wall moved 10 mm outward, `MCC_GAP_FAR`
@@ -113,8 +125,8 @@ Two knowledge trees, do not merge them:
 ```
 python scripts/build.py doctor        # environment sanity (OpenSCAD, BOSL2 submodule pinned)
 python scripts/build.py render        # render all models, --backend=Manifold
-python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire, non-zero exit = fail
-python scripts/build.py check         # mesh checks (watertight, winding, single shell) + no floating islands
+python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire; + the lid see-through check's self-test; non-zero exit = fail
+python scripts/build.py check         # mesh checks (watertight, winding, single shell) + no floating islands + no see-through opening in a case lid
 python scripts/build.py golden        # diff tests/golden/*.json, --update to refresh
 python scripts/build.py review        # exports/review.3mf: every design in one Bambu Studio project
 python scripts/build.py slicer-check  # slice every part with Bambu Studio's CLI, fail on any warning (CI gate too)
@@ -154,7 +166,8 @@ evolutions since — the connectors mount straight into the patch wall, no panel
 insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail gravity lock that
 replaced the D34 latch (D48), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
 instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47),
-the vertical VESA-column bracket and the arch's sandwich parts (D51) — are in architecture.md §13.
+the vertical VESA-column bracket and the arch's sandwich parts (D51), and the patch-wall
+tongue-and-groove moved clear of the lid's thumbscrew counterbores (D62.1) — are in architecture.md §13.
 Slicer rules and the debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio`
 skill.
 
@@ -166,7 +179,7 @@ HDMI/SDI Plus, NDI to HDMI / HDMI 4K / SDI / AIO), built on the full library: L0
 is green locally and in CI; every merge to `main` publishes a pre-release with per-device zips
 (STL + 3MF + STEP + manifest). Plus-family cases ship with the fan. **Next milestone is physical
 (Tier 4)**: print and measure the six coupons on the X1C, measure the side 1/4"-20 hole per SKU, the
-dongle splitter and the E-clip, write the measured values into `constants.scad` (confidence →
+dongle splitter, the E-clip and the lid thumbscrews (M62.1), write the measured values into `constants.scad` (confidence →
 `measured`), then the first full-size print. Later: the IP-decoder family (120 × 79.3 × 24.5). See
 `.claude/knowledge/session-resume.md` for the ordered plan (and the open material-saving options);
 `new-case-variant` explains the

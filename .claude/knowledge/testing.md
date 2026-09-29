@@ -28,12 +28,15 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
    correspondence). No separate command — a violated assert shows up as `ERROR:` in any `render`
    or `smoke` invocation.
 2. **Tier 2 — `python scripts/build.py smoke`.** Runs every `tests/test_*.scad` with
-   `-o *.csg` (evaluates the CSG tree, so Tier-1 asserts fire, without tessellating — fast).
+   `-o *.csg` (evaluates the CSG tree, so Tier-1 asserts fire, without tessellating — fast), plus
+   `scripts/printability.py selftest_see_through()` (two synthetic lids: the lid see-through check
+   must flag the broken one and pass the other — architecture.md §9, #62).
 3. **Tier 3 — `python scripts/build.py check --all` and `... golden`.** `check` runs trimesh
    mesh checks (watertight, winding-consistent, positive volume, exactly one connected shell,
    bbox ≤ 244 mm/axis) against every exported print-pose STL, plus the **printability gate**
    (`scripts/printability.py`, 2026-09-27): sliced at 0.2 mm, no layer may contain a floating
-   island (Bambu Studio's "floating regions"), and the **slicer gate** `slicer-check --require`
+   island (Bambu Studio's "floating regions"); on every `lid.stl` the **lid see-through check** (no
+   accidental opening where two cuts meet — architecture.md §8, #62, D62.1); and the **slicer gate** `slicer-check --require`
    (every part sliced by the pinned Bambu Studio CLI, no slicer warning allowed). CI runs all of
    Tier 3 per part via `build.py ci --group k/6` on six parallel runners ("Validate parts — group k of 6"); `ci` with no `--group` runs
    the same thing locally. `golden` compares bbox/volume/area/facet-count
@@ -49,9 +52,9 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
   submodule SHA, and `trimesh` reported available. This is the pre-flight check — run it first
   when anything below misbehaves, especially after a fresh clone or a BOSL2 submodule update.
 - `smoke`: every `tests/test_*.scad` completed with no `ERROR:` (or there are none yet — that is
-  not a failure, just an unwritten test).
+  not a failure, just an unwritten test), and `selftest_see_through()` passed.
 - `check --all`: every print-pose STL under `exports/**` passes all five mesh checks and has zero
-  floating islands. Goldens are measured on the model-frame `<part>.model.stl`, so a print-pose
+  floating islands; every case lid has zero accidental see-through openings. Goldens are measured on the model-frame `<part>.model.stl`, so a print-pose
   change never moves a golden.
 - `golden`: every rendered target matches its committed golden within tolerance (bbox ±0.1 mm/axis,
   volume ±0.5%, area ±1%; facet-count differences are printed but never fail the comparison —

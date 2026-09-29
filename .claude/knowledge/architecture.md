@@ -1,5 +1,30 @@
 # Architecture — magewell-converter-cases
 
+**Issue #68, 2026-09-29 — record ids follow GitHub issues (user rule).** Every feature, bug and task
+gets a GitHub issue first, and the records it creates are numbered after that issue: for issue N,
+decisions and deviations **DN.x** (§13), risks **RN.x** (§11), open questions **QN.x** and measurements
+**MN.x** (§12), Tier-1 asserts **T1-N.x** (§9, `layout-patch-wall.md` §9 and the assert messages in
+code), x = 1, 2, … within the issue. This file no longer bumps a revision number: a change is recorded
+here at the top under its issue, newest first. **History stays:** rev ≤ 19, D1 … D52, T1-01 … T1-90
+(with their letter suffixes), R1 … R47, M1 … M22 and Q1 … Q23 keep their numbers and are never
+renumbered, and no further sequential id is allocated. A new id always carries its `.x`, so it never
+reads as an old one: `T1-62` is the rail-clearance assert of rev 16, `T1-62.1` is issue #62's first
+assert (search with the dot, `T1-62\.`). The rule in full: §13's introduction.
+
+**Issue #62, 2026-09-29 — lid thumbscrew holes (D62.1, D62.2; plan G,
+`docs/plans/2026-09-29-lid-screw-hole-openings.md`).** The external CAD specialist found see-through
+crescents in 3 of the 6 lid thumbscrew counterbores on every SKU: on the 8 mm patch wall the lid's groove
+ran through the ⌀8 counterbores of the fasteners at `MCC_FASTENER_INSET` = 10 (D62.1, latent since the
+first lid). Fix: on the +Y wall only, the tongue-and-groove frame moves outward to `MCC_TG_PATCH_INSET` =
+4.5 mm from the outer face (`layout-patch-wall.md` §15 ruling 4 amended); fasteners, bosses, inserts and
+the other three walls do not move. Guards: **T1-62.1** (counterbore web to the groove ≥ 1.2 mm),
+**T1-62.2** (the inset stays on the patch wall) and a Tier-3 check that fails a case lid with any
+accidental see-through opening, with a `smoke` self-test (§8, §9). User decisions the same day: the
+thumbscrews keep a **small Ø7–8 mm knurled head recessed in the ⌀8 counterbore** (not DIN 653) and are
+**not captive** (D62.2; Q62.1 answered; `mcc_captive_thumbscrew_hole()` → `mcc_thumbscrew_hole()`).
+New: **D62.1, D62.2, T1-62.1, T1-62.2, R62.1, M62.1, Q62.1**. No envelope figure moves; base
++22.40 mm³, lid −46.48 mm³ on every SKU.
+
 **Revision 19, 2026-09-29 (end-stop remnants retired — D52; golden-neutral cleanup).** D34 retired the
 male rail's end-stop flange but left `MCC_RAIL_END_STOP_L/H = 0` and the arch bracket's
 `RAIL_X = MCC_RAIL_END_STOP_L / 2` shift "until the next bracket rework"; on 2026-09-28 the stale
@@ -421,7 +446,7 @@ L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS 
                                           end zones, plate/fixing positions, fan/splitter/
                                           side-bolt/lid-fastener positions). Added rev 5.
     lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
-    lib/mcc/fasteners.scad                heat-set bosses, captive thumbscrew, 1/4"-20 boss
+    lib/mcc/fasteners.scad                heat-set bosses, lid thumbscrew hole (non-captive, D62.2), 1/4"-20 boss
     lib/mcc/rail.scad                     mount-rail dovetail profile: male rail, female cut,
                                           gravity-lock bump and pocket, plate-side keep-out
                                           (rev 17). ONE source of truth shared by
@@ -617,7 +642,7 @@ history for the reasoning behind the numbers):
 | Body window | `mcc_cutout_d + 2·MCC_CLR_SLIDE` through the 3 mm behind the seat, **perfectly round**, coaxial with the seat hole. The roof over the opening is the round arch itself — no cap, no flat bridge (T1-34a retired); the window stays inside the recess band with `MCC_APERTURE_LIP_WEB_MIN` to spare (T1-34c) | `layout.scad` `mcc_aperture_window()` |
 | Connector fixing | 2 × **plain ⌀2.5 mm bore** (`MCC_FIXING_BORE_D`, the ISO M3×0.5 tap-drill size) **through the whole 5 mm wall**, on the standard diagonal — **no printed thread** (rev 15, D41), no chamfer, no pads, no inserts, nothing standing proud of the inner face; screws M3×10 through the flange. The external CAD specialist models the thread on the exact STEP; how a *printed* case gets its thread is open (§12 Q20) | **T1-61**: ≥ `MCC_WALL_BORE_WEB_MIN` (1.2 mm, `assumed`) of wall between each bore and either opening |
 | Dispatch | `models/**` never calls `neutrik.scad`; `shell.scad` calls `panel.scad` `mcc_panel_wall_cut()` | layering rule unchanged |
-| Lid | the D32 patch-wall lip is gone (nothing to frame); the tongue/groove runs unbroken | `shell.scad` `mcc_shell_lid()` |
+| Lid | the D32 patch-wall lip is gone (nothing to frame); the tongue/groove runs unbroken — on this wall 4.5 mm (`MCC_TG_PATCH_INSET`) from the outer face instead of flush with the inner face (tongue 2.9–4.5, groove 2.65–4.75 mm), so the groove clears the lid's thumbscrew counterbores (#62, D62.1, T1-62.1) | `shell.scad` `_mcc_tg_rect()`, `mcc_shell_lid()` |
 | Coupon | `neutrik-tile` is a 40 × 45 mm section of this wall, printed **standing**, on a foot — it tests the real geometry: the round holes' printed arch (R39) and the horizontal ⌀2.5 bores (M19) | `models/coupons/neutrik-tile.scad` |
 
 **Round holes and the plain bore (rev 15, 2026-09-28, D40/D41 — user decisions).** The external CAD
@@ -1161,6 +1186,18 @@ rendered STL only), and nothing carried a printer/filament/process. The export c
   `.github/actions/setup-bambu-studio` — the same Bambu Studio version the project files and the
   settings dump are made for; bump the AppImage pin, `bambu_project.BAMBU_VERSION` and the dump
   together. >45° overhang areas are reported with `check --verbose`, not failed.
+- **A case lid may not have an accidental see-through opening (#62, D62.1).** `check_mesh()` runs
+  `printability.non_prismatic_see_through()` on every print-pose file named in `build.py`'s
+  `SEE_THROUGH_FILE_NAMES` (`lid.stl` — every case lid) in `check`, `check --all` and each `ci` part
+  pipeline: the lid is sliced at the middle of every Z interval between consecutive vertex heights, and
+  each connected region that is open along Z at every height must equal one connected void of at least
+  one slice. A drawn hole or slot does; an opening made by two overlapping cuts (the D62.1 counterbore
+  crossing the groove) does not, and fails the part. `smoke` runs its self-test. **Scope, on purpose:**
+  lids only (≈ 0.1 s each) — a base needs ≈ 540 slices (≈ 320 s), so bases, coupons and brackets stay
+  out of the per-part gate; a new lid-like part joins `SEE_THROUGH_FILE_NAMES` in the same change, and a
+  lid feature the check cannot represent (a conical countersink) extends the check in the same change.
+  It complements T1-62.1 — the assert names the known pair at render time, the mesh check catches any
+  pair — and no golden field replaces it: a golden records what the geometry is, not whether it is right.
 - The Bambu project settings come from a GUI-saved X1C + Bambu ASA preset dump
   (`scripts/bambu/x1c-0.4-asa.project_settings.json`, Bambu Studio 02.08.02.61) with the overrides
   in `scripts/bambu_project.py PROCESS_OVERRIDES`, recorded in `different_settings_to_system` the
@@ -1258,20 +1295,30 @@ lead-in ≤ `MCC_WALL`). T1-67 … T1-69, reserved for rev 17, stay unused; T1-7
 plan D (rev 18). **The next free id is T1-91.**
 **Rev 18 adds T1-70 … T1-90** (plan D, issue #56: T1-70 … T1-85 the vertical bracket, T1-86 … T1-90 the
 arch's sandwich parts; listed in `layout-patch-wall.md` §9). **The next free id is T1-91.**
+**From issue #68 on, Tier-1 ids are issue-scoped: `T1-<issue>.<n>`** (§13's introduction); T1-01 …
+T1-90 keep their numbers and no sequential id follows them. **#62 adds T1-62.1 and T1-62.2** (D62.1):
+T1-62.1 — for every lid fastener, the counterbore's radius as cut (`mcc_thumbscrew_hole_rim_r()`) stays
+≥ `MCC_LID_CB_WEB_MIN` (1.2) inside the groove ring's inner edge, evaluated in `mcc_shell_lid()`;
+T1-62.2 — `MCC_WALL ≤ MCC_TG_PATCH_INSET ≤ MCC_T_PATCH`, evaluated inside `_mcc_tg_rect()` so a base
+render trips it too. Neither is the old **T1-62** (rail clearances, rev 16).
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
 
 **Tier 2 — headless smoke tests, `tests/*.scad`.** Instantiate every public module at its default,
 minimum, and maximum parameters. Run with `openscad -o out.csg` — CSG export evaluates the tree (so
-asserts fire) without tessellating, so it is fast. Non-zero exit = failure.
+asserts fire) without tessellating, so it is fast. Non-zero exit = failure. Since #62 `smoke` also runs
+the Python self-test of the lid see-through check (`printability.selftest_see_through()`: two synthetic
+lids, one broken, one not) — a Tier-3 checker that silently stops finding anything is worse than none.
 
 **Tier 3 — geometry goldens.** `openscad --summary all --summary-file <json>` on every model, diffed
 against `tests/golden/*.json` with a tolerance (~0.5 % volume, 0.1 mm bbox). Plus `check_mesh.py`
 (trimesh): `is_watertight`, `is_winding_consistent`, `euler_number`, `volume > 0`, and
 **`len(split()) == 1`** — a case body must be one connected shell, which catches a rib or boss that
 floated free after a parameter change. Do not attempt automated minimum-wall-thickness measurement in
-trimesh; it is unreliable. Rely on the Tier-1 assert plus the slicer.
+trimesh; it is unreliable. Rely on the Tier-1 assert plus the slicer. **#62:** `check` also fails a case
+lid with an accidental see-through opening (§8, D62.1) — a topology test on a thin slab, not a
+wall-thickness measurement, so the rule above stands.
 
 **Tier 4 — physical coupons, `models/coupons/`.** Non-negotiable and *first*, before any 244 mm case
 is printed:
@@ -1317,6 +1364,9 @@ conventions in §3 without the teamlead restating them every time.
 ---
 
 ## 11. Risks carried into the design
+
+Risks R1 … R47 keep their numbers. From issue #68 (2026-09-29) a new risk is **R<issue>.<n>** (§13's
+introduction) and is appended at the end of this section.
 
 **R1 — Plus family vs. the build plate. RESOLVED 2026-09-07 (user decision).**
 The in-line layout (76 HDMI bay + 117.5 device + 61 USB bay + 6 walls = ~260.5 mm) exceeded the
@@ -1384,7 +1434,7 @@ build, by two much smaller and much more specific risks: **R21** (decoder host-p
 fallback would have to re-inherit.
 
 **R7 — lid fastener count. RESOLVED; D-04 ACCEPTED by the user 2026-09-08. Outcome revised by D-12.**
-Baseline stays the user's 4 captive M3 thumbscrews; **6 for any lid over 180 mm span** (D-04).
+Baseline stays the user's 4 M3 thumbscrews (non-captive since D62.2, 2026-09-29); **6 for any lid over 180 mm span** (D-04).
 Outcome under the **rev-4** envelopes: **compact → 6** (L = 193.9–194.9) and **plus → 6**
 (L = 210.5–211.5) — the compact family crossed the threshold when D-12 added 20 mm, so **every
 current SKU carries 6**. Keep the threshold rule anyway; a constant `6` would silently break the first
@@ -1898,9 +1948,31 @@ it: the arm's print length `ARM_LEN + LAP_L/2 + ARM_W/2` reaches the 244 mm cap 
 where T1-70 fails loudly. Beyond that the arm must split into two printed parts — a design change for the
 architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
 
+**R62.1 — the lid counterbore has almost no headroom, and the thumbscrew is not yet in hand. NEW
+2026-09-29 (#62, D62.1/D62.2).** The user fixed the hardware class: a small knurled M3 head, Ø7–8 mm,
+seated in the lid's ⌀8 × 1.5 mm counterbore (`MCC_LID_CB_D`, depth `lid_t/2`, both `assumed`) — not
+DIN 653's Ø12 — and non-captive. What is left:
+- **Diameter.** With `e = 10` and `MCC_TG_PATCH_INSET` = 4.5, T1-62.1 fires above a ⌀8.09 counterbore
+  (web 1.245 against 1.2). A head that measures Ø8.0 will not drop into a printed ⌀8.0 counterbore (FDM
+  holes print undersize — the reason `MCC_HOLE_COMP` exists), so a Ø8 head forces a larger counterbore,
+  which forces a smaller inset: a base + lid change that pushes the tongue out over the bezel recess's
+  chamfered roof (at 4.0 its outer edge rides on ≈ 2.3 mm of roof). **That is an architect re-gate, not a
+  constant tweak.** A Ø7 head needs nothing.
+- **Height.** A head taller than 1.5 mm stands proud of the lid by the difference. Deepening the
+  counterbore thins the 1.5 mm of lid the head clamps on. Decide with M62.1 in hand.
+- **Length.** The clamp stack allows ≤ 8.2 mm under the head: 1.5 mm of lid below the counterbore floor
+  plus the 6.7 mm blind insert bore (`mcc_heat_set_bore()`: insert 5.7 + 1). M3×6 puts 4.5 mm into the
+  5.7 mm insert; M3×8 leaves 0.2 mm nominal; the former BOM figure, M3×10, bottomed out before clamping
+  (D62.2).
+- **Loss.** A non-captive screw can be dropped when a lid is opened on stage — accepted by the user.
+
 ---
 
 ## 12. Open questions / assumptions
+
+Questions 1 … 23 and measurements M1 … M22 keep their numbers. From issue #68 (2026-09-29) a new
+question is **Q<issue>.<n>**, written after question 23 as a paragraph of its own, and a new measurement
+is **M<issue>.<n>**, appended at the end of the measurement table (§13's introduction).
 
 1. **OpenSCAD version.** The brief says nightly **2025**.09.07; today is 2026-09-07. Is this a
    deliberately pinned year-old build, or a typo for 2026.09.07? Whichever it is, the exact version
@@ -1996,6 +2068,11 @@ architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
     unlocked in some poses — then the case must come off before the lift moves, or the lock decision
     (D48) goes back to the user.
 
+**Q62.1 — Which lid thumbscrew, and is it captive? NEW and answered 2026-09-29 (#62, user).** A small
+knurled M3 head, **Ø7–8 mm, recessed in the ⌀8 counterbore as modelled** — not DIN 653 (Ø12, which fits
+no counterbore at `e = 10`); **not captive** (D62.2). The residue — the real head's ⌀ and height, and the
+screw length — is R62.1/M62.1.
+
 ### Measurement list (blocks `shell.scad` / `cradle.scad` / the first full-size print)
 
 | # | Measure | Why it blocks | Who |
@@ -2022,6 +2099,7 @@ architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
 | **M20** | **The user's TV and its TV lift, for the sandwiched brackets (plan D, issue #56):** the TV model, its VESA pattern (400 × 300?) and usable M8 thread depth; the lift's rail/plate width `W_LIFT_RAIL` and thickness `T_LIFT_RAIL` at each hole; the bolt-head height `K_BOLT_HEAD`; any lift hardware within 250 mm of either bracket's arms and pads. **Resolved (user, 2026-09-28): 150–200 mm behind the TV (`WALL_GAP` = 150 asserted) and the space beside it is not a constraint (`TV_SIDE_CLEAR` asserted, non-binding).** | R42/R43/R47 — `REACH`, the rib start, the arch sandwich rise and M3 length, the spacer and M8 lengths. Until measured each is an `assumed` parameter behind an assert (T1-70 … T1-90) | User, with the TV and lift in hand — **open** |
 | **M21** | **First bracket print (arch, direct mode), with a real case and device:** the lock's yaw release force for a −X pull on the case's top (far-wall) edge (≈ 3 × the weight expected), no release for pulls on the patch-wall edge and on the cables, and the one-hand lift-and-slide removal behind a mounted TV | R44 — the 60 mm coupon cannot reproduce the full case's yaw lever | User |
 | **M22** | **Sandwich tilt and clamp check, both brackets:** hang the heaviest Plus SKU for 24 h on the vertical bracket and on the arch's sandwich parts; static rail tilt ≤ 2° (the arch's M18d rule); re-check the M8 preload at 24–48 h (R42) | R42/R47, and the arch sandwich parts' larger COM offset (≈ 53 mm off the TV back vs ≈ 47.5). If the tilt fails, thicken the plates and re-derive every Z plane | User, after the first print |
+| **M62.1** | **Buy the chosen lid thumbscrew (small knurled M3 head, Ø7–8 mm) and measure: head ⌀ across the knurl, head height, under-head length; try it in a printed ⌀8 × 1.5 counterbore (a test print of one lid corner is enough)** | **R62.1 — gates the first full-size lid print.** A tight fit, or a head over ≈ 7.8 mm, means the counterbore must grow — T1-62.1 fires above ⌀8.09, so that is an architect re-gate, not a constant tweak. A head over 1.5 mm stands proud by the difference. Length ≤ 8.2 mm under the head (M3×6 recommended) | User, after buying |
 
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
@@ -2032,6 +2110,7 @@ architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
 > **Rev 16** retires M7 (D44) and adds M20 (plan-D gate).
 > **Rev 17** adds M21.
 > **Rev 18** adds M22 (plan D).
+> **#62** adds M62.1 (plan G). From issue #68 on, measurement ids follow the issue (§12's introduction).
 
 ---
 
@@ -2039,6 +2118,17 @@ architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
 
 Record each detected deviation with: date, intended rule, `file:line` of the violation, why it
 matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
+
+**Record ids (issue #68, user rule 2026-09-29).** Every feature, bug and task gets a GitHub issue first.
+The records it produces are numbered after that issue — for issue N: **DN.x** in this table, **RN.x** in
+§11, **QN.x** and **MN.x** in §12, **T1-N.x** for a Tier-1 assert (§9, `layout-patch-wall.md` §9, and
+the assert's message in code) — with x = 1, 2, … in the order the issue creates them. A decision that
+changes a rule is recorded here like a deviation. A change to this file names its issue; there is no
+revision number after rev 19. **History stays as written:** D1 … D52 (D11 sits out of order), rev ≤ 19,
+T1-01 … T1-90, R1 … R47, M1 … M22 and Q1 … Q23 keep their numbers — nothing is renumbered and no
+further sequential number is allocated. An issue-scoped id always carries its `.x`, so `T1-62` (rail
+clearance, rev 16) and `T1-62.1` (issue #62) can never be confused. New rows are appended at the end of
+the table.
 
 | # | Date | Intended rule | Violation | Why it matters | Resolution |
 |---|---|---|---|---|---|
@@ -2094,6 +2184,8 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D51** | 2026-09-28 | #47 / `models/brackets/README.md`: the arch bracket is a **direct** mount — its top VESA holes must not also carry another mount | **User decision 2026-09-28 (Q22(c)):** the TV's own mount (a TV lift) uses all four holes, so the arch must also work sandwiched | Without it the arch could not be used on the user's TVs | **Done in rev 18 (plan D, issue #56):** the arch ships `arm_sandwich`, `centre_sandwich` and `spacer` beside its direct parts — flat pads, ribs clear of the lift's rail band (T1-89), a taller centre so the slide-on sweep clears the lift rail and bolt head at the right-hand column (T1-87, R43), printed-ASA spacers under the bottom row (T1-90, R42). Direct-mode geometry and goldens unchanged |
 | **D52** | 2026-09-29 | D34 retired the male rail's end-stop flange; §3 "no magic numbers"; D50: a bracket takes the rail's plate footprint only from `mcc_rail_male_keepout()` and never rebuilds it | Deferred D34 cleanup (line numbers at `24c52c8`): `lib/mcc/constants.scad:635-640` kept `MCC_RAIL_END_STOP_L/H = 0`; `models/brackets/arch-tv-bracket.scad:218` `RAIL_X = MCC_RAIL_END_STOP_L / 2; // = 3.0` (value 0), used at `:225`, `:658-659`, `:779`, `:894`; T1-53 (`:531-533`) still added `MCC_RAIL_END_STOP_L`; the header (`:5-10`), B1 (`:45-52`), B6 (`:318-322`), T1-89 (`:567-573`) and the in-code print gate (`:60-63`, still "R38/F1" — closed by D34/D48, never a §11 row — and without M20/M22) described an open F1 and a flange; `models/brackets/vertical-tv-bracket.scad:148,283,654-655` dated the retirement to D48, and its T1-76 (`:459`) built its X half from `MCC_RAIL_LEN / 2`; `tests/test_rail.scad:48` asserted the zeros | On 2026-09-28 the `// = 3.0` beside a zero sent a mesh probe looking for the lock bump 3 mm from its real position. Zero placeholders and a named zero shift invite re-adding a male-side stop as a constant brackets add by hand, bypassing D50's accessor | **Done in rev 19 (golden-neutral).** Constants and `RAIL_X` removed, tombstone comment at the end-stop note in `constants.scad`; `RAIL_KEEPOUT_X` is the plain rotated keep-out (as in the vertical bracket); arch T1-53 and vertical T1-76 check `RAIL_KEEPOUT_X ± MCC_WALL` against the plate half-length; T1-59 drops `abs(RAIL_X)`; `test_rail.scad:48` deleted (the D50 keep-out assert pins X = ±`MCC_RAIL_LEN`/2); stale comments rewritten ("symmetric in X" at both rail calls — the keep-out's Y range is asymmetric because of the lock bump); the arch's in-code print gate synced to `models/brackets/README.md`. T1-54's margin at this geometry, re-derived by probe and by hand: 5.31 mm (`TV_TOP_CLEAR` = 150) / 4.84 mm (184.9) on both laps against `ARCH_KEEPOUT_CLR` = 1.0 — the arch plan's 1.87 mm predates D34/D44. `docs/plans/**` untouched. Verified: exported `.csg` byte-identical for every part of both brackets and `rail-lock`, STL hashes identical, `smoke` 11/11, `check` and `golden` green, no golden moved |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
+| **D62.1** | 2026-09-29 | §5 lid row / `layout-patch-wall.md` §15 ruling 4 (the tongue flush with the wall's inner face; groove = tongue ± `MCC_CLR_TG`) with §6 (the fastener ring at `e` = 10 from the outer faces). The lid is one 3 mm slab: two cuts in it must never meet | `lib/mcc/shell.scad:400` (groove) with `lib/mcc/fasteners.scad:87-98` (counterbore) and `lib/mcc/constants.scad:373` (`MCC_FASTENER_INSET`), lines at `4e3a93f`: on the 8 mm patch wall the groove (6.15–8.25 mm from the outer face, 2.0 mm deep) runs through the ⌀8 counterbore (rim 5.995 mm, floor 1.5 mm below the outer face) of the three patch-side lid fasteners; the cuts overlap 0.5 mm in Z, so 11.38 mm² (27.6 %) of each counterbore floor is open on all 8 SKUs (24 holes), and the through-hole stands 0.05 mm from the groove | Found by the external CAD specialist in the exact `lid.step`. Latent since `b6a8b77` (2026-09-08): `check`, the slicer gate, the goldens (0.018 % of the volume — the first lid golden already contained it) and T1-33 all passed it. Ruling 4's own reason — a centred tongue does not fit a 3 mm wall — never applied to the 8 mm wall | **Fixed by #62 (plan G, option T).** On the +Y wall only, the frame is offset outward: `MCC_TG_PATCH_INSET` = 4.5 (tongue 2.9–4.5, groove 2.65–4.75 mm from the outer face; counterbore web 1.245 mm) through `_mcc_tg_rect()`, which replaces `_mcc_cavity_rect()`; fasteners, bosses, inserts and the other three walls do not move. New `MCC_LID_CB_D` (8.0, `assumed`, was a literal), `MCC_LID_CB_WEB_MIN` (1.2), `mcc_thumbscrew_hole_rim_r()`; **T1-62.1**, **T1-62.2**; the Tier-3 lid see-through check with its `smoke` self-test (§8). Rejected: moving the three fasteners inboard (an unverifiable cable-bay change), interrupting the frame at each hole (the fallback), dropping the counterbore, a thicker lid (H = 51 is fixed). Base +22.40 mm³, lid −46.48 mm³, bbox unchanged on every SKU; a base and a lid from either side of the change do not mate (MAJOR). Ruling 4 amended in `layout-patch-wall.md` §15 |
+| **D62.2** | 2026-09-29 | `CLAUDE.md` fixed decision "6 captive M3 knurled thumbscrews" (Closure) and `mcc_captive_thumbscrew_hole()`'s doc ("stays captive when backed out") | The model never retained the screw: `lib/mcc/fasteners.scad:70-98` cuts a ⌀3.4 clearance hole and a ⌀8 × 1.5 counterbore — no groove, clip, O-ring or thread holds an M3 once it is out of the base's insert. And `BOM.md:38`'s "assumed M3×10" bottoms out: under a 1.5 mm counterbore floor the 6.7 mm blind insert bore allows 8.2 mm under the head | A fixed decision the geometry did not implement; a public module named for a property it lacks; a BOM length that cannot clamp the lid | **Resolved by user decision 2026-09-29 (#62) — the rule changes, no geometry changes.** The thumbscrews are **non-captive**, with a **small knurled head, Ø7–8 mm, recessed in the ⌀8 counterbore** (not DIN 653, Ø12). `CLAUDE.md` Closure reworded; `mcc_captive_thumbscrew_hole()` renamed `mcc_thumbscrew_hole()` (no alias) and its doc rewritten; BOM row: small head, ≤ 8 mm under the head (M3×6), non-captive. `knowledge/**` unchanged — it lists knurled and captive screws as sourced options, not as the design. Q62.1 answered; residue R62.1/M62.1 |
 
 ---
 
