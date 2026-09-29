@@ -1161,6 +1161,8 @@ def cmd_smoke(_args: argparse.Namespace) -> int:
     _require_trimesh()
     problems = printability.selftest_see_through()
     results.append(("scripts/printability.py selftest_see_through()", not problems, "; ".join(problems)))
+    problems = printability.selftest_cantilever()
+    results.append(("scripts/printability.py selftest_cantilever()", not problems, "; ".join(problems)))
 
     print("\nsmoke results:")
     width = max(len(name) for name, _, _ in results)
