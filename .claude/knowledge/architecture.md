@@ -1,5 +1,20 @@
 # Architecture — magewell-converter-cases
 
+**Issues #63–#66, 2026-09-29 — top rail lock, closed groove end, no tie-down slots, cantilever check
+(D63.1, D64.1, D65.1, D66.1; plan H, `docs/plans/2026-09-29-top-lock-and-floor-fixes.md`).** User
+decisions: the rail lock moves **on top of the dovetail** (#63, D63.1 — option (a), top only): two rigid
+0.6 mm strips on the male's top drop into one full-width slot in the groove roof, backed by 1.1 mm of
+extra sill so T1-38 holds over it; square exit faces; a 1 × 45° lead-in on flanks, mouth and roof;
+release = pull the case about 1 mm off the plate (the dovetail stops it) and slide it off. The D48 flank
+bump and pocket are gone, and with them T1-64 … T1-66 (retired; the top lock's asserts are **T1-63.1 …
+T1-63.3**). The groove's −X end, which opened into the case between z = 3 and 4, is closed by a 3 mm end
+wall, and the rail is **136 mm** (was 150) so the sill clears the reserved splitter bay (#64, D64.1,
+**T1-64.1**; T1-17 implemented; D45 closed). The PoE-splitter tie-down slots are removed (#65, D65.1;
+D7 closed). `build.py check` measures cantilever reach on outlines stripped of collinear mesh vertices,
+guarded by a `smoke` self-test (#66, D66.1). New: **D63.1, D64.1, D65.1, D66.1, T1-63.1 … T1-63.3,
+T1-64.1, R63.1, M63.1**; R40, R41, R44, R45, M15, M21 amended. Base, `rail-lock` and bracket goldens
+move; a base and a bracket from either side of the change do not mate (MAJOR).
+
 **Issue #68, 2026-09-29 — record ids follow GitHub issues (user rule).** Every feature, bug and task
 gets a GitHub issue first, and the records it creates are numbered after that issue: for issue N,
 decisions and deviations **DN.x** (§13), risks **RN.x** (§11), open questions **QN.x** and measurements
@@ -448,14 +463,14 @@ L1  lib/mcc/layout.scad                   case layout solver — PURE FUNCTIONS 
     lib/mcc/neutrik.scad                  D-series cutout, pocket, screw bosses, depth tables
     lib/mcc/fasteners.scad                heat-set bosses, lid thumbscrew hole (non-captive, D62.2), 1/4"-20 boss
     lib/mcc/rail.scad                     mount-rail dovetail profile: male rail, female cut,
-                                          gravity-lock bump and pocket, plate-side keep-out
-                                          (rev 17). ONE source of truth shared by
+                                          top-lock strips, roof slot and its backing,
+                                          plate-side keep-out (D63.1). ONE source of truth shared by
                                           mounts.scad (case floor) and models/brackets/*.scad
                                           (rev 9, D-15). NOT named bracket.scad — see below
     lib/mcc/fan.scad                      fan bay envelope, grille, finger guard
     lib/mcc/switch.scad                   panel-switch cutout + recess pocket + keep-out
                                           (rev 11, #32). Geometry only — no dev/cfg
-    lib/mcc/poe_splitter.scad             splitter bay envelope + tie-down
+    lib/mcc/poe_splitter.scad             splitter spec + bay envelope module (tie-down retired, D65.1)
     lib/mcc/ghost.scad                    device ghost + plug envelopes (visual only)
         │
         ▼
@@ -499,7 +514,7 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
 - **`shell.scad` must not `use <neutrik.scad>`.** If the shell ever needs a connector-shaped void it
   goes through `mcc_panel_cutout()` (§5 dispatcher rule). Today it needs neither.
 - **`rail.scad` (L1, added rev 9).** Owns the mount-rail dovetail cross-section and nothing else:
-  `mcc_rail_male()` (additive), `mcc_rail_female_cut()` (subtractive), `mcc_rail_sill_size()` and `mcc_rail_male_keepout()` (pure, rev 17).
+  `mcc_rail_male()` (additive), `mcc_rail_female_cut()` (subtractive), `mcc_rail_female_backing()` (additive, case side — the material over the lock's roof slot, D63.1), and the pure `mcc_rail_sill_size()`, `mcc_rail_male_keepout()` (rev 17), `mcc_rail_lock_slot()` and `mcc_rail_z_play()` (D63.1).
   Both halves of a mating interface must come out of **one** file or they drift — the same reasoning
   that moved `mcc_panel_fixing_pos()` into `layout.scad` (D6). Consumers: `mounts.scad` (L2, the
   female groove in the case floor) and `models/brackets/*.scad` (the male rail). Three rules:
@@ -513,10 +528,12 @@ L0  lib/mcc/constants.scad                dimensions, tolerances, part tables �
     rule (§6) has one owner.
   - **Brackets consume the rail through two public symbols only** (rev 17, D50): `mcc_rail_male(len)`,
     unioned onto the bracket's plate — the rail needs no cut in any plate — and
-    `mcc_rail_male_keepout(len)`, the rail-local plate-side keep-out (bump included) that the bracket
-    maps through its own placement and pads with its own clearance. A bracket never passes `lock_e`
-    (only the rail-lock coupon's e-ladder does, always to both halves), never reads `MCC_RAIL_LOCK_*`
-    or other rail internals, and never rebuilds the rail's footprint.
+    `mcc_rail_male_keepout(len)`, the rail-local plate-side keep-out (the lock strips included; they sit
+    on the rail's top, so it is symmetric since D63.1) that the bracket maps through its own placement
+    and pads with its own clearance. A bracket never passes `lock_e` (only the rail-lock coupon's
+    e-ladder does, always the same value to male, cut and backing), never reads `MCC_RAIL_LOCK_*` or
+    other rail internals, never calls the case-side `mcc_rail_female_backing()`, `mcc_rail_lock_slot()`
+    or `mcc_rail_z_play()`, and never rebuilds the rail's footprint.
 - **`switch.scad` (L1, added rev 11, #32).** Owns the panel-switch void and nothing else:
   `mcc_switch_cutout(spec, wall_t)` (subtractive: through-bore + outer recess pocket),
   `mcc_switch_keepout(spec)` (**pure**, the wall-plane pad footprint + the body depth behind it) and
@@ -905,9 +922,11 @@ fitted connector. It is not an ingress or a drop regression.
 Three rules exist because these features will otherwise collide silently:
 
 - **The floor rule.** `mounts.scad` is the **single owner** of every feature in the case floor: the
-  **mount-rail dovetail groove and its sill** (D-15, rev 9 — replaces VESA; widened by D44), the
-  strap slots, the stacking profile and the splitter tie-downs (the Magewell-Fishtail M4 reservation
-  was dropped by D44). It exposes `mcc_floor_keepout()` and asserts non-overlap between all of them.
+  **mount-rail dovetail groove and its sill** (D-15, rev 9 — replaces VESA; widened by D44; 136 mm
+  with a closed −X end wall since D64.1), the strap slots and the stacking profile (the
+  Magewell-Fishtail M4 reservation was dropped by D44, the splitter tie-down slots by D65.1 — the bay
+  stays reserved and nothing is cut under it). It exposes `mcc_floor_keepout()` and asserts
+  non-overlap between all of them.
   `cradle.scad` never cuts the floor; if it ever needs a penetration it requests one *through*
   `mounts.scad`. The two sanctioned exceptions stay in `cradle.scad` because they are installed from
   the underside *into the deck hollow*: the case's own 1/4"-20 insert boss (T1-32; opt-in, and since
@@ -936,9 +955,10 @@ Three rules exist because these features will otherwise collide silently:
   plate — the joint's only designed bearing face (on a TV-mounted bracket the upper flank (rail-local
   −Y) also bears, R41). Every other face keeps **≥ `MCC_RAIL_MATE_CLR` = 0.5 mm**: normal to the flanks
   (`MCC_RAIL_CLR_HORIZ` = 0.577 horizontal) and at the roof (the male is `MCC_RAIL_MALE_H` = 3.5 tall
-  under the 4.0 groove, and the lock pocket runs the full depth over the bump) — **T1-62**. The lock
-  is the gravity lock (D48): a rigid bump on the rail's upper flank in a pocket of the groove flank,
-  held by the case's weight — no plate cut, no flexure. The Fishtail and case-insert reservations
+  under the 4.0 groove, and the lock's roof slot keeps 0.5 mm around the strips) — **T1-62**. The lock
+  is the top lock (D63.1, which replaced the D48 flank lock): two rigid strips on the rail's top in one
+  full-width slot in the groove roof, held there because the case's weight on the upper flank wedges
+  the case onto the plate — no plate cut, no flexure. The Fishtail and case-insert reservations
   are retired, and D19's exemption with them; the opt-in insert and the rail are mutually exclusive
   (**T1-63**). Printing: the groove roof is a ~66 mm bridge in the base's print pose — a sanctioned
   exception to §5's 10 mm span rule, forced by the width, judged by the slicer gate and the
@@ -1177,7 +1197,9 @@ rendered STL only), and nothing carried a printer/filament/process. The export c
 - **Printability is a Tier-3 gate**: `build.py check` slices every print-pose STL at 0.2 mm
   (`scripts/printability.py`) and fails on any *floating island* (a layer region with nothing under
   it — Bambu's "floating regions") or *cantilever* (an overhang whose far edge lies > 3 mm from where
-  it attaches to the layer below — Bambu's "floating cantilever", same 3 mm limit). It is an
+  it attaches to the layer below — Bambu's "floating cantilever", same 3 mm limit; reach is measured
+  at the overhang outline's vertices after collinear mesh-triangulation vertices are dropped — 0.05 mm,
+  D66.1 — so a straight bridge edge never reads as a tip). It is an
   approximation of the slicer, so the ground truth is `build.py slicer-check`: every `<part>.3mf`
   sliced headlessly by Bambu Studio's own CLI, failing on any `warning_message` in its
   `result.json`. **CI runs it as a gate** on every part (`build.py ci`, render.yml: six
@@ -1301,6 +1323,16 @@ T1-62.1 — for every lid fastener, the counterbore's radius as cut (`mcc_thumbs
 ≥ `MCC_LID_CB_WEB_MIN` (1.2) inside the groove ring's inner edge, evaluated in `mcc_shell_lid()`;
 T1-62.2 — `MCC_WALL ≤ MCC_TG_PATCH_INSET ≤ MCC_T_PATCH`, evaluated inside `_mcc_tg_rect()` so a base
 render trips it too. Neither is the old **T1-62** (rail clearances, rev 16).
+**#63–#66 add T1-63.1 … T1-63.3 and T1-64.1, implement T1-17 and retire T1-64 … T1-66** (D63.1,
+D64.1): T1-63.1 — the lock strips' ride fits the dovetail's Z-play, `MCC_RAIL_LOCK_ENGAGE +
+MCC_RAIL_LOCK_PLAY_MARGIN ≤ mcc_rail_z_play()` (0.6 + 0.3 ≤ 1.0); T1-63.2 — the strips' entry chamfer is
+30–60° and shorter than the strip, and the strips sit ≥ 1 mm inside the male's top and inside its
+working length; T1-63.3 — the roof lead-in is taller than the engagement and no deeper than `MCC_WALL`
+(all in `rail.scad` and `tests/test_rail.scad`); T1-64.1 — `MCC_RAIL_END_WALL ≥ MCC_WALL`, the groove's
+closed end keeps a full wall (`mounts.scad`); T1-17 — the rail sill's −X end clears the reserved
+splitter bay by `MCC_FAN_BAY_CLR` (`mounts.scad`, 2.95 mm on the tightest SKU); T1-38 now also holds over
+the lock's roof slot (`mcc_rail_female_backing()`). T1-64 … T1-66 (the D48 flank lock) are retired —
+history, never reused, and unrelated to T1-64.1.
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
@@ -1309,7 +1341,9 @@ re-derive them in the model files; they are the acceptance criteria for `shell.s
 minimum, and maximum parameters. Run with `openscad -o out.csg` — CSG export evaluates the tree (so
 asserts fire) without tessellating, so it is fast. Non-zero exit = failure. Since #62 `smoke` also runs
 the Python self-test of the lid see-through check (`printability.selftest_see_through()`: two synthetic
-lids, one broken, one not) — a Tier-3 checker that silently stops finding anything is worse than none.
+lids, one broken, one not) — a Tier-3 checker that silently stops finding anything is worse than none. Since #66 it also runs
+`printability.selftest_cantilever()` (a bridge with collinear edge vertices must pass, a 6 mm
+cantilever must fail — D66.1).
 
 **Tier 3 — geometry goldens.** `openscad --summary all --summary-file <json>` on every model, diffed
 against `tests/golden/*.json` with a tolerance (~0.5 % volume, 0.1 mm bbox). Plus `check_mesh.py`
@@ -1879,6 +1913,11 @@ forced by the user's width decision (no roof shape fits 3 mm of residual floor).
   ≈ 15 mm). On the Plus family the ⌀38 fan aperture above it (z ≥ 6.5) leaves ~2.5 mm of wall between
   the two over ~38 mm. The 1 m drop requirement (CLAUDE.md) has no test yet for this edge; flagged, not
   blocking.
+- **Amended by #63 (D63.1):** the lock's full-width roof slot (3 mm in X, 1.1 mm deep) splits the roof
+  bridge — the slicer passes it, separate pockets did not (D33's lesson) — and its ceiling is a second,
+  short 66 mm bridge whose sag eats the strips' 0.5 mm top clearance (M15 measures it). The roof
+  lead-in raises the groove's entry roof to z = 5.0 at the +X face, so on the Plus family the wall
+  under the ⌀38 fan aperture is 1.5 mm at the outer face (was 2.5).
 
 **R41 — clearance means play, and on a TV-mounted bracket a flank carries the weight. NEW 2026-09-28
 (rev 16, D44; flank corrected rev 17).** With 0.5 mm normal clearance at 60° flanks the case has
@@ -1890,8 +1929,8 @@ a French cleat, loading it with ≈ 1.15 × the case's weight normal to the flan
 slope pulls the case onto the plate with ≈ 0.58 × its weight. The tipping moment of the case's offset
 centre of mass is taken by that hook and by the floor pressing on the plate below the rail. All
 clearance collects at the lower flank (≈ 1.15 mm horizontal), so gravity keeps the case seated; only a
-push against its weight lifts it off the upper flank. Acceptable (user decision), and the gravity lock
-(D48) holds X while the case hangs. Measure it on the coupon (M15) and on the first bracket print. If
+push against its weight lifts it off the upper flank. Acceptable (user decision), and the top lock
+(D63.1) holds X while the case hangs. Measure it on the coupon (M15) and on the first bracket print. If
 it is objectionable the lever is `MCC_RAIL_MATE_CLR` — a **user** decision (D44), not a developer
 tweak.
 
@@ -1925,22 +1964,24 @@ the same four VESA holes.
   case ≈ 5.6 mm further off the TV at the assumed lift figures (lid ≈ 79 mm ≤ `WALL_GAP`, T1-88).
 - Remaining: the lift figures (M20); until measured, each is an `assumed` parameter behind an assert.
 
-**R44 — the rail lock is gravity-engaged. NEW 2026-09-28 (rev 17, D48/D49).** While the case hangs
-patch-wall down its weight holds the bump in its pocket (≈ 0.6–1.15 × the weight, normal to the flank,
-depending on whether the case yaws about its −X end), and the square exit face stops any axial pull at
-or below the rail line — including every cable load at the patch wall. It does not hold when that
-flank is unloaded: while the case is being hung, when the TV is laid flat, carried or tilted, or when
-the case is pushed upward; then only friction resists sliding. **Take the case off before the TV is
-laid down, carried or tilted — including by a TV lift that tilts or flips it (Q23).** A −X pull on the
-case's top (far-wall) edge can yaw its +X end up and release it at ≈ 3 × the weight — also the natural
-hand release. Mitigation: D49, the install/removal text (brackets README), M21. Accepted by the user.
+**R44 — the rail lock is gravity-engaged. NEW 2026-09-28 (rev 17, D48/D49); rewritten for the top lock by
+#63 (D63.1).** While the case hangs patch-wall down its weight rests on the rail's upper flank, whose 60°
+wedge presses the case floor onto the plate with ≈ 0.58 × the weight; that keeps the strips in the roof
+slot, and their square exit faces stop any axial pull. Pushing the case up (plugging a cable from
+below), outward tugs at the patch wall and vertical vibration do not release it (plan H §2). It releases
+when the case is pulled ≈ 0.6 mm off the plate — ≈ 0.6–1.1 × the weight straight off the TV, ≈ 0.3–0.5 ×
+when its +X end is pried off — and then slid: that is the release gesture, and its accidental version is
+R63.1. It does not hold when the upper flank is unloaded: while the case is being hung, when the TV is
+laid flat, carried or tilted; then only friction resists sliding. **Take the case off before the TV is
+laid down, carried or tilted — including by a TV lift that tilts or flips it (Q23).** Mitigation: D49,
+the install/removal text (brackets README), M21. Accepted by the user.
 
-**R45 — the ride-over needs the printed flank play. NEW 2026-09-28 (rev 17, D48).** The case rides over
-the 0.70 mm bump inside the dovetail's own 1.155 mm horizontal play (0.45 mm margin; T1-64 asserts
-≥ 0.2). A print that comes out more than ≈ 0.1 mm oversize on each of the four flank faces binds —
-nothing is designed to flex. M15 measures the printed play and runs the e-ladder; if it binds, lower
-`MCC_RAIL_LOCK_ENGAGE` (0.5 is still self-locking). Never widen the rail or change `MCC_RAIL_MATE_CLR`
-(user decisions).
+**R45 — the ride-over needs the printed Z-play. NEW 2026-09-28 (rev 17, D48); rewritten by #63 (D63.1).**
+The case rides over the 0.60 mm strips inside the dovetail's own 1.0 mm Z-play (0.40 mm left normal to the
+lower flank; T1-63.1 asserts ≥ 0.3). A print ≈ 0.1 mm oversize on each flank face, or a sagging groove
+roof, eats that margin — nothing is designed to flex. M15 measures the printed play and runs the
+e-ladder (0.4 / 0.5 / 0.7); if it binds, lower `MCC_RAIL_LOCK_ENGAGE`. Never widen the rail or change
+`MCC_RAIL_MATE_CLR` (user decisions).
 
 **R47 — the vertical bracket's arm outgrows the bed if the TV lift's rail is wide. NEW 2026-09-28 (rev 18,
 plan D).** `REACH` grows with `W_LIFT_RAIL/2` (the case must clear the lift's rail band), and the arm with
@@ -1965,6 +2006,14 @@ DIN 653's Ø12 — and non-captive. What is left:
   5.7 mm insert; M3×8 leaves 0.2 mm nominal; the former BOM figure, M3×10, bottomed out before clamping
   (D62.2).
 - **Loss.** A non-captive screw can be dropped when a lid is opened on stage — accepted by the user.
+
+**R63.1 — pulling the case off the TV and sliding it releases the top lock. NEW 2026-09-29 (#63, D63.1)
+— accepted with option (a).** The top lock trades D48's weakness (a push up at the patch wall released
+it) for this one: pulling the case ≈ 0.6 mm straight off the TV (≈ 0.6–1.1 × its weight, μ 0–0.3) or
+prying its +X (fan) end off (≈ 0.3–0.5 ×) and then sliding it releases it — the release gesture, done by
+accident. At ≈ 0.8 kg (`assumed`, M63.1) that is ≈ 2–9 N. The plan's option (b-stag), the D48 bump kept
+as a second catch 50 mm further along (plan H §18.1), would close it; **the user chose (a)** on
+2026-09-29. Re-open only on a user decision, with M21's first-bracket findings in hand.
 
 ---
 
@@ -2092,14 +2141,15 @@ screw length — is R62.1/M62.1.
 | **M13** | **Temperature of the device's metal top under sustained load in the closed case, ambient ~25 °C and ~35 °C** | R22 — nothing confirms 45 °C is the right trip point for this case/device pair (`poe-splitter-verification.md:234-238`). If the top never reaches 45 °C the fan never runs; if it sits at 45 °C the fan hunts | User, after the first full-size print |
 
 | **M14** | **Buy one 50 mm half coupler (Doughty T57010 / Global Truss equivalent, M12) and measure its mounting-flange bolt pattern, flange plate L × W, and overall depth** | **R25 — BLOCKING for issue #27.** No fetched source publishes the flange pattern; `MCC_TRUSS_MOUNT_PATTERN` cannot be authored honestly without it, and a placeholder produces a plate that does not bolt on. Also fixes the truss plate's own outline, which must be ≥ the case footprint | User, after buying one |
-| **M15** | **Print `models/coupons/rail-lock` and test it:** (a) roof sag on the groove half — roof height at mid-width vs 4.0 mm; the rail's 3.5 mm top must not touch it (R40); (b) play with the lock not engaged — expect ≈ 1.15 mm lateral (R41, R45); (c) **the lock, hanging**: rail plate vertical, groove half loaded to the heaviest case (≈ 0.8 kg, `assumed` — weigh one) — it rides over the bump without binding and clicks; an axial pull at the rail line does not release it up to ≥ 50 N; an outward tug at the lower edge does not release it; lifting ≤ 1.2 mm and sliding releases it one-handed; (d) e-ladder `LOCK_E` 0.5 / 0.6 / 0.8; (e) 100 cycles, then (b)–(c) again and inspect the bump and the pocket's +X wall | R40, R41, R44, R45 — every `MCC_RAIL_*` figure is `assumed` except the user-decided width and clearance. (a) decides `MCC_RAIL_ROOF_CLR`; (c)/(d) decide `MCC_RAIL_LOCK_ENGAGE`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this** | User, with a luggage scale, a dummy mass and calipers |
+| **M15** | **Print `models/coupons/rail-lock` and test it:** (a) roof sag on the groove half — roof height at mid-width vs 4.0 mm and the lock slot's ceiling vs 5.1 mm; the rail's 3.5 mm top must stay clear of the roof and its 4.6 mm strips must pass under it with the groove half lifted (R40); (b) play with the lock not engaged — ≈ 1.15 mm lateral and ≈ 1.0 mm lift before it binds (R41, R45); (c) **the lock, hanging**: rail plate vertical, groove half loaded to the heaviest case (M63.1) — it rides over the strips without binding and clicks; an axial pull at the rail line does not release it up to ≥ 50 N; a push up from below (≈ 3 × the weight) and then an axial pull does not release it; an outward tug at the lower edge and then an axial pull does not release it; pulling it off the plate until it stops (≤ 1.2 mm) and sliding releases it one-handed; (d) e-ladder `LOCK_E` 0.4 / 0.5 / 0.7; (e) 100 cycles, then (b)–(c) again and inspect the strips' square faces and the slot's +X wall | R40, R41, R44, R45 — every `MCC_RAIL_*` figure is `assumed` except the user-decided width and clearance. (a) decides `MCC_RAIL_ROOF_CLR`; (c)/(d) decide `MCC_RAIL_LOCK_ENGAGE`. **"Coupons before cases" applies to brackets too — no full-size bracket prints before this.** Rewritten by #63 (D63.1) | User, with a luggage scale, a dummy mass and calipers |
 
 | **M17** | **Buy one panel switch of the chosen class and measure: actuator height proud of the panel, mounting-hole ⌀, nut across-flats (⇒ circumscribed ⌀), body depth behind the panel, and the panel-clamp thickness range** | **R29 — gates the pocket geometry for issue #32.** All five are `assumed` from a family-analogue datasheet, and all five are load-bearing: the actuator height sets `recess_t` (T1-44), the nut ⌀ sets `pad_d` and therefore whether the part fits the +X band at all (T1-43), and the clamp range decides whether a 2.0 mm residual panel is legal. The plus family's feasible `switch_y` window is 3.2 mm wide — this is not a figure to leave `assumed` through a print | User, after buying one (≈ €1–2) |
 | **M19** | **`neutrik-tile`, both classes (NAHDMI-W-B and NE8FDP-B), printed standing in ASA:** (a) seat-hole and window diameter measured **horizontally and vertically** (sag at the top of the arch, R39); (b) the real connector passes and its flange seats flush; (c) both ⌀2.5 fixing bores aligned with the flange holes, round, and their printed diameter; (d) once §12 Q20 is answered, the chosen thread survives **≥ 5 insert/remove cycles** (R28's acceptance idea, kept) | **R39 + Q20 — gates the first full-size print** (with the other "Coupons before cases" coupons). `MCC_HOLE_COMP` is written back from (a)/(b) as usual; `MCC_FIXING_BORE_D` and the hole shape are user decisions (D40/D41) — report, do not tune | User, calipers + a ⌀2.5 drill shank as a gauge |
 | **M20** | **The user's TV and its TV lift, for the sandwiched brackets (plan D, issue #56):** the TV model, its VESA pattern (400 × 300?) and usable M8 thread depth; the lift's rail/plate width `W_LIFT_RAIL` and thickness `T_LIFT_RAIL` at each hole; the bolt-head height `K_BOLT_HEAD`; any lift hardware within 250 mm of either bracket's arms and pads. **Resolved (user, 2026-09-28): 150–200 mm behind the TV (`WALL_GAP` = 150 asserted) and the space beside it is not a constraint (`TV_SIDE_CLEAR` asserted, non-binding).** | R42/R43/R47 — `REACH`, the rib start, the arch sandwich rise and M3 length, the spacer and M8 lengths. Until measured each is an `assumed` parameter behind an assert (T1-70 … T1-90) | User, with the TV and lift in hand — **open** |
-| **M21** | **First bracket print (arch, direct mode), with a real case and device:** the lock's yaw release force for a −X pull on the case's top (far-wall) edge (≈ 3 × the weight expected), no release for pulls on the patch-wall edge and on the cables, and the one-hand lift-and-slide removal behind a mounted TV | R44 — the 60 mm coupon cannot reproduce the full case's yaw lever | User |
+| **M21** | **First bracket print (arch, direct mode), with a real case and device:** no release for pulls on the patch-wall edge, on the cables or on the top (far-wall) edge, nor for a push up from below; the pull-off force that releases the top lock, straight off the TV and prying the +X end; then the one-hand pull-and-slide removal behind a mounted TV (R63.1) | R44, R63.1 — the 60 mm coupon cannot reproduce the full case's levers. Rewritten by #63 (D63.1) | User |
 | **M22** | **Sandwich tilt and clamp check, both brackets:** hang the heaviest Plus SKU for 24 h on the vertical bracket and on the arch's sandwich parts; static rail tilt ≤ 2° (the arch's M18d rule); re-check the M8 preload at 24–48 h (R42) | R42/R47, and the arch sandwich parts' larger COM offset (≈ 53 mm off the TV back vs ≈ 47.5). If the tilt fails, thicken the plates and re-derive every Z plane | User, after the first print |
 | **M62.1** | **Buy the chosen lid thumbscrew (small knurled M3 head, Ø7–8 mm) and measure: head ⌀ across the knurl, head height, under-head length; try it in a printed ⌀8 × 1.5 counterbore (a test print of one lid corner is enough)** | **R62.1 — gates the first full-size lid print.** A tight fit, or a head over ≈ 7.8 mm, means the counterbore must grow — T1-62.1 fires above ⌀8.09, so that is an architect re-gate, not a constant tweak. A head over 1.5 mm stands proud by the difference. Length ≤ 8.2 mm under the head (M3×6 recommended) | User, after buying |
+| **M63.1** | **Weigh one assembled case per family, with its device (and the fan where fitted)** | R44/R63.1 — every release force in plan H §2 scales with the weight (≈ 0.8 kg `assumed`); M15's dummy mass is this weight | User — **open** |
 
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
@@ -2111,6 +2161,7 @@ screw length — is R62.1/M62.1.
 > **Rev 17** adds M21.
 > **Rev 18** adds M22 (plan D).
 > **#62** adds M62.1 (plan G). From issue #68 on, measurement ids follow the issue (§12's introduction).
+> **#63** adds M63.1 and rewrites M15 and M21 (plan H).
 
 ---
 
@@ -2186,6 +2237,10 @@ the table.
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 | **D62.1** | 2026-09-29 | §5 lid row / `layout-patch-wall.md` §15 ruling 4 (the tongue flush with the wall's inner face; groove = tongue ± `MCC_CLR_TG`) with §6 (the fastener ring at `e` = 10 from the outer faces). The lid is one 3 mm slab: two cuts in it must never meet | `lib/mcc/shell.scad:400` (groove) with `lib/mcc/fasteners.scad:87-98` (counterbore) and `lib/mcc/constants.scad:373` (`MCC_FASTENER_INSET`), lines at `4e3a93f`: on the 8 mm patch wall the groove (6.15–8.25 mm from the outer face, 2.0 mm deep) runs through the ⌀8 counterbore (rim 5.995 mm, floor 1.5 mm below the outer face) of the three patch-side lid fasteners; the cuts overlap 0.5 mm in Z, so 11.38 mm² (27.6 %) of each counterbore floor is open on all 8 SKUs (24 holes), and the through-hole stands 0.05 mm from the groove | Found by the external CAD specialist in the exact `lid.step`. Latent since `b6a8b77` (2026-09-08): `check`, the slicer gate, the goldens (0.018 % of the volume — the first lid golden already contained it) and T1-33 all passed it. Ruling 4's own reason — a centred tongue does not fit a 3 mm wall — never applied to the 8 mm wall | **Fixed by #62 (plan G, option T).** On the +Y wall only, the frame is offset outward: `MCC_TG_PATCH_INSET` = 4.5 (tongue 2.9–4.5, groove 2.65–4.75 mm from the outer face; counterbore web 1.245 mm) through `_mcc_tg_rect()`, which replaces `_mcc_cavity_rect()`; fasteners, bosses, inserts and the other three walls do not move. New `MCC_LID_CB_D` (8.0, `assumed`, was a literal), `MCC_LID_CB_WEB_MIN` (1.2), `mcc_thumbscrew_hole_rim_r()`; **T1-62.1**, **T1-62.2**; the Tier-3 lid see-through check with its `smoke` self-test (§8). Rejected: moving the three fasteners inboard (an unverifiable cable-bay change), interrupting the frame at each hole (the fallback), dropping the counterbore, a thicker lid (H = 51 is fixed). Base +22.40 mm³, lid −46.48 mm³, bbox unchanged on every SKU; a base and a lid from either side of the change do not mate (MAJOR). Ruling 4 amended in `layout-patch-wall.md` §15 |
 | **D62.2** | 2026-09-29 | `CLAUDE.md` fixed decision "6 captive M3 knurled thumbscrews" (Closure) and `mcc_captive_thumbscrew_hole()`'s doc ("stays captive when backed out") | The model never retained the screw: `lib/mcc/fasteners.scad:70-98` cuts a ⌀3.4 clearance hole and a ⌀8 × 1.5 counterbore — no groove, clip, O-ring or thread holds an M3 once it is out of the base's insert. And `BOM.md:38`'s "assumed M3×10" bottoms out: under a 1.5 mm counterbore floor the 6.7 mm blind insert bore allows 8.2 mm under the head | A fixed decision the geometry did not implement; a public module named for a property it lacks; a BOM length that cannot clamp the lid | **Resolved by user decision 2026-09-29 (#62) — the rule changes, no geometry changes.** The thumbscrews are **non-captive**, with a **small knurled head, Ø7–8 mm, recessed in the ⌀8 counterbore** (not DIN 653, Ø12). `CLAUDE.md` Closure reworded; `mcc_captive_thumbscrew_hole()` renamed `mcc_thumbscrew_hole()` (no alias) and its doc rewritten; BOM row: small head, ≤ 8 mm under the head (M3×6), non-captive. `knowledge/**` unchanged — it lists knurled and captive screws as sourced options, not as the design. Q62.1 answered; residue R62.1/M62.1 |
+| **D63.1** | 2026-09-29 | D48 (the gravity lock: a rigid bump on the rail's upper flank in a pocket of the groove flank) and R44/R45/M15 | **User decision 2026-09-29 (issue #63, plan H option (a)):** the lock sits on top of the dovetail, DP48 style. Research finding: DP48's two separate roof pockets are holes in the ~66 mm roof bridge, which Bambu flags as a floating cantilever on the base and the coupon (D33's lesson), so the case gets one transverse slot across the full roof width instead | The flank lock released when the case was pushed up at the patch wall (plugging a cable from below) and at ≈ 3 W in yaw; the user asked for the lock on top | **Done by #63.** Two rigid strips 2.0 × 20.0 on the male's top at \|y\| 10–30, 0.60 above the roof line, square exit face 3.0 from the male's +X end, 45° entry chamfer (`MCC_RAIL_LOCK_*`); one roof slot (`mcc_rail_lock_slot()`: the strips + 0.5 all round, full roof width) with `mcc_rail_female_backing()` so T1-38 holds over it; roof lead-in 1 × 45° on flanks, mouth and roof; `mcc_rail_male_keepout()` symmetric; `mcc_rail_z_play()`. T1-64 … T1-66 retired, **T1-63.1 … T1-63.3** new; R44, R45, M15, M21 rewritten; R40, R41 amended; **R63.1**, **M63.1**. D48's flank placement is superseded; its D34 removal and lead-in stand. (b-stag), (b-same) and (c) are recorded in the plan (§18), not built |
+| **D64.1** | 2026-09-29 | D34: the groove's closed −X end is the axial end stop and the case stays closed; §6 reservation rule (a reserved bay clears every other feature — D45) | `lib/mcc/mounts.scad:63-66` (at `4e3a93f`) ended the sill at x = −`MCC_RAIL_LEN`/2 = −75, exactly where the groove ends; the groove (4.0 deep) is deeper than the floor (3.0), so at the −X end it opened into the case between z = 3 and 4 over its full 66 mm width. The sill also sat 0.55–1.05 mm inside the compact splitter bay (D45) | A 1 × 66 mm slit from outside into the case interior on every SKU, seen by no gate (#62's see-through check covers lids only) | **Fixed by #64 (user decision 2026-09-29: `MCC_RAIL_LEN` 150 → 136).** `MCC_RAIL_END_WALL` = `MCC_WALL`: the sill runs 3 mm past the groove at both ends and closes the −X end over the full groove depth (**T1-64.1**). At 136 mm the sill ends at x = −71, 2.95 mm clear of the bay on the tightest SKU (L = 193.9) — **T1-17** implemented in `mcc_floor_features_add()`; **D45 closed**. `scripts/rail_fit.py` checks it with rays from inside the groove |
+| **D65.1** | 2026-09-29 | §6 floor rule (the splitter tie-downs were a floor feature); D7 (`mcc_splitter_tiedown()` must follow the on-edge splitter) | — (a user decision; plan G's mesh check also found the −X slot straddling the −X wall's inner face) | Two 1.5 × 4 mm slots through the floor under the reserved bay, for a splitter no SKU fits (D-14) | **Done by #65 (user decision 2026-09-29).** The slots and `mcc_splitter_tiedown()` are removed; the bay stays reserved (§6) and its reservation in `layout.scad` is unchanged. **D7 closed:** its envelope half (`orient`, `cable_allow`) is implemented and stays; its tie-down half is moot. D24 (the envelope is an ungated cube) stays open |
+| **D66.1** | 2026-09-29 | §8 printability gate: `build.py check` approximates Bambu Studio's floating-cantilever test; the slicer is the ground truth | `scripts/printability.py` `_cantilevers()` measured reach at the raw vertices of a mesh section; a straight bridge edge that crosses triangulated faces carries collinear mid-edge vertices, which read as cantilever tips (6.3 / 7.2 mm on plan H's split roof) while Bambu passed the same parts | The result depended on how Manifold triangulated a face, not on the geometry | **Fixed by #66 (architect ruling on plan H's Q6).** Each overhang outline is simplified by `CONTOUR_SIMPLIFY` = 0.05 mm (Douglas–Peucker, a subset of the original vertices) before its reach is measured, so reach can only drop — no part that passes can start failing — and a real tip, a corner, stays. `smoke` runs `selftest_cantilever()`: a bridge with collinear edge vertices must pass, a 6 mm cantilever must fail. Unchanged: the check still reads outer contours only, and the slicer gate stays the ground truth |
 
 ---
 
@@ -2246,8 +2301,9 @@ keep-out** (⌀24 disc *plus* a 7 mm strip down to the floor for the boss's supp
 free area — not duct depth — is the flow bottleneck; size the intake slots against the fan aperture
 (R20, T1-30).
 
-**Floor.** The mount rail (D-15; 65 mm root at `y = −23.5`, flush seat, ≥ 0.5 mm clearance — D44),
-strap slots, the splitter tie-down and the stacking profile; `mcc_floor_keepout()` asserts non-overlap.
+**Floor.** The mount rail (D-15; 65 mm root at `y = −23.5`, flush seat, ≥ 0.5 mm clearance — D44;
+136 mm, closed −X end wall, top lock — D63.1, D64.1), strap slots and the stacking profile (no splitter
+tie-down since D65.1); `mcc_floor_keepout()` asserts non-overlap.
 VESA 75 × 75 (D-15), the Fishtail M4 band and the case-insert reservation (D44) are gone. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
 

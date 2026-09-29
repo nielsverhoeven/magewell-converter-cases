@@ -3,9 +3,10 @@
 //   L2. Every case-floor feature except the case's own opt-in 1/4"-20 insert boss (cradle.scad, T1-32 —
 //   installed from the underside into the deck hollow; since D44 only with ["rail", false], T1-63).
 //   Owns: the tool-less dovetail mount rail (D-15, rev 9, issue #25 — replaces VESA; widened, flush and
-//   >= 0.5 mm-clearance since D44), strap slots (displaced off the reserved splitter bay per §7.1
-//   correction 1), the splitter tie-down (mcc_splitter_tiedown(orient="edge")), and a minimal
-//   stacking-profile recess.
+//   >= 0.5 mm-clearance since D44; closed -X end wall (D64.1), top lock and slot backing (D63.1)), strap
+//   slots (displaced off the reserved splitter bay per §7.1 correction 1), and a minimal
+//   stacking-profile recess. The splitter tie-down slots are gone (D65.1): the bay stays reserved and
+//   nothing is cut into the floor under it.
 //   Positions come from mcc_floor_keepout() (layout.scad) so this file never re-derives them; this
 //   file also owns the D16 pairwise non-overlap assert over that same list (architecture.md §6,
 //   §13 D16 — no exemptions since D44).
@@ -20,7 +21,6 @@ include <constants.scad>
 use <util.scad>
 use <ports.scad>        // mcc_dev_slug() (assert messages)
 use <layout.scad>
-use <poe_splitter.scad> // mcc_splitter_tiedown()
 use <rail.scad>         // mcc_rail_female_cut() -- D-15, rev 9, issue #25
 
 // Non-manifold-avoidance pattern this file follows for every additive floor feature: a plain solid
@@ -36,8 +36,9 @@ use <rail.scad>         // mcc_rail_female_cut() -- D-15, rev 9, issue #25
 //   mcc_floor_features_add(dev, cfg);
 // Description:
 //   ADDITIVE floor features: the mount-rail sill (D-15, rev 9, issue #25 — replaces VESA), a plain
-//   MCC_RAIL_LEN x (MCC_RAIL_ROOT_W + 2*MCC_RAIL_SILL_SIDE_W) x MCC_RAIL_SILL_H solid block at
-//   (0, MCC_RAIL_Y), skipped
+//   (MCC_RAIL_LEN + 2*MCC_RAIL_END_WALL) x (MCC_RAIL_ROOT_W + 2*MCC_RAIL_SILL_SIDE_W) x MCC_RAIL_SILL_H
+//   solid block at (0, MCC_RAIL_Y) -- the groove's closed -X end keeps MCC_RAIL_END_WALL of it (T1-64.1)
+//   -- plus the lock slot's backing (mcc_rail_female_backing(), T1-38, D63.1), skipped
 //   entirely when `cfg`'s "rail" key is explicitly false (default true, mirroring the old "vesa"
 //   flag's off-switch convenience). Split into an ADD (here) + a separate CUT
 //   (mcc_rail_features_cut(), below) for the same non-manifold reason documented at the top of this
@@ -60,12 +61,27 @@ module mcc_floor_features_add(dev, cfg) {
             str("mcc: MCC_RAIL_LEN=", MCC_RAIL_LEN, " does not fit the usable floor span on \"",
                 mcc_dev_slug(dev), "\" (L=", L, ")"));
 
-        translate([0, MCC_RAIL_Y, 0])
+        // T1-17 (D45, closed by D64.1): the sill -- the working length plus MCC_RAIL_END_WALL at each
+        // end -- clears the reserved splitter bay by MCC_FAN_BAY_CLR (architecture.md §6 clearance rule).
+        sill_x0 = -MCC_RAIL_LEN / 2 - MCC_RAIL_END_WALL;
+        assert(sill_x0 >= struct_val(l, "splitter_bay_x")[1] + MCC_FAN_BAY_CLR - MCC_EPS,
+            str("mcc: T1-17 rail sill -X end x=", sill_x0, " is within MCC_FAN_BAY_CLR=", MCC_FAN_BAY_CLR,
+                " of the reserved splitter bay (x <= ", struct_val(l, "splitter_bay_x")[1], ") on \"",
+                mcc_dev_slug(dev), "\""));
+        // T1-64.1 (D64.1): the groove's closed -X end keeps a full wall behind it -- the groove
+        // (MCC_RAIL_DEPTH) is deeper than the floor (MCC_FLOOR_T), so the end stop needs the sill.
+        assert(MCC_RAIL_END_WALL >= MCC_WALL - MCC_EPS,
+            str("mcc: T1-64.1 MCC_RAIL_END_WALL=", MCC_RAIL_END_WALL, " below MCC_WALL=", MCC_WALL));
+
+        translate([0, MCC_RAIL_Y, 0]) {
             // Width: root + a full side wall each side (MCC_RAIL_SILL_SIDE_W, D30) — never just
             // the root width, which leaves knife-edge sill walls and an unsupported groove roof.
-            _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], MCC_RAIL_SILL_H);
+            _mcc_floor_boss_from_below_rect([MCC_RAIL_LEN + 2 * MCC_RAIL_END_WALL, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], MCC_RAIL_SILL_H);
+            // D63.1: material over the lock's roof slot, so T1-38 holds there too.
+            mcc_rail_female_backing();
+        }
 
-        // Insertion passage (D34): the groove runs on from +MCC_RAIL_LEN/2 out through the +X wall
+        // Insertion passage (D34): the groove runs on from the sill's +X end out through the +X wall
         // so a case can actually be slid onto a bracket. Its sill is capped by the fan-bay
         // reservation above it (fan_bay_z[0]; the bay is reserved in every variant, §6), leaving a
         // thinner roof than T1-38's — acceptable because at full mate the male no longer reaches
@@ -75,7 +91,7 @@ module mcc_floor_features_add(dev, cfg) {
         assert(pass_h - MCC_RAIL_DEPTH >= MCC_RAIL_PASSAGE_ROOF_MIN - MCC_EPS,
             str("mcc: D34 rail passage roof ", pass_h - MCC_RAIL_DEPTH, " below MCC_RAIL_PASSAGE_ROOF_MIN on \"",
                 mcc_dev_slug(dev), "\""));
-        pass_x0 = MCC_RAIL_LEN / 2 - MCC_EPS;
+        pass_x0 = MCC_RAIL_LEN / 2 + MCC_RAIL_END_WALL - MCC_EPS;
         pass_x1 = L / 2 - MCC_WALL + MCC_EPS;
         translate([(pass_x0 + pass_x1) / 2, MCC_RAIL_Y, 0])
             _mcc_floor_boss_from_below_rect([pass_x1 - pass_x0, MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W], pass_h);
@@ -112,7 +128,7 @@ module mcc_rail_features_cut(dev, cfg) {
     rail_on = is_undef(rail_flag) ? true : rail_flag;
     if (rail_on) {
         // Open at +X through the case wall (D34): the groove's closed -X end is the end stop. The
-        // +X outer face (x = L/2) gets the 45-degree lead-in (D48).
+        // +X outer face (x = L/2) gets the 45-degree lead-in on flanks, mouth and roof (D63.1).
         L = struct_val(mcc_case_layout(dev, cfg), "L");
         translate([0, MCC_RAIL_Y, 0])
             mcc_rail_female_cut(len = MCC_RAIL_LEN, open_ext = L / 2 - MCC_RAIL_LEN / 2 + 1, entry_x = L / 2);
@@ -168,10 +184,9 @@ module mcc_assert_floor_keepout_no_overlap(dev, cfg) {
 //   mcc_floor_features_cut(dev, cfg);
 // Description:
 //   SUBTRACTIVE floor features: the 2 (or, with the -X pair displaced clear of the splitter bay,
-//   still 2) strap-slot pairs, the splitter tie-down (mcc_splitter_tiedown(orient="edge"), NOT
-//   hand-rolled holes — layout-patch-wall.md §15 ruling 7), and a minimal stacking-profile recess
-//   (a shallow counterbore at each corner lid-fastener position, so a stacked second case's feet
-//   have somewhere to seat). (The Magewell-Fishtail M4 reservation was dropped by D44.)
+//   still 2) strap-slot pairs and a minimal stacking-profile recess (a shallow counterbore at each
+//   corner lid-fastener position, so a stacked second case's feet have somewhere to seat). (The
+//   Magewell-Fishtail M4 reservation was dropped by D44; the splitter tie-down slots by D65.1.)
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list.
@@ -189,12 +204,6 @@ module mcc_floor_features_cut(dev, cfg) {
                 cube([size[0], size[1], MCC_FLOOR_T + 2 * MCC_EPS], center = true);
         }
     }
-
-    // Splitter tie-down, positioned at the reserved bay's own XY centre.
-    bay_x = struct_val(l, "splitter_bay_x");
-    bay_y = struct_val(l, "splitter_bay_y");
-    translate([(bay_x[0] + bay_x[1]) / 2, (bay_y[0] + bay_y[1]) / 2, 0])
-        mcc_splitter_tiedown(orient = "edge");
 
     // Minimal stacking-profile recess: a shallow counterbore under each corner lid-fastener
     // position, mirroring that fastener's boss so a stacked case's feet seat cleanly.

@@ -1,6 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/poe_splitter.scad
-//   L1. PoE splitter bay envelope (reservation keep-out) and zip-tie down slots.
+//   L1. PoE splitter spec lookup and its bay envelope module. NOT the reservation: the reservation
+//   of record is mcc_case_layout()'s splitter_bay_x/y/z (architecture.md §6); the envelope is a plain
+//   cube not yet gated as a review ghost (architecture.md §13 D24, open). The zip-tie slots were
+//   retired (D65.1).
 //   knowledge/components/poe-splitters.md. `use`d by lib/mcc/mcc.scad.
 // Includes:
 //   include <mcc/mcc.scad>
@@ -57,55 +60,11 @@ module mcc_splitter_envelope(name = MCC_SPLITTER_DEFAULT, orient = "flat", cable
     // "flat": L->X, W->Y, H->Z (pre-existing). "edge": H->X, L->Y, W->Z (layout-patch-wall.md §5).
     dims = (orient == "flat") ? [size[0], size[1], size[2]] : [size[2], size[0], size[1]];
     // The splitter's own long/cabled axis (size[0], where its two RJ45 leads run) lands on X in
-    // "flat" and on Y in "edge" — same mapping used by mcc_splitter_tiedown() below, so the two
-    // modules never disagree about where the splitter body sits.
+    // "flat" and on Y in "edge".
     long_idx = (orient == "flat") ? 0 : 1;
     total = [for (i = [0:1:2]) (cable_allow && i == long_idx) ? dims[i] + 2 * allow : dims[i]];
     translate([0, 0, total[2] / 2])
         cube(total, center = true);
-}
-
-// Module: mcc_splitter_tiedown()
-// Usage:
-//   mcc_splitter_tiedown([name=], [floor_t=], [orient=]);
-// Description:
-//   Negative: two zip-tie slots through the floor, one on each side of the splitter footprint's
-//   SHORT floor-plane axis, centered along its LONG axis, so a tie can loop over the splitter body
-//   and cinch down through both slots. Slot size per the brief's explicit instruction, "4 x 1.5mm"
-//   — no sourced figure exists for this project-specific feature; treated as a fixed constant of
-//   this module's contract rather than derived from
-//   knowledge/components/fasteners-and-hardware.md's generic cable-tie width table
-//   (fasteners-and-hardware.md:219-221), which covers stock tie widths, not slot geometry.
-//   `orient` (added — D7/ruling 7, same rationale as mcc_splitter_envelope()) selects the same
-//   "flat"/"edge" axis mapping as that module, so the two never disagree about where the splitter
-//   body — and therefore where the tie-down slots relative to it — actually sit.
-// Arguments:
-//   name    = splitter name, key into MCC_SPLITTERS. Default: MCC_SPLITTER_DEFAULT (matches
-//             mcc_splitter_envelope()'s default — see the rationale there).
-//   floor_t = floor thickness at the tie-down location, mm. Default: MCC_FLOOR_T.
-//   orient  = "flat" (default, back-compat) or "edge" (layout-patch-wall.md §5).
-module mcc_splitter_tiedown(name = MCC_SPLITTER_DEFAULT, floor_t = MCC_FLOOR_T, orient = "flat") {
-    assert(orient == "flat" || orient == "edge",
-        str("mcc: mcc_splitter_tiedown orient must be \"flat\" or \"edge\", got \"", orient, "\""));
-    spec   = mcc_splitter_spec(name);
-    size   = struct_val(spec, "size");
-    // Same dims mapping as mcc_splitter_envelope() above.
-    dims   = (orient == "flat") ? [size[0], size[1], size[2]] : [size[2], size[0], size[1]];
-    slot_l = 4;   // zip-tie slot length (along the splitter's own long axis), mm.
-    slot_w = 1.5; // zip-tie slot width (across, on the short floor-plane axis), mm.
-    cut_h  = floor_t + 2 * MCC_EPS;
-
-    // "flat": long axis = X (dims[0]), short = Y (dims[1]) -- slots at y=+-short/2, spanning X.
-    // "edge": long axis = Y (dims[1]), short = X (dims[0]) -- slots at x=+-short/2, spanning Y.
-    if (orient == "flat") {
-        for (s = [-1, 1])
-            translate([0, s * dims[1] / 2, floor_t / 2])
-                cube([slot_l, slot_w, cut_h], center = true);
-    } else {
-        for (s = [-1, 1])
-            translate([s * dims[0] / 2, 0, floor_t / 2])
-                cube([slot_w, slot_l, cut_h], center = true);
-    }
 }
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

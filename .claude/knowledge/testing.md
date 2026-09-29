@@ -30,7 +30,8 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
 2. **Tier 2 — `python scripts/build.py smoke`.** Runs every `tests/test_*.scad` with
    `-o *.csg` (evaluates the CSG tree, so Tier-1 asserts fire, without tessellating — fast), plus
    `scripts/printability.py selftest_see_through()` (two synthetic lids: the lid see-through check
-   must flag the broken one and pass the other — architecture.md §9, #62).
+   must flag the broken one and pass the other — architecture.md §9, #62) and `selftest_cantilever()`
+   (a bridge with collinear edge vertices must pass, a 6 mm cantilever must fail — #66).
 3. **Tier 3 — `python scripts/build.py check --all` and `... golden`.** `check` runs trimesh
    mesh checks (watertight, winding-consistent, positive volume, exactly one connected shell,
    bbox ≤ 244 mm/axis) against every exported print-pose STL, plus the **printability gate**
@@ -52,7 +53,7 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
   submodule SHA, and `trimesh` reported available. This is the pre-flight check — run it first
   when anything below misbehaves, especially after a fresh clone or a BOSL2 submodule update.
 - `smoke`: every `tests/test_*.scad` completed with no `ERROR:` (or there are none yet — that is
-  not a failure, just an unwritten test), and `selftest_see_through()` passed.
+  not a failure, just an unwritten test), and `selftest_see_through()` and `selftest_cantilever()` passed.
 - `check --all`: every print-pose STL under `exports/**` passes all five mesh checks and has zero
   floating islands; every case lid has zero accidental see-through openings. Goldens are measured on the model-frame `<part>.model.stl`, so a print-pose
   change never moves a golden.

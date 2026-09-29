@@ -33,6 +33,8 @@ CANTILEVER_MIN_AREA = 0.5  # mm^2
 ISLAND_MIN_AREA = 0.2     # mm^2 — ignore tessellation slivers below this
 ISLAND_SUPPORT_FRAC = 0.02  # a region counts as supported when >= 2 % of it overlaps the layer below
 OVERHANG_REPORT_MIN = 20.0  # mm^2 per layer — smaller unsupported rims are just the 45 deg slope
+CONTOUR_SIMPLIFY = 0.05   # mm — collinear mesh-triangulation vertices are dropped from an overhang
+                          # outline before its reach is measured (issue #66, architecture.md D66.1)
 SEE_THROUGH_Z_MERGE = 0.01   # mm — vertex heights closer than this are one break-point
 SEE_THROUGH_MIN_AREA = 0.05  # mm^2 — ignore tessellation dust
 SEE_THROUGH_SAME_AREA = 0.05  # mm^2 — two outlines are the same when their symmetric difference is this small
@@ -97,7 +99,8 @@ def _cantilevers(layer, prev, z: float, layer_h: float) -> list[Cantilever]:
         attach = poly.intersection(attach_zone)
         if attach.is_empty:
             continue  # nothing below at all — that is an island, reported separately
-        reach = max(attach.distance(Point(pt)) for pt in poly.exterior.coords)
+        outline = poly.simplify(CONTOUR_SIMPLIFY, preserve_topology=True)
+        reach = max(attach.distance(Point(pt)) for pt in outline.exterior.coords)
         if reach > CANTILEVER_REACH:
             found.append(Cantilever(z=z, area=round(poly.area, 1), reach=round(reach, 1),
                                     bounds=tuple(round(b, 1) for b in poly.bounds)))
@@ -217,4 +220,27 @@ def selftest_see_through() -> list[str]:
     fine = non_prismatic_see_through(lid(6.0))
     if fine:
         problems.append(f"groove clear of the counterbore: expected none, found {len(fine)}")
+    return problems
+
+
+def selftest_cantilever() -> list[str]:
+    """[] when analyse() passes a synthetic bridge whose straight edges carry extra collinear mesh
+    vertices and flags a synthetic 6 mm cantilever (issue #66, architecture.md D66.1), else the
+    problems. Print pose: 5 mm square pillars 10 mm tall, 1 mm slabs on top."""
+
+    import trimesh
+
+    def box(x0, x1, z0, z1):
+        b = trimesh.creation.box(extents=(x1 - x0, 5.0, z1 - z0))
+        b.apply_translation(((x0 + x1) / 2, 2.5, (z0 + z1) / 2))
+        return b
+
+    problems = []
+    bridge = trimesh.boolean.union([box(0, 5, 0, 10), box(25, 30, 0, 10), box(0, 30, 10, 11)],
+                                   engine="manifold").subdivide()
+    if analyse(bridge).cantilevers:
+        problems.append("a bridge whose edges carry collinear vertices is reported as a cantilever")
+    cantilever = trimesh.boolean.union([box(0, 5, 0, 10), box(0, 11, 10, 11)], engine="manifold")
+    if not analyse(cantilever).cantilevers:
+        problems.append("a 6 mm cantilever is not reported")
     return problems

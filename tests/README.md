@@ -27,7 +27,7 @@ any failure; the command prints a pass/fail table naming every test file.
 
 `smoke` also runs `scripts/printability.py selftest_see_through()` — two synthetic lids, one whose
 groove crosses a counterbore and one whose groove does not — so the lid see-through check (Tier 3)
-cannot silently stop finding openings (architecture.md §9, #62).
+cannot silently stop finding openings (architecture.md §9, #62); likewise `selftest_cantilever()` for the cantilever check (#66).
 
 If no `tests/test_*.scad` files exist yet, `smoke` prints a note and exits 0 (nothing to fail).
 
@@ -86,7 +86,7 @@ section for the rest of the release pipeline (`release_version.py`, `confidence`
 
 ## "Green" means
 
-- `smoke`: every `tests/test_*.scad` ran to completion with no `ERROR:` (or there were none yet), and `selftest_see_through()` passed.
+- `smoke`: every `tests/test_*.scad` ran to completion with no `ERROR:` (or there were none yet), and `selftest_see_through()` and `selftest_cantilever()` passed.
 - `check --all`: every exported STL is watertight, winding-consistent, positive-volume, a single
   connected shell, and within the 244 mm/axis bbox ceiling; print-pose STLs have no floating island or cantilever, and no case lid has an accidental see-through opening.
 - `golden`: every rendered target's bbox is within 0.1 mm/axis, volume within 0.5%, and area

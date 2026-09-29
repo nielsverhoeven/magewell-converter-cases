@@ -564,7 +564,7 @@ MCC_FLOOR_FEATURE_EDGE_MIN = 2.0; // minimum edge-to-edge clearance between a fl
 MCC_SHOW_GHOST = false;
 
 // -----------------------------------------------------------------------------------------
-// Section: Mount rail (dovetail + gravity lock) — issue #25, replaces VESA (D-15, rev 9; lock D48)
+// Section: Mount rail (dovetail + top lock) — issue #25, replaces VESA (D-15, rev 9; lock D63.1)
 // lib/mcc/rail.scad owns the geometry; this section owns only the shared cross-section constants
 // both mcc_rail_male() (bracket, #26/#27) and mcc_rail_female_cut() (case floor, mounts.scad) read,
 // per the D6 precedent (one file, both mating halves, so the profiles can never drift apart).
@@ -602,10 +602,16 @@ MCC_RAIL_SILL_SIDE_W = MCC_WALL; // side wall of the floor sill beside the groov
                             // the 150 mm roof over the groove hung only on the cradle-rib crossings
                             // (Bambu Studio: "floating cantilever" on every base). A full MCC_WALL
                             // each side lets the roof bridge flank-to-flank over its whole length.
-MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-local X), mm. assumed —
-                            // fixed across every SKU (one interface, every case; layout-patch-wall.md
-                            // §17.2 R4/§1.4). Fits the smallest family (compact, L=194.9) with
-                            // >= 19 mm margin per end past the end walls' inner faces.
+MCC_RAIL_END_WALL = MCC_WALL; // solid sill beyond each end of the groove's working length, mm (D64.1). At
+                            // the closed -X end it is the end stop's wall over the groove's full
+                            // depth -- the groove (4.0 deep) is deeper than the floor (3.0), so without
+                            // it the groove opened into the case between z = 3 and 4 (T1-64.1).
+MCC_RAIL_LEN = 136.0;      // rail/groove working length along its slide axis (case-local X), mm.
+                            // assumed -- fixed across every SKU (one interface, every case;
+                            // layout-patch-wall.md §17.2 R4/§1.4). D64.1: 150 -> 136 so the sill
+                            // (MCC_RAIL_LEN + 2 * MCC_RAIL_END_WALL = 142) clears the reserved splitter
+                            // bay by >= MCC_FAN_BAY_CLR on the tightest SKU (L = 193.9: bay ends at
+                            // x = -73.95, sill at -71.0 -- T1-17).
 
 // Rail Y (D44, 2026-09-28 -- supersedes rev 9's R2 value -20.0). As close to the device's own centre
 // of mass (y_dev_c = -30.825 on every HDMI-ended SKU, ~0.5 mm less negative on the BNC-ended ones) as
@@ -617,33 +623,39 @@ MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-loca
 // and Fishtail reservations that pinned the rail to |y| >= 19.31 are gone (D44).
 MCC_RAIL_Y = -23.5;
 
-// Rail lock -- a GRAVITY lock (user decision 2026-09-28, architecture.md §13 D48; it replaces the D34
-// snap latch, which is removed). A rigid bump on the male rail's -Y flank, near its +X end, drops into
-// a pocket in the case groove's -Y flank at full insertion. Every bracket places the rail with
-// rotate([0,0,180]) and a mounted case always hangs patch-wall down (fixed decision, D49), so the -Y
-// flank is the upper one: the case's weight rests on it (about 1.15 x the weight, normal to the 60 deg
-// flank) and holds the bump in its pocket. Nothing flexes: sliding on, the case rides over the bump
-// inside the dovetail's own flank play (2 x MCC_RAIL_CLR_HORIZ = 1.155 mm horizontal, T1-64); the exit
-// face is square to the slide axis, so an axial pull cannot cam a hanging case out. Release: lift the
-// case about 1 mm (it stops on the lower flank) and slide it back off. Reference: the external
-// specialist's DP48 plate -- 0.8 mm strips riding inside 0.97 mm of dovetail play (analysis F2).
-MCC_RAIL_LOCK_ENGAGE = 0.70;      // bump protrusion beyond the flank, horizontal (Y), mm (0.61 normal to
-                                   // the flank). assumed: the DP48 uses 82 % of its lift play, this is
-                                   // 61 % of ours, leaving 0.45 mm for FDM tolerance. Tuned on the
-                                   // rail-lock coupon's e-ladder (M15).
-MCC_RAIL_LOCK_PLAY_MARGIN = 0.2;  // horizontal flank play that must remain while the bump rides the
-                                   // groove flank, mm (T1-64). assumed.
-MCC_RAIL_LOCK_RAMP_IN = 30;       // entry ramp (the bump's -X side) to the slide axis, deg. assumed (the
-                                   // D34 nub's entry angle).
-MCC_RAIL_LOCK_RAMP_OUT = 90;      // exit face (the bump's +X side) to the slide axis, deg. 90 = square:
-                                   // self-locking against an axial pull at any friction (T1-65). assumed.
-MCC_RAIL_LOCK_FLAT = 1.0;         // bump flat top length along X, mm. assumed.
-MCC_RAIL_LOCK_END_OFFSET = 3.0;   // male's +X (trailing) end to the bump's exit face, mm. assumed -- the
-                                   // DP48 strips sit 3.0-5.0 mm from their trailing end (F2). rail.scad
+// Rail lock -- a TOP lock (user decision 2026-09-29, architecture.md §13 D63.1; it replaces the D48 flank
+// bump). Two rigid strips on the male rail's flat top, near its +X (trailing) end, drop into ONE
+// transverse slot across the full width of the case groove's roof at full insertion. Every bracket
+// places the rail with rotate([0,0,180]) and a mounted case always hangs patch-wall down (D49): its
+// weight rests on the rail's upper flank, whose 60 deg wedge presses the case floor onto the plate
+// (about 0.58 x the weight) and holds the strips in the slot. Nothing flexes: sliding on, the case rides
+// over the strips inside the dovetail's own Z-play (mcc_rail_z_play() = 1.0, T1-63.1); the exit faces are
+// square, so a pull along the rail cannot cam a hanging case out. Release: pull the case about 1 mm
+// away from the plate (the dovetail stops it at 1.0; the strips clear at MCC_RAIL_LOCK_ENGAGE) and
+// slide it back off. The slot spans the whole roof because separate pockets are holes in the roof
+// bridge, which the slicer flags (bambu-slicer.md §1, D33). Reference: the external specialist's DP48
+// plate -- two 2.0 x 20.0 strips, 3.0 mm from the trailing end (analysis F2).
+MCC_RAIL_LOCK_ENGAGE = 0.60;      // strip height above the groove roof line, mm (the strips stand
+                                   // MCC_RAIL_ROOF_CLR + this above the male's top). assumed: 60 % of
+                                   // the Z-play (the DP48 uses 82 %), leaving 0.4 mm for FDM tolerance
+                                   // and roof sag. Tuned on the rail-lock coupon's e-ladder (M15).
+MCC_RAIL_LOCK_PLAY_MARGIN = 0.30; // Z-play that must remain while the case rides the strips, mm
+                                   // (T1-63.1). assumed.
+MCC_RAIL_LOCK_RAMP_IN = 45;       // entry chamfer of each strip (its -X side, over the engaged height)
+                                   // to the slide axis, deg. DP48's 45 deg chamfer (F2). The +X (exit)
+                                   // face is square by construction.
+MCC_RAIL_LOCK_STRIP_X = 2.0;      // strip base length along the slide axis, mm. DP48 2.000 (F2).
+MCC_RAIL_LOCK_STRIP_Y_IN = 10.0;  // |y| of each strip's inner end, mm. assumed.
+MCC_RAIL_LOCK_STRIP_Y_OUT = 30.0; // |y| of each strip's outer end, mm -- 20.0 long each like the DP48's
+                                   // (F2), the outer end 2.2 mm inside the male's 64.4 mm top so the
+                                   // upper strip sits as close to the loaded flank as the top allows.
+MCC_RAIL_LOCK_END_OFFSET = 3.0;   // male's +X (trailing) end to the strips' exit face, mm. The DP48
+                                   // strips sit 3.0-5.0 mm from their trailing end (F2). rail.scad
                                    // derives the position from its own `len`, so the 60 mm coupon works.
-MCC_RAIL_LEADIN = 1.0;            // 45-deg lead-in where the groove leaves the case's +X wall: flanks and
-                                   // mouth flare by this much per side (horizontal) over the last this-many
-                                   // mm; the roof stays. The DP48's 1.0 x 45 deg entry chamfer (F2). assumed.
+MCC_RAIL_LEADIN = 1.0;            // 45-deg lead-in where the groove leaves the case's +X wall: flanks,
+                                   // mouth AND roof flare by this much over the last this-many mm, so a
+                                   // strip meets a ramp, not an edge (D63.1). The DP48's 1.0 x 45 deg roof
+                                   // entry chamfer (F2). assumed.
 MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs out through the case's
                                // +X end zone (D34). There the passage only guides the male during
                                // insertion — at full mate nothing loads it — so the T1-38 residual
@@ -663,10 +675,10 @@ MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs o
 // normal to it -- below the requirement. MCC_CLR_SLIDE stays for every other sliding fit.
 MCC_RAIL_MATE_CLR = 0.5;    // minimum clearance on every non-bearing rail face, mm. User decision (D44).
 MCC_RAIL_CLR_HORIZ = MCC_RAIL_MATE_CLR / sin(MCC_RAIL_FLANK_ANGLE); // = 0.5774. Per-side horizontal
-                            // offset of the female groove and lock pocket from the male profile that
+                            // offset of the female groove from the male profile that
                             // gives MCC_RAIL_MATE_CLR normal to a MCC_RAIL_FLANK_ANGLE flank (T1-62).
-MCC_RAIL_ROOF_CLR = MCC_RAIL_MATE_CLR; // = 0.5. Gap between the male's flat top (and the lock bump's) and
-                            // the groove roof, mm. Its own constant on purpose: the roof is a ~66 mm
+MCC_RAIL_ROOF_CLR = MCC_RAIL_MATE_CLR; // = 0.5. Gap between the male's flat top (and the lock strips' tops) and
+                            // the groove roof (the roof slot's ceiling), mm. Its own constant on purpose: the roof is a ~66 mm
                             // bridge in the base's print pose (architecture.md R40) -- if the rail-lock
                             // coupon (M15) shows it sags into this gap, raise THIS; never narrow the rail.
 MCC_RAIL_MALE_H = MCC_RAIL_DEPTH - MCC_RAIL_ROOF_CLR; // = 3.5. The male taper's built height above the

@@ -6,19 +6,20 @@
 //   full-length print (docs/plans/2026-09-09-mount-rail-and-brackets.md §2). It checks the D44
 //   clearances (0.5 mm normal to the flanks and at the roof -- MCC_RAIL_MATE_CLR is a user decision,
 //   confirmed here, not calibrated), the groove-roof bridge (architecture.md R40: the groove half
-//   prints exactly like the case floor), the 45-degree lead-in, and the gravity lock (D48): the rigid
-//   bump on the rail's -Y flank rides over the groove flank inside the dovetail's own play, clicks into
-//   its pocket, and -- with the rail plate vertical and the groove half hanging on the upper flank --
-//   cannot be pulled out along the rail until the groove half is lifted about 1 mm (M15).
+//   prints exactly like the case floor, with the lock's full-width roof slot and its backing), the
+//   45-degree lead-in on flanks, mouth and roof, and the top lock (D63.1): the two rigid strips on the
+//   rail's top ride over the roof inside the dovetail's own Z-play, click into the roof slot, and --
+//   with the rail plate vertical and the groove half hanging on the upper flank -- cannot be pulled
+//   out along the rail until the groove half is pulled about 1 mm away from the plate (M15).
 //
 //   The groove half stands directly on the bed, groove mouth down and OPEN, like the case floor; the
 //   rail half stands on its own plate. Two thin snap-off strips beside the groove join them so the
 //   coupon renders/checks as one connected shell (architecture.md §9 Tier 3). Snap the strips off
 //   before testing.
 //
-//   e-ladder (M15): LOCK_E below is passed to BOTH halves. The exported part uses the production
-//   MCC_RAIL_LOCK_ENGAGE; for the ladder, render extra copies with -D LOCK_E=0.5 / 0.6 / 0.8 (see
-//   models/coupons/README.md "rail-lock").
+//   e-ladder (M15): LOCK_E below is passed to both halves and the backing. The exported part uses the
+//   production MCC_RAIL_LOCK_ENGAGE; for the ladder, render extra copies with -D LOCK_E=0.4 / 0.5 / 0.7
+//   (0.7 is the largest T1-63.1 allows; see models/coupons/README.md "rail-lock").
 //
 // Render:
 //   openscad --backend=Manifold -o out/rail-lock.stl models/coupons/rail-lock.scad
@@ -33,10 +34,10 @@ include <mcc/mcc.scad>
 // parameter -- side-bolt.scad:26-29's documented convention.
 part = "rail-lock";
 
-LEN = 60; // working (dovetail) length under test, mm. Well under MCC_RAIL_LEN=150 -- brief's own
+LEN = 60; // working (dovetail) length under test, mm. Well under MCC_RAIL_LEN=136 -- brief's own
            // "short groove tile" instruction (docs/plans/2026-09-09-mount-rail-and-brackets.md §2).
-LOCK_E = MCC_RAIL_LOCK_ENGAGE; // lock bump protrusion for THIS print, mm -- the e-ladder overrides it
-                               // with -D; both halves always get the same value.
+LOCK_E = MCC_RAIL_LOCK_ENGAGE; // lock strip height above the roof line for THIS print, mm -- the
+                               // e-ladder overrides it with -D; both halves always get the same value.
 MARGIN = 6; // plinth/plate footprint margin beyond MCC_RAIL_ROOT_W, mm. assumed -- wall support
              // around the groove/rail cross-section, generous enough to print cleanly.
 GAP = 20; // gap between the female half's own footprint and the male half's, mm. assumed --
@@ -57,7 +58,7 @@ base_w    = x_male0 + LEN + MARGIN - x_base0;
 base_d    = footprint_d;
 
 // This coupon's own lock position, re-derived from ITS OWN (short) LEN, exactly as lib/mcc/rail.scad
-// does: the bump's exit face sits MCC_RAIL_LOCK_END_OFFSET inside the rail's +X end.
+// does: the strips' exit face sits MCC_RAIL_LOCK_END_OFFSET inside the rail's +X end.
 _lock_exit_x_here = LEN / 2 - MCC_RAIL_LOCK_END_OFFSET;
 
 echo(str(
@@ -65,9 +66,9 @@ echo(str(
     " mouth_w=", MCC_RAIL_MOUTH_W, " root_w=", MCC_RAIL_ROOT_W, " flank_angle=", MCC_RAIL_FLANK_ANGLE,
     " clr_horiz=", MCC_RAIL_CLR_HORIZ, " roof_clr=", MCC_RAIL_ROOF_CLR,
     " lock_e=", LOCK_E, " lock_exit_x=", _lock_exit_x_here,
-    " lock_ramps_in_out_deg=", [MCC_RAIL_LOCK_RAMP_IN, MCC_RAIL_LOCK_RAMP_OUT],
-    " flank_play=", 2 * MCC_RAIL_CLR_HORIZ, " leadin=", MCC_RAIL_LEADIN,
-    " print_bbox=", [base_w, base_d, max(MCC_RAIL_SILL_H, PLATE_T + MCC_RAIL_MALE_H)]
+    " lock_entry_chamfer_deg=", MCC_RAIL_LOCK_RAMP_IN, " lock_slot=", mcc_rail_lock_slot(LEN, LOCK_E),
+    " flank_play=", 2 * MCC_RAIL_CLR_HORIZ, " z_play=", mcc_rail_z_play(), " leadin=", MCC_RAIL_LEADIN,
+    " print_bbox=", [base_w, base_d, max(MCC_RAIL_SILL_H + LOCK_E + MCC_RAIL_ROOF_CLR, PLATE_T + MCC_RAIL_DEPTH + LOCK_E)]
 ));
 
 // The rail half's own plate (the bracket-plate stand-in). The rail needs no cut in it (D50). Two
@@ -91,15 +92,20 @@ Z0 = PLATE_T - MCC_EPS;
 // Female half: a plinth standing DIRECTLY on the bed with its groove mouth face down -- the case
 // floor's own print pose, so the groove roof prints as the same ~66 mm bridge as on a real base (R40).
 // mcc_rail_female_cut()'s local Z=0 (the case's exterior floor face) is the bed; the groove is closed
-// at -X by a MCC_WALL stop wall and runs out open through the plinth's +X end, like the case (D34),
-// with the case's 45-degree lead-in at that face (entry_x, D48).
+// at -X by a MCC_WALL stop wall and runs out open through the plinth's +X end, 1 mm past the working
+// length like the case's passage (D34), with the case's 45-degree lead-in at that face (entry_x, D63.1).
+// The lock slot's backing sits on the plinth exactly as on the case's sill (mcc_rail_female_backing()).
 module _rail_lock_female() {
     translate([x_female0, 0, 0])
         difference() {
-            translate([-MCC_WALL, -footprint_d / 2, 0])
-                cube([LEN + MCC_WALL, footprint_d, MCC_RAIL_SILL_H]);
+            union() {
+                translate([-MCC_WALL, -footprint_d / 2, 0])
+                    cube([LEN + 1 + MCC_WALL, footprint_d, MCC_RAIL_SILL_H]);
+                translate([LEN / 2, 0, 0])
+                    mcc_rail_female_backing(len = LEN, lock_e = LOCK_E);
+            }
             translate([LEN / 2, 0, 0])
-                mcc_rail_female_cut(len = LEN, open_ext = 1, entry_x = LEN / 2, lock_e = LOCK_E);
+                mcc_rail_female_cut(len = LEN, open_ext = 1, entry_x = LEN / 2 + 1, lock_e = LOCK_E);
         }
 }
 
