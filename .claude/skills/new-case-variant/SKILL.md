@@ -269,7 +269,7 @@ may be *developed* in parallel; it is the **merge order** that matters.
 - [ ] `python scripts/build.py render <slug>` succeeds for `base`/`lid`/`panel` with no library
       assert firing. If one fired, stopped and reported instead of editing `lib/mcc/**`.
 - [ ] `python scripts/build.py check --all` passes (watertight, single shell, bbox, no floating
-      islands/cantilevers).
+      islands/cantilevers, no accidental see-through opening in the lid).
 - [ ] `python scripts/build.py slicer-check <slug>` passes — zero Bambu Studio warnings.
 - [ ] `tests/golden/<slug>.*.json` created via `golden --update <slug>` and eyeballed against
       `.claude/knowledge/layout-patch-wall.md` §16.1.

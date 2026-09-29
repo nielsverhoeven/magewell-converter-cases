@@ -65,6 +65,9 @@ translate([250, 0, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_FAN);
 // --- shell.scad: plus-family base with fan=true + fan_switch=true (exercises the switch cutout) ---
 translate([1000, 0, 0]) mcc_shell_base(dev = DEV_PLUS, cfg = VARIANT_PLUS_SWITCH);
 
+// --- shell.scad: plus-family lid (T1-62.1/T1-62.2 on both families) ---
+translate([1000, 250, 0]) mcc_shell_lid(dev = DEV_PLUS, cfg = VARIANT_PLUS_SWITCH);
+
 // --- cradle.scad standalone ---
 // --- shell.scad: base with tripod_insert=false (issue #29 -- boss/collar/bore-cut all omitted) ---
 translate([250, 500, 0]) mcc_shell_base(dev = DEV, cfg = VARIANT_NO_TRIPOD);
@@ -122,6 +125,11 @@ echo("mcc test_shell: OK");
 // and confirm the render FAILS with an ERROR containing "T1-19":
 //
 //   mcc_vents(dev = DEV, cfg = VARIANT, face = [0, 1, 0]);
+//
+// Manual check (T1-62.1/T1-62.2, D62.1), OPENSCADPATH=lib: force the old patch-wall frame and confirm FAIL:
+//   openscad --backend=Manifold -D 'part="lid"' -D MCC_TG_PATCH_INSET=8 -o neg.csg models/pro-convert-hdmi-plus/case.scad
+//   -> ERROR "T1-62.1 lid fastener [95.25, 73.175] counterbore rim is -2.25482 mm from the groove ..."
+//   -D MCC_TG_PATCH_INSET=2 instead (part "lid" or "base") -> ERROR "T1-62.2 MCC_TG_PATCH_INSET=2 outside [...]"
 // -----------------------------------------------------------------------------------------
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

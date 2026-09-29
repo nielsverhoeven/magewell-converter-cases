@@ -25,20 +25,20 @@ uses GitHub issues only.
 - **If a GitHub issue already exists for the task**, `researcher` writes its findings/plan back as a
   comment on that issue (`gh issue comment <n> --body-file <plan>`, or the equivalent GitHub MCP
   tool if connected).
-- **If no issue exists** (a plan was requested ad hoc, or the repo isn't pushed yet), write the plan
-  to `docs/plans/<date>-<slug>.md` instead — `<date>` in `YYYY-MM-DD` form, `<slug>` a short
-  kebab-case description of the task. Create `docs/plans/` if it doesn't exist yet; nothing else
-  currently owns that directory.
+- **If no issue exists yet**, one is opened first (user rule 2026-09-29, #68: every feature, bug and
+  task gets a GitHub issue before any work). Only if the repo isn't pushed, write the plan to
+  `docs/plans/<date>-<slug>.md` instead — `<date>` in `YYYY-MM-DD` form, `<slug>` a short kebab-case
+  description of the task. A gated plan is also copied to `docs/plans/` with its architect verdict.
 
 ## Branch naming for tracked work
 
 This repo has a single long-lived branch, `main`; every piece of work — including urgent fixes — is
-a `feature/*` branch off `main`, merged back via PR. When a GitHub issue exists for a task, its
-feature branch references the issue number: `feature/issue-<n>-<topic>` (e.g.
-`feature/issue-12-vents`), so the branch and the tracked work are traceable to each other at a
-glance. When no issue exists — ad hoc work, or the repo isn't pushed yet — fall back to the plain
-`feature/<kebab-topic>` naming from `CONTRIBUTING.md`; don't invent an issue number to force the
-numbered form. See the `git-flow` skill and `CONTRIBUTING.md` for the full branching model.
+a `feature/*` branch off `main`, merged back via PR. Every task has its GitHub issue first (user rule
+2026-09-29, #68), so its feature branch always references the issue number:
+`feature/issue-<n>-<topic>` (e.g. `feature/issue-12-vents`), its PR closes the issue, and the
+records it creates are numbered after it (CLAUDE.md "Record ids follow GitHub issues"). Don't invent
+an issue number — open the issue first. See the `git-flow` skill and `CONTRIBUTING.md` for the full
+branching model.
 
 ## Notes for future maintenance
 

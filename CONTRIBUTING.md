@@ -16,11 +16,10 @@ stays Dutch.
 | Branch | Purpose | Branches from | Merges into | Naming |
 |---|---|---|---|---|
 | `main` | Integration **and** release branch. Always renders green in CI. Every tagged commit on it is a release `vX.Y.Z` (SemVer). | — | — | `main` |
-| `feature/*` | Everything else: a feature, a new case variant, a coupon, a doc change, a routine fix, or an urgent fix on something already released. | `main` | `main` via PR | `feature/<kebab-topic>`, `feature/issue-<n>-<topic>` when a GitHub issue exists, or `feature/hotfix-<topic>` for an urgent fix |
+| `feature/*` | Everything else: a feature, a new case variant, a coupon, a doc change, a routine fix, or an urgent fix on something already released. | `main` | `main` via PR | `feature/issue-<n>-<topic>` — every feature, bug and task gets its GitHub issue first (user rule 2026-09-29, #68), urgent fixes included |
 
-A hotfix is **not** a separate branch type — it's a `feature/*` branch off `main` like any other,
-named `feature/hotfix-<topic>` (or `feature/issue-<n>-<topic>` if a GitHub issue tracks it) so it's
-recognizable in the branch list. It goes through the same PR → CI-green → merge → tag path as
+A hotfix is **not** a separate branch type — it's a `feature/issue-<n>-<topic>` branch off `main`
+like any other, with its own issue. It goes through the same PR → CI-green → merge → tag path as
 everything else; there is no separate hotfix workflow to remember.
 
 **Merge policy:** squash-merge or a regular merge commit, maintainer's call — the branch's own
@@ -81,12 +80,13 @@ Every recipe assumes `origin` is up to date (`git fetch origin` first if unsure)
 ### Start a feature
 
 ```
-git switch -c feature/<kebab-topic> main
+git switch -c feature/issue-<n>-<topic> main
 ```
 
-Naming: `feature/<kebab-topic>`, `feature/issue-<n>-<topic>` when a GitHub issue exists (see
-`.claude/knowledge/ticket-source.md`) — e.g. `feature/issue-12-vents` — or `feature/hotfix-<topic>`
-for an urgent fix on something already released.
+Naming: `feature/issue-<n>-<topic>`, e.g. `feature/issue-12-vents`. Every feature, bug and task — an
+urgent fix included — gets its GitHub issue first (user rule 2026-09-29, #68; see
+`.claude/knowledge/ticket-source.md`); the PR closes it, and the records the work creates are
+numbered after it (CLAUDE.md "Record ids follow GitHub issues").
 
 ### Keep it current
 
@@ -104,7 +104,7 @@ nothing else depends on yet.
 ### Open the PR
 
 ```
-git push -u origin feature/<kebab-topic>
+git push -u origin feature/issue-<n>-<topic>
 gh pr create --base main --title "..." --body "..."
 ```
 

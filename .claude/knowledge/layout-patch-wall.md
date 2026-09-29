@@ -1,5 +1,11 @@
 # Patch-wall layout contract
 
+Status: **issue #62, 2026-09-29** (aligned with `architecture.md` — D62.1/D62.2, plan G: the lid
+thumbscrew holes). From issue #68 on this file, like `architecture.md`, names issues instead of revisions
+and numbers new records after them (`architecture.md` §13 intro). §6 gains the counterbore web rule and
+the non-captive screw; **§9** gains **T1-62.1** and **T1-62.2**; §10 D-04 drops "captive"; §11 gains an
+addendum; §15 ruling 4 is amended for the +Y wall. No envelope figure moves.
+
 Status: **revision 18, 2026-09-28** (aligned with `architecture.md` rev 18 — plan D, issue #56: the
 vertical VESA-column bracket and the arch's sandwich parts). **§9** gains **T1-70 … T1-90**; no case
 figure moves.
@@ -971,9 +977,17 @@ constant `6` would silently break the first SKU that comes in under 180 mm.
   the same rule in `shell.scad` and in the golden.
 - Corner bosses always clear the outer flange by 11.0 mm by construction (`(L/2-10) - (L/2-21)`).
 
-Captive M3 knurled thumbscrews into M3 heat-set inserts (`MCC_INSERT_M3`, `constants.scad:96`);
-boss OD ≥ 1.8 × insert OD = 8.28 mm (`constants.scad:102`), ≥ 2 mm material to any edge
-(`fdm-rugged-enclosure-guidelines.md:127`).
+Non-captive M3 knurled thumbscrews with a small head (Ø7–8 mm, seated in the lid's ⌀8 × 1.5 mm
+counterbore, `MCC_LID_CB_D`; user decision 2026-09-29, `architecture.md` D62.2) into M3 heat-set inserts
+(`MCC_INSERT_M3`, `constants.scad:96`); boss OD ≥ 1.8 × insert OD = 8.28 mm (`constants.scad:102`),
+≥ 2 mm material to any edge (`fdm-rugged-enclosure-guidelines.md:127`).
+
+**Counterbore web rule (#62, D62.1).** The lid is one 3 mm slab, so its cuts must never meet: every
+counterbore keeps ≥ `MCC_LID_CB_WEB_MIN` (1.2 mm) of lid, in plan, to the groove ring's inner edge
+(**T1-62.1**). At `e = 10` that holds by 2.745 mm on the 3 mm walls; on the 8 mm patch wall it holds only
+because the tongue-and-groove frame is offset outward there (`MCC_TG_PATCH_INSET` = 4.5, web 1.245 mm —
+§15 ruling 4 as amended). The counterbore can therefore grow to ⌀8.09 at most before T1-62.1 fires
+(`architecture.md` R62.1).
 
 Family outcome after D-12: **compact → 6 (L = 193.9–194.9); plus → 6 (L = 210.5–211.5).** Both
 families are over the 180 mm threshold, so **every current SKU gets 6 thumbscrews** — a BOM change
@@ -1322,7 +1336,9 @@ panel plate (`L − 26` × 39, printed flat) *does* fit alongside the base in th
 
 ## 9. Tier-1 asserts this topology requires
 
-Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at render.
+Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at render. Ids: T1-01 … T1-90
+are history; from issue #68 (2026-09-29) a new assert is **T1-<issue>.<n>** (`architecture.md` §13
+intro), appended at the end of this table.
 
 | # | Assertion | Rationale / source |
 |---|---|---|
@@ -1387,6 +1403,8 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | **T1-66** | *the case keeps wall around the lock* — sill wall behind the pocket `MCC_RAIL_SILL_SIDE_W − MCC_RAIL_CLR_HORIZ − lock_e ≥ MCC_WALL/2` (1.72 ≥ 1.5); lead-in `MCC_RAIL_LEADIN ≤ MCC_WALL` | **new rev 17** (D48). Evaluated in `mcc_rail_female_cut()` and `tests/test_rail.scad`. T1-67 … T1-69 stay unused; T1-70 … T1-90 belong to plan D; **the next free id is T1-91** |
 | **T1-70 … T1-85** | *vertical VESA-column bracket* (`models/brackets/vertical-tv-bracket.scad`): T1-70 bboxes incl. tabs and spacer ≤ 244; T1-71 case ≤ `TV_SIDE_CLEAR`; T1-72 `REACH` self-consistency; T1-73 case clears both pads in Y; T1-74 slide-on sweep ≥ `SWEEP_CLR`; T1-75 rib proportions; T1-76 rail footprint (`mcc_rail_male_keepout()`) on the centre body; T1-77 every M3 counterbore clears the rail keep-out; T1-78 ribs clear the centre body, the TV lift's rail band and the case (sampled); T1-79 insert bores and edge distances; T1-80 M3 stack; T1-81 sandwich pad thickness and wall; T1-82 UP arrow clear of body edge, keep-out and counterbores; T1-83 lid ≤ `WALL_GAP`; T1-84 rib run ≥ 2·`RIB_T`; T1-85 spacer = pad height and footprint | **new rev 18** (plan D, issue #56; plan ids B1 … B16) |
 | **T1-86 … T1-90** | *arch sandwich parts* (`arch-tv-bracket.scad`): T1-86 mode ∈ {direct, sandwich}; T1-87 sweep clears the lift rail + bolt head at the right-hand column; T1-88 lid ≤ `WALL_GAP`; T1-89 ribs clear the lift's rail band; T1-90 spacer = pad clamp height (`ARCH_PLATE_T`) and footprint (`ARM_W`). T1-47 … T1-60 hold in both modes | **new rev 18** (D51). **The next free id is T1-91** |
+| **T1-62.1** | *the lid's counterbores clear the groove* — for every `lid_fastener_pos` p: p lies inside the groove ring's inner edge `gi` (`_mcc_tg_rect()` shrunk by `MCC_CLR_TG`), and `min(p.x − gi.x0, gi.x1 − p.x, p.y − gi.y0, gi.y1 − p.y) − mcc_thumbscrew_hole_rim_r(MCC_LID_CB_D) ≥ MCC_LID_CB_WEB_MIN` (1.2) | **new, #62** (D62.1, plan G). Patch-side fasteners `5.25 − 4.005 = 1.245` ✓; the other walls `6.75 − 4.005 = 2.745` ✓. Evaluated in `mcc_shell_lid()`. The old geometry (`MCC_TG_PATCH_INSET` = 8) gives −2.25 and fails. Not the old T1-62 (rail clearances) |
+| **T1-62.2** | *the patch-side frame stays on the patch wall* — `MCC_WALL ≤ MCC_TG_PATCH_INSET ≤ MCC_T_PATCH` | **new, #62** (D62.1). Evaluated in `_mcc_tg_rect()`, so a base render trips it too |
 
 ---
 
@@ -1397,7 +1415,7 @@ Add to `architecture.md` §9's minimum set. All are cheap, pure, and fire at ren
 | D-01 | Mini-DIN-8 PTZ/Tally stays internal, `panel:"none"` on every SKU. `mcc_panel_cutout()` dispatches Neutrik D parts + `DBA-BL-B` only. | User, 2026-09-07 | **fixed** |
 | D-02 | Side-exit, one patch wall (this document). | User, 2026-09-07 | **fixed** |
 | D-03 | HDMI loop-out is brought outside on the Plus encoders. | User, 2026-09-07 | **fixed** |
-| D-04 | 4 captive M3 thumbscrews baseline; **6 for lids over 180 mm span**. | Architect-derived, user-reviewed | **ACCEPTED 2026-09-08** |
+| D-04 | 4 M3 thumbscrews baseline; **6 for lids over 180 mm span**. The screws are **non-captive** (user decision 2026-09-29, `architecture.md` D62.2). | Architect-derived, user-reviewed | **ACCEPTED 2026-09-08** |
 | D-05 | Slot assignment is computed from `mcc_bend_envelope`/`mcc_plug_len`, not hand-placed. | Architect-derived | **fixed** |
 | D-06 | Relax the flange-to-plate-edge web from 4.0 to 3.0 mm in Z only (would have bought a 49 mm case). | Architect-derived | **VETOED 2026-09-08** — web stays 4.0 mm, plate 39 mm, **case height 51 mm** |
 | D-07 | Tongue on the **base**, groove in the **lid**. | Architect-derived (the 3 mm band above the aperture) | **fixed**, unaffected by the D-06 veto |
@@ -1468,7 +1486,7 @@ top-to-bottom ordering requirement, not a module dependency.
 | Constant | Value | Status |
 |---|---|---|
 | `MCC_LID_CLEAR` | **2.0** | **ACCEPTED** (§15 ruling 3). Minimum only — not the design plenum, which is 10.85 mm here and must never be sealed (`architecture.md` §12 Q10) |
-| `MCC_TG_W` / `MCC_TG_H` | **1.6 / 2.0**, offset (shiplap) tongue flush with the wall's **inner** face | **CHANGED** from the plan's 3.0/4.0, which are geometrically impossible (§15 ruling 4, T1-33). `models/coupons/tg-ladder.scad`'s `T_W`/`T_H` must be re-cut to these before it is printed |
+| `MCC_TG_W` / `MCC_TG_H` | **1.6 / 2.0**, offset (shiplap) tongue flush with the wall's **inner** face — **except on the +Y patch wall, where its inner edge sits `MCC_TG_PATCH_INSET` (4.5) from the outer face (#62, D62.1)** | **CHANGED** from the plan's 3.0/4.0, which are geometrically impossible (§15 ruling 4, T1-33). `models/coupons/tg-ladder.scad`'s `T_W`/`T_H` must be re-cut to these before it is printed |
 | `MCC_VENT_SLOT_W` / `MCC_VENT_WEB_W` | 1.2 / 1.6 `assumed` | unchanged, §5 |
 | `MCC_VENT_INTAKE_BAND_H` | **18.0** | **CHANGED** from the plan's 15.0 (§15 ruling 5). 12 and 15 both fail T1-30 once the T1-23/T1-23b keep-outs are subtracted |
 | `MCC_VENT_EXHAUST_Z` | `[32, 44]` | unchanged, §5 |
@@ -1511,6 +1529,14 @@ is shape-only.
 parameterised — a flag for a rejected topology is an invitation to re-open a settled decision and to
 ship an untested second geometry path. §15 ruling 2026-09-08b.
 
+### Addendum (#62, 2026-09-29) — the lid thumbscrew holes (D62.1)
+
+| Constant | Value | Purpose / where used |
+|---|---|---|
+| **`MCC_TG_PATCH_INSET`** | **NEW — 4.5** | +Y patch wall only: outer face → tongue inner edge (tongue at `[inset − MCC_TG_W, inset]`, groove `± MCC_CLR_TG`). The largest 0.5 mm step that keeps T1-62.1's web (`10 − 4.005 − 0.25 − 1.2 = 4.545`); it also keeps the tongue (all but its outer 0.1 mm) on the full-height wall behind the bezel-recess floor. `_mcc_tg_rect()`, T1-62.1, T1-62.2. A change is an architect re-gate (R62.1) |
+| **`MCC_LID_CB_D`** | **NEW — 8.0 `assumed`** | Lid thumbscrew counterbore diameter (was the literal `head_d = 8` in `fasteners.scad`). User decision 2026-09-29: keep ⌀8 for a small Ø7–8 mm knurled head (D62.2). `mcc_thumbscrew_hole()`, `mcc_thumbscrew_hole_rim_r()`, T1-62.1; measured by M62.1 |
+| **`MCC_LID_CB_WEB_MIN`** | **NEW — 1.2** | Minimum lid material between a counterbore and the groove, in plan: three perimeters (`fdm-rugged-enclosure-guidelines.md:35`), the same rule as T1-61. T1-62.1 |
+
 ---
 
 ## 15. Rulings, 2026-09-08 — L2 architecture gate for `docs/plans/2026-09-08-l2-first-case.md`
@@ -1525,7 +1551,7 @@ nine further defects found during validation that the plan did not raise.
 | 1 | new L1 `lib/mcc/layout.scad` | **ACCEPT**, constrained: pure **functions only, no modules ever**; dependencies limited to `constants.scad` / `ports.scad` / `util.scad`; it may **not** `use` any L1 geometry provider — so `mcc_case_layout()` returns `side_bolt_x`/`side_bolt_z`, and callers fetch `mcc_side_bolt_keepout()` from `fasteners.scad` themselves. It also becomes the home of `mcc_panel_fixing_pos()` (§2.3) |
 | 2 | patch-wall aperture = 4 discrete windows | **ACCEPT the 4 windows, REJECT the window shape.** One plate, **one continuous stepped rabbet**, `n_slots` windows through the 3 mm structural lip only. Full normative spec: §2.5 + T1-34 |
 | 3 | `MCC_LID_CLEAR = 2.0` | **ACCEPT** |
-| 4 | `MCC_TG_W/H = 3.0/4.0` | **REJECT.** `MCC_TG_H = 4.0 > MCC_LID_T = 3.0` — a 4 mm groove cuts clean through the lid, and `H = 51.0` is a fixed user decision so the lid cannot grow. A *centred* tongue also does not fit a 3 mm wall (`0.8 + 0.25 + w + 0.25 + 0.8 ≤ 3.0` → `w ≤ 0.9`). **Ruling: offset/shiplap tongue flush with the wall's inner face, `MCC_TG_W = 1.6`, `MCC_TG_H = 2.0`**, leaving 1.0 mm of lid above the groove. New assert T1-33. `tg-ladder` calibrates `MCC_CLR_TG` and must be re-cut to 1.6/2.0 |
+| 4 | `MCC_TG_W/H = 3.0/4.0` | **REJECT.** `MCC_TG_H = 4.0 > MCC_LID_T = 3.0` — a 4 mm groove cuts clean through the lid, and `H = 51.0` is a fixed user decision so the lid cannot grow. A *centred* tongue also does not fit a 3 mm wall (`0.8 + 0.25 + w + 0.25 + 0.8 ≤ 3.0` → `w ≤ 0.9`). **Ruling: offset/shiplap tongue flush with the wall's inner face, `MCC_TG_W = 1.6`, `MCC_TG_H = 2.0`**, leaving 1.0 mm of lid above the groove. New assert T1-33. `tg-ladder` calibrates `MCC_CLR_TG` and must be re-cut to 1.6/2.0. **Amended by #62 (2026-09-29, D62.1):** "flush with the wall's inner face" holds on the three 3 mm walls only. On the 8 mm +Y patch wall the frame is offset outward — tongue inner edge `MCC_TG_PATCH_INSET` = 4.5 mm from the outer face — because flush with that wall's inner face the lid groove ran through the ⌀8 thumbscrew counterbores at `e = 10` (T1-62.1). This ruling's reason (a centred tongue does not fit a 3 mm wall) never applied to the 8 mm wall |
 | 5 | `MCC_VENT_INTAKE_BAND_H = 15.0` | **CHANGE to 18.0.** 15 mm gives ≈1143 mm² *gross* — but T1-23 (side-bolt strip + disc, ≈78 mm²) and the new T1-23b (far-wall mid lid boss, ≈64 mm²) must come off, leaving ≈1084 < 1134. See §5 |
 | 6 | far-flank rib count/positions | **CHANGE.** The plan's §3.3 visibly hand-iterates and contradicts itself. Deterministic rule now normative in §7; for NDI to HDMI it yields **4 ribs at `x = −38.95, −12.0, +19.0, +45.95`**. The contract's "exactly two, outboard of the intake band" alternative is **struck** as unrealisable |
 | 7 | splitter tie-down orientation | **CHANGE the fix, not the diagnosis.** The plan is right that `mcc_splitter_tiedown()` assumes a *flat* splitter — and so does `mcc_splitter_envelope()`, which additionally inflates `size[0]` by `2 × cable_allow` and would reserve a **115 mm** Y extent instead of §5's 75 mm. **Do not hand-roll holes in `mounts.scad`.** Add an `orient = "edge"` parameter to **both** modules in `poe_splitter.scad` (an approved L1 change, outside the plan's file list) and a `cable_allow = false` option on the envelope; `mounts.scad` then calls `mcc_splitter_tiedown(orient="edge")`. The tie-down stays **2 × (4 × 1.5) zip-tie slots**, not "2 × ⌀8" |

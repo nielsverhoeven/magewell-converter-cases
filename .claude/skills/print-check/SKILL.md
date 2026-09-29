@@ -19,7 +19,7 @@ python scripts/build.py golden
 All three must pass before you even open Bambu Studio. `check` includes the **printability gate**
 (`scripts/printability.py`): it slices every print-pose STL at 0.2 mm and fails on any floating
 island — the exact condition behind Bambu Studio's "It seems object X has floating regions" warning
-(architecture.md §8 rev 13, deviations D26–D33) plus Bambu's 3 mm "floating cantilever" rule. The
+(architecture.md §8 rev 13, deviations D26–D33) plus Bambu's 3 mm "floating cantilever" rule, and on case lids any accidental see-through opening — two cuts meeting in the 3 mm slab (architecture.md §8, #62, D62.1). The
 ground truth is `python scripts/build.py slicer-check` — every part sliced headlessly by Bambu
 Studio's CLI, failing on any slicer warning; CI runs the same gate on every PR. What the slicer
 flags, the design rules that avoid it, and how to locate a warning fast:
@@ -102,10 +102,10 @@ support-enabled by default).
 - Uniform wall thickness (3 mm) with ribs, not thickened sections — a locally-thick boss/wall cools
   unevenly and sinks/warps (§4 of the FDM guidelines file).
 - **Do not treat the first full-size print as the design validation.** Coupons first — see §6.
-- On a long lid (>~180 mm), 4 captive thumbscrews likely aren't enough to stop mid-span bow +
-  tongue-and-groove joint opening under ASA warp (architecture §11 R7, currently flagged as needing a
-  user decision toward 6 thumbscrews or a mid-span rib). Check whether that decision has been made
-  for the specific case before printing a long lid with only 4.
+- On a long lid (>~180 mm), 4 thumbscrews are not enough to stop mid-span bow + tongue-and-groove
+  joint opening under ASA warp — D-04 (accepted 2026-09-08) puts 6 on every lid over 180 mm, which is
+  every current SKU (architecture §11 R7). The thumbscrews are non-captive, with a small Ø7–8 mm head
+  in the lid's Ø8 counterbore (D62.2); check the bought screw against M62.1 before the first lid print.
 
 ## 6. Coupons before cases — non-negotiable, and first
 
@@ -135,6 +135,7 @@ don't just re-render and hope:
 | `euler_number` unexpected | Topological genus changed unexpectedly (e.g. an unintended hole clear through the shell) | Check the most recent cutout/vent placement against its intended bounds |
 | `volume <= 0` | Inverted/degenerate solid | Usually paired with a winding-consistency failure — fix that first |
 | `len(split()) != 1` | The mesh is more than one connected shell — a rib, boss, or vent grille floated free after a parameter change | This is the most common real-world hit in this repo per architecture.md §9 Tier 3 — check whatever dimension you last edited actually still reaches the wall it's supposed to be attached to |
+| `accidental_openings > 0` (case lid only) | Two cuts in the 3 mm lid overlap in plan and in Z — e.g. a counterbore reaching the groove (architecture.md D62.1) — so the lid is open where nobody drew a hole | Whatever you last moved in the lid (counterbore, groove, vent field); T1-62.1 and T1-37 should have fired first — if neither did, the new feature needs its own web assert |
 
 Do not attempt to fix a `check` failure by loosening the check itself — these five conditions are the
 minimum bar for "this is one printable solid," not an arbitrary strictness knob.

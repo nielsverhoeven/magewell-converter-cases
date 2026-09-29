@@ -14,10 +14,12 @@ $fa = 1; $fs = 0.4;
 
 include <mcc/mcc.scad>
 
-// --- Heat-set insert boss/bore (M3), captive thumbscrew hole -- pre-existing coverage sanity ---
+// --- Heat-set insert boss/bore (M3), lid thumbscrew hole -- pre-existing coverage sanity ---
 mcc_heat_set_boss(h = 8);
 translate([20, 0, 0]) mcc_heat_set_bore();
-translate([40, 0, 0]) mcc_captive_thumbscrew_hole(lid_t = 3.0);
+translate([40, 0, 0]) mcc_thumbscrew_hole(lid_t = 3.0);
+assert(mcc_thumbscrew_hole_rim_r() > MCC_LID_CB_D / 2,
+    "mcc test_fasteners: mcc_thumbscrew_hole_rim_r() must return the circumscribed (as-cut) radius");
 
 // --- Captive side bolt (D-09) -- FLUSH default parameters (D-13) -------------------------------
 // boss(od=20) + cut() at every constants.scad default: proud=0, wall_t=3, gap_far=16, pad_t=2, so

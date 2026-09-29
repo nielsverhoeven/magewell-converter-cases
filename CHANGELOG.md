@@ -12,6 +12,33 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Fixed (2026-09-29, issue #62, external CAD review of `lid.step`) — MAJOR: a base and a lid printed on either side of this change do not mate
+
+- **Lid thumbscrew holes had openings** (architecture.md D62.1): on all 8 SKUs the 3 patch-wall-side
+  holes (the two (±X, +Y) corners and the patch-wall middle one) had a see-through opening in the Ø8
+  counterbore floor, 11.4 mm² each, where the lid's groove crossed the counterbore. The
+  tongue-and-groove frame on the +Y patch wall now sits 4.5 mm from the outer face
+  (`MCC_TG_PATCH_INSET`) in both the base (tongue) and the lid (groove), clear of the counterbores. The
+  other three walls and every fastener, boss and insert position are unchanged. No full case has been
+  printed yet.
+- New guards: asserts T1-62.1 (counterbore-to-groove web) and T1-62.2 (patch inset range); `build.py
+  check` and the `ci` part gate fail a case lid with an accidental see-through opening; `build.py smoke`
+  runs a self-test of that check.
+
+### Changed (2026-09-29, issue #62, user decision) — the lid thumbscrews are not captive
+
+- The 6 lid thumbscrews are **non-captive** M3 knurled thumbscrews with a small Ø7–8 mm head recessed in
+  the Ø8 counterbore (architecture.md D62.2); the model never retained them, so no geometry changes.
+  `mcc_captive_thumbscrew_hole()` is renamed `mcc_thumbscrew_hole()`. BOM: ≤ 8 mm under the head (M3×6
+  recommended) — the earlier "assumed M3×10" would bottom out in the insert bore.
+
+### Changed (2026-09-29, issue #68, user rule) — record ids follow GitHub issues
+
+- Every feature, bug and task gets a GitHub issue first, and the decisions, risks, measurements, open
+  questions and Tier-1 asserts it creates are numbered after it (D62.1, T1-62.1, …). `architecture.md`
+  no longer has revision numbers. Existing ids (D1–D52, rev ≤ 19, T1-01–T1-90, R1–R47, M1–M22, Q1–Q23)
+  are unchanged. Branches are always `feature/issue-<n>-<topic>` (CLAUDE.md, CONTRIBUTING.md).
+
 ### Removed (2026-09-29, end-stop remnants)
 
 - `MCC_RAIL_END_STOP_L`/`MCC_RAIL_END_STOP_H` and the arch bracket's `RAIL_X` rail offset — all zero

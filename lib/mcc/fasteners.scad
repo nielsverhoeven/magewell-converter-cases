@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/fasteners.scad
-//   L1. Heat-set insert bosses/bores, captive thumbscrew holes, the captive side bolt (D-09,
+//   L1. Heat-set insert bosses/bores, lid thumbscrew holes, the captive side bolt (D-09,
 //   device retention through the far wall — .claude/knowledge/layout-patch-wall.md §7.1), the
 //   case's own 1/4"-20 floor mounting insert, and a generic M4 clearance hole.
 //   knowledge/components/fasteners-and-hardware.md §1-2. `use`d by lib/mcc/mcc.scad.
@@ -13,7 +13,7 @@ include <constants.scad>
 use <util.scad>
 
 // Z-axis convention: a boss stands with its base at Z=0 and grows to Z=h (anchor=BOTTOM); a
-// panel/lid feature (mcc_captive_thumbscrew_hole) spans Z=[0, lid_t] with the outward face at
+// panel/lid feature (mcc_thumbscrew_hole) spans Z=[0, lid_t] with the outward face at
 // Z=lid_t, matching lib/mcc/neutrik.scad's own convention.
 
 // Module: mcc_heat_set_bore()
@@ -67,24 +67,38 @@ module mcc_heat_set_boss(insert = MCC_INSERT_M3, h, od = undef) {
     }
 }
 
-// Module: mcc_captive_thumbscrew_hole()
+// Function: mcc_thumbscrew_hole_rim_r()
 // Usage:
-//   mcc_captive_thumbscrew_hole([d=], [head_d=], lid_t);
+//   r = mcc_thumbscrew_hole_rim_r([head_d=]);
 // Description:
-//   Negative: a full-depth shaft clearance hole plus an outward-face counterbore sized so a
-//   knurled M3 thumbscrew's head cannot pull all the way through the lid (stays captive when
-//   backed out). knowledge/components/fasteners-and-hardware.md:97 "M3 knurled thumb screw ...
-//   tool-less panel access"; counterbore depth is assumed at half the lid thickness (no sourced
-//   figure for this specific geometry) — smallest reasonable choice, confidence assumed.
-//   TODO(teamlead): confirm counterbore depth against a physical knurled M3 thumbscrew's head
-//   height before finalizing the lid design.
+//   Pure. The radius of the counterbore mcc_thumbscrew_hole() cuts, as cut: `head_d` is drawn
+//   circum=true at $fn = 64, so the polygon's vertices lie at head_d / 2 / cos(180 / 64). The one
+//   source for any clearance check against that counterbore (T1-62.1 in shell.scad's
+//   mcc_shell_lid()). If the counterbore's $fn or circum below changes, change this in the same edit.
+// Arguments:
+//   head_d = counterbore diameter, mm. Default: MCC_LID_CB_D.
+function mcc_thumbscrew_hole_rim_r(head_d = MCC_LID_CB_D) = head_d / 2 / cos(180 / 64);
+
+// Module: mcc_thumbscrew_hole()
+// Usage:
+//   mcc_thumbscrew_hole([d=], [head_d=], lid_t);
+// Description:
+//   Negative: a full-depth shaft clearance hole plus an outward-face counterbore that seats the head
+//   of a small knurled M3 thumbscrew (Ø7-8 mm, user decision 2026-09-29) recessed in the lid. The
+//   screw is NOT captive (architecture.md §13 D62.2): nothing here retains it once it is out of the
+//   base's heat-set insert — the counterbore only seats the head.
+//   knowledge/components/fasteners-and-hardware.md:115 "M3 knurled thumb screw ... tool-less panel
+//   access"; counterbore depth is assumed at half the lid thickness (no sourced figure for this
+//   specific geometry) — smallest reasonable choice, confidence assumed.
+//   TODO(teamlead): confirm the counterbore diameter and depth against the purchased thumbscrew's
+//   head (architecture.md §12 M62.1, §11 R62.1) before the first full-size print.
 // Arguments:
 //   d      = shaft clearance diameter, mm. Default: MCC_M3_CLR_D.
-//   head_d = counterbore (head-trap) diameter, mm. Default: 8 (assumed — a typical M3 knurled
-//            thumbscrew head is 6-8 mm per generic hardware guides, no sourced figure in
-//            knowledge/components/fasteners-and-hardware.md).
+//   head_d = counterbore (head seat) diameter, mm. Default: MCC_LID_CB_D (constants.scad; assumed,
+//            no sourced figure in knowledge/components/fasteners-and-hardware.md). Its radius as
+//            cut is mcc_thumbscrew_hole_rim_r(head_d).
 //   lid_t  = lid thickness at this location, mm (required).
-module mcc_captive_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = 8, lid_t) {
+module mcc_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = MCC_LID_CB_D, lid_t) {
     assert(head_d > d, str("mcc: head_d=", head_d, " must exceed shaft clearance d=", d));
     counterbore_depth = lid_t / 2; // assumed — see TODO above.
     assert(counterbore_depth < lid_t,
@@ -93,6 +107,7 @@ module mcc_captive_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = 8, lid_t) {
     union() {
         translate([0, 0, -MCC_EPS])
             cyl(h = lid_t + 2 * MCC_EPS, d = d, circum = true, anchor = BOTTOM, $fn = 64);
+        // $fn = 64 and circum = true must match mcc_thumbscrew_hole_rim_r() above.
         translate([0, 0, lid_t - counterbore_depth])
             cyl(h = counterbore_depth + MCC_EPS, d = head_d, circum = true, anchor = BOTTOM, $fn = 64);
     }
