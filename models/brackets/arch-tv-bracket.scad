@@ -3,13 +3,13 @@
 //   L4-equivalent assembly (architecture.md §3 rev 9/13, layout-patch-wall.md §17.2). Issue #47,
 //   implemented per docs/plans/2026-09-27-arch-tv-bracket.md §0-§8/§10, as amended by the architect
 //   verdict's binding changes B1-B11 (§12.2) and the PLAN-ASSUMPTION rulings (§12.5). Sibling of
-//   models/brackets/tv-bracket.scad (#26); consumes lib/mcc/rail.scad's mount-rail interface (#25)
+//   the retired tv-bracket.scad (#26, D47); consumes lib/mcc/rail.scad's mount-rail interface (#25)
 //   UNCHANGED -- the inherited rail-interface defect F1 (§12.3, proposed R38) is tracked separately
 //   (issue #48) and is NOT fixed here; every rail-dependent value in this file (keep-out rectangle,
-//   Z stack, RAIL_X, slide_clear) derives from MCC_RAIL_* so a future rail fix is absorbed by a
+//   Z stack, RAIL_X, slide_clear) derives from MCC_RAIL_* or mcc_rail_male_keepout(), so a future rail fix is absorbed by a
 //   re-golden, no code edit.
 //
-//   Mounts directly on a TV's TOP TWO VESA 400 M8 screws (no VESA plate -- unlike tv-bracket.scad's
+//   Mounts directly on a TV's TOP TWO VESA 400 M8 screws (no VESA plate -- unlike the retired tv-bracket.scad's
 //   sandwich-plate approach). This file's own `build.py` parts marker (§4.2, below) declares TWO
 //   exported parts, not one: an "arm" (printed TWICE, left/right -- PLAN-ASSUMPTION-4, one part is
 //   symmetric about its own axis so a proper in-plane rotation gives the mirror, not a flip) and a
@@ -26,21 +26,21 @@
 //       the assembly frame above.
 //     - Arm print frame: pad centre at the origin, arm axis = local +X, TV face on the bed (Z=0).
 //     - Centre print frame: origin = the rail centre projected onto the centre's own bottom face
-//       (assembly (0, rise, ARCH_PLATE_T)); bottom face (TV-facing, but 8 mm standing off the TV --
+//       (assembly (0, rise, ARCH_PLATE_T)); bottom face (TV-facing, but 11 mm standing off the TV --
 //       PLAN-ASSUMPTION-3, forced by the +X slide-on sweep, §1.3) on the bed.
 //
-//   Z stack (TV back = 0; plan §1.3, re-derived independently by the architect, §12.1 -- all checks
-//   OK except A8, fixed here by B1):
+//   Z stack (TV back = 0; plan §1.3, re-derived for D44 -- the case floor now sits FLUSH on the
+//   centre's top face, the rail has no pedestal any more):
 //     Arm TV face / centre gap floor ............ Z = 0
-//     Arm top face = centre bottom face (stacked lap) ... Z = ARCH_PLATE_T       (= 8)
-//     Rail mounting face (centre top) Z_RAIL ..... Z = 2 * ARCH_PLATE_T          (= 16)
-//     Arm feature top ARM_TOP_Z (ribs, M8 pad boss) Z = ARCH_PLATE_T + RIB_H     (= 17)
-//     Case floor (exterior), at full mate and while sliding .. Z = Z_RAIL + MCC_FLOOR_T  (= 19)
-//     Case lid top ................................ Z = 19 + 51 = 70            (H=51, CLAUDE.md)
-//   Sweep condition (T1-51 / A5): Z_RAIL + MCC_FLOOR_T - ARM_TOP_Z >= ARCH_SWEEP_CLR, i.e.
-//   2T + 3 - (T + 9) >= 2 => T >= 8 -- ARCH_PLATE_T=8 is the smallest plate that clears the pad
+//     Arm top face = centre bottom face (stacked lap) ... Z = ARCH_PLATE_T       (= 11)
+//     Rail mounting face (centre top) Z_RAIL ..... Z = 2 * ARCH_PLATE_T          (= 22)
+//     Arm feature top ARM_TOP_Z (ribs, M8 pad boss) Z = ARCH_PLATE_T + RIB_H     (= 20)
+//     Case floor (exterior), at full mate and while sliding .. Z = Z_RAIL          (= 22, flush)
+//     Case lid top ................................ Z = 22 + 51 = 73            (H=51, CLAUDE.md)
+//   Sweep condition (T1-51 / A5): Z_RAIL - ARM_TOP_Z >= ARCH_SWEEP_CLR, i.e.
+//   2T - (T + 9) >= 2 => T >= 11 -- ARCH_PLATE_T=11 is the smallest plate that clears the pad
 //   during the +X slide-on approach (the case can never clear the pad by going above it -- plan
-//   §1.3 -- so it must pass over it in Z instead).
+//   §1.3 -- so it must pass over it in Z instead). T was 8 while the rail carried a 3 mm pedestal.
 //
 //   B1 (blocking, §12.2): the plan's own A8 assert (M3 counterbore vs. the rail keep-out rectangle)
 //   FAILS at the placeholder on the -X (end-stop) lap. Fix: centre the rail's physical footprint
@@ -56,7 +56,7 @@
 //   .claude/knowledge/architecture.md after merge (§12.5 bottom) -- this file cites the PROPOSED
 //   ids in comments only.
 //
-//   PRINT GATE (B10): do not print this bracket FOR USE before M15 (rail-latch pull test), M18 (the
+//   PRINT GATE (B10): do not print this bracket FOR USE before M15 (rail-lock coupon), M18 (the
 //   TV measurements below) and R38/F1 (rail entry/interference) are closed. The released STL is
 //   rendered for the PLACEHOLDER TV_TOP_CLEAR=150; a measured TV needs
 //   `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
@@ -95,13 +95,12 @@ part = "centre";
 
 // -----------------------------------------------------------------------------------------
 // §1.2 Parameters (plan-fixed geometry, THIS bracket's own authored dimensions -- bracket-own
-// geometry stays out of constants.scad, the tv-bracket.scad convention; nothing here is
+// geometry stays out of constants.scad, the models/brackets convention; nothing here is
 // cross-cutting library policy).
 // -----------------------------------------------------------------------------------------
 
 VESA_TOP_PITCH = 400; // mm. User decision 2026-09-27 (#47); VESA MIS-F 400x400 is a standard
-                       // pattern (https://en.wikipedia.org/wiki/VESA_mount, same citation as
-                       // tv-bracket.scad:98-100).
+                       // pattern (https://en.wikipedia.org/wiki/VESA_mount).
 HALF_PITCH = VESA_TOP_PITCH / 2; // = 200. derived.
 
 TV_TOP_CLEAR = 150; // mm. `unknown` -> placeholder, assumed (PLAN-ASSUMPTION-2, RATIFIED as
@@ -113,13 +112,11 @@ TV_TOP_CLEAR_MAX = 185; // mm. user decision 2026-09-27 ("less than 185 mm") -- 
 TV_TOP_MARGIN = 10.0; // mm. assumed -- case top stays this far below the TV top edge (bezel,
                        // measurement error, sight line over the edge).
 
-ARCH_PLATE_T = 8.0; // mm. derived minimum (§1.3 Z-stack derivation above; T>=8 for the slide-on
-                     // sweep to clear the pad) and independently justified for torsion stiffness
-                     // (plan §2). NOT MCC_BRACKET_PLATE_T (6.0, constants.scad) -- that constant is
-                     // a SHIM thickness for a TV-sandwiched plate (tv-bracket.scad); this plate is a
-                     // cantilevered BEAM, a different structural class.
-RIB_T = MCC_WALL; // = 3.0. <= 0.6 x ARCH_PLATE_T (fdm-rugged-enclosure-guidelines.md:67), same
-                   // choice as tv-bracket.scad:117.
+ARCH_PLATE_T = 11.0; // mm. derived minimum (Z-stack derivation above: T>=11 for the slide-on sweep to
+                      // clear the pad once D44 removed the rail's 3 mm pedestal -- was 8) and
+                      // independently justified for torsion stiffness (plan §2). A cantilevered BEAM,
+                      // not a sandwiched shim.
+RIB_T = MCC_WALL; // = 3.0. <= 0.6 x ARCH_PLATE_T (fdm-rugged-enclosure-guidelines.md:67).
 RIB_H = MCC_RIB_HEIGHT_RATIO_MAX * RIB_T; // = 9.0 (fdm-rugged-enclosure-guidelines.md:68, D22).
 ARCH_SWEEP_CLR = 2.0; // mm. assumed -- vertical clearance between the sliding case floor and the
                        // tallest arm feature while the case passes over it (§1.3); same magnitude as
@@ -128,7 +125,11 @@ ARM_W = 40.0; // mm. assumed -- arm width; carries the 2x2 joint pattern, two ed
                // pad.
 PAD_BOSS_D = 30.0; // mm. assumed -- >= counterbore diameter (16.6) + 2 x 2*MCC_WALL; asserted
                     // (T1-58).
-CENTRE_W = 40.0; // mm. assumed (= ARM_W) -- centre-body height in local Y.
+CENTRE_W = 92.0; // mm. D44: holds the rail keep-out Y span (T1-53) and the UP arrow above it
+                  // (T1-60). Sized for the D34 latch's [-32.5, +36.1]; since D48 the keep-out
+                  // (mcc_rail_male_keepout()) is [-32.5, +33.2], so T1-60 needs only
+                  // 2 x (33.2 + 1 + 6 + 1) = 82.4 and 92 leaves 2.4 mm on both of its bounds.
+                  // Kept at 92 so D48 moves no bracket outline. Was 40 for the 14.6 mm rail.
 C_HALF = 90.0; // mm. assumed -- centre-body half-length. Rail footprint half-length is
                // MCC_RAIL_LEN/2 + MCC_RAIL_END_STOP_L = 81, leaving a 9 mm end web (>= MCC_WALL,
                // asserted T1-53).
@@ -136,7 +137,10 @@ XJ = 95.0; // mm. assumed -- |x| of each lap centre in the assembly frame (plan 
 LAP_L = 30.0; // mm. assumed -- lap length along the arm axis.
 JOINT_S = 14.0; // mm. assumed -- joint hole pitch along the arm axis (2x2 pattern).
 JOINT_P = 20.0; // mm. assumed -- joint hole pitch across the arm axis.
-LAP_RIB_GAP = 1.0; // mm. assumed -- arm ribs stop this far short of the lap.
+LAP_RIB_GAP = 3.0; // mm. arm ribs stop this far short of the lap. D44: 3.0 (was 1.0) -- with the
+                    // 92 mm centre body the rib end's outer corner lies inside the body's Y band at large
+                    // TV_TOP_CLEAR, so T1-55's X clearance alone governs: 1.0 left 0.994 mm at
+                    // TV_TOP_CLEAR=184.9 (limit 1.0, passing only on the assert's EPS); 3.0 leaves 2.34.
 ARCH_KEEPOUT_CLR = 1.0; // mm. assumed -- clearance used by the hole-vs-rail and rib-vs-centre
                          // asserts.
 
@@ -149,7 +153,11 @@ M8_WASHER_H  = 1.6;  // ISO 7089 M8 flat-washer thickness, mm.
 // M3 socket-head cap screw -- same status.
 M3_HEAD_D = 5.5; // ISO 4762 M3 socket-head diameter, mm.
 M3_HEAD_K = 3.0; // ISO 4762 M3 socket-head height, mm.
-M3_JOINT_SCREW_L = 10; // mm. derived stock length (§3.3 screw-stack derivation, T1-57).
+M3_COUNTERBORE_DEPTH = M3_HEAD_K + 1.3; // mm. D44 (T1-57): the head sits 4.3 mm deep in the 11 mm
+                  // centre, leaving 6.7 mm of centre under it, so an M3x12 reaches 5.3 mm into the arm
+                  // (tip 1.4 mm above the insert-bore floor, 0.9 more than T1-57's 0.5) -- the same
+                  // engagement the 8 mm stack had.
+M3_JOINT_SCREW_L = 12; // mm. derived stock length (§3.3 screw-stack derivation, T1-57). Was 10 (8 mm plates).
 
 ARROW_DEPTH = 0.6; // mm. assumed, cosmetic "UP" deboss (§3.5).
 ARROW_L = 8.0; // mm. assumed (B3 -- the plan's original arrow had no defined size).
@@ -161,14 +169,16 @@ ARROW_W = 6.0; // mm. assumed (B3).
 // A13/T1-59. If F1's eventual fix drops the end-stop flange, this becomes 0 automatically.
 RAIL_X = MCC_RAIL_END_STOP_L / 2; // = 3.0
 
-// Rail keep-out rectangle, centre-local frame, B1-shifted (plan §3.2, rail-local -> centre-local
-// after the rotate([0,0,180]) rail placement below): the latch arm/nub stand on the rail-local -Y
-// flank, i.e. +Y here (rail.scad:151-175). Built from MCC_RAIL_* constants only, never hand-typed.
-RAIL_KEEPOUT_X = [RAIL_X - MCC_RAIL_LEN / 2 - MCC_RAIL_END_STOP_L, RAIL_X + MCC_RAIL_LEN / 2];
-RAIL_KEEPOUT_Y = [-MCC_RAIL_ROOT_W / 2, MCC_RAIL_ROOT_W / 2 + MCC_RAIL_LATCH_ARM_T + MCC_RAIL_LATCH_ENGAGE];
+// Rail keep-out rectangle, centre-local frame, B1-shifted: the rail's own plate-side keep-out
+// (mcc_rail_male_keepout(), rail-local) mapped through this file's rotate([0,0,180]) rail
+// placement, which negates and swaps both ranges -- the lock bump on the rail-local -Y flank
+// lands at +Y here. D50 / F-R1: never built from MCC_RAIL_* internals.
+_RAIL_KO = mcc_rail_male_keepout(MCC_RAIL_LEN);
+RAIL_KEEPOUT_X = [RAIL_X - _RAIL_KO[0][1], RAIL_X - _RAIL_KO[0][0]];
+RAIL_KEEPOUT_Y = [-_RAIL_KO[1][1], -_RAIL_KO[1][0]];
 
 // reused from constants.scad, no new library constant: MCC_M8_CLR_D, MCC_M3_CLR_D, MCC_INSERT_M3,
-// MCC_CLR_SLIDE, MCC_RAIL_*, MCC_FLOOR_T, MCC_WALL, MCC_BUILD, MCC_BED_MARGIN, MCC_EPS,
+// MCC_CLR_SLIDE, MCC_RAIL_*, MCC_WALL, MCC_BUILD, MCC_BED_MARGIN, MCC_EPS,
 // MCC_M3_MAJOR_D, MCC_RIB_HEIGHT_RATIO_MAX, MCC_RAIL_Y.
 
 // -----------------------------------------------------------------------------------------
@@ -237,7 +247,7 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR) =
         pad_clamp_t = arm_top_z - m8_counterbore_depth,
 
         // B6: the case can only engage once its leading (+X) end wall passes the rail's own open
-        // (+X, per tv-bracket's rotate([0,0,180]) convention) end, at case centre
+        // (+X, per this file's rotate([0,0,180]) rail placement) end, at case centre
         // x = RAIL_X + MCC_RAIL_LEN/2 + L/2 -- not "+MCC_RAIL_LEN" as the plan's own §1.3 originally
         // had it (F1's own entry-path defect notwithstanding -- this bracket derives the number
         // from MCC_RAIL_* so a future rail-interface fix is absorbed automatically).
@@ -262,8 +272,8 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR) =
         tab_y_min = -rise + (arm_len - LAP_L / 2) * sin(alpha) - (ARM_W / 2) * cos(alpha),
         centre_y_max = max(CENTRE_W / 2, tab_y_max),
         centre_y_min = min(-CENTRE_W / 2, tab_y_min),
-        centre_z_max = ARCH_PLATE_T + MCC_RAIL_SILL_H + MCC_RAIL_END_STOP_H, // = 17 (rail rises
-            // MCC_RAIL_SILL_H=7 above its own foot at Z_RAIL, plus the end-stop's own extra rise)
+        centre_z_max = ARCH_PLATE_T + MCC_RAIL_MALE_H + MCC_RAIL_END_STOP_H, // = 14.5 (the male rises
+            // MCC_RAIL_MALE_H above its own foot at Z_RAIL -- D44; MCC_RAIL_END_STOP_H is 0 since D34)
         centre_bbox = [2 * centre_x_max, centre_y_max - centre_y_min, centre_z_max]
     )
     [
@@ -411,9 +421,10 @@ module mcc_arch_tv_assert(g) {
         str("mcc: arch-tv-bracket T1-50 tv_top_clear=", tv_top_clear,
             " must be < TV_TOP_CLEAR_MAX=", TV_TOP_CLEAR_MAX));
 
-    // T1-51 (A5): the +X slide-on sweep clears the right arm's pad (§1.3).
-    assert(z_rail + MCC_FLOOR_T - arm_top_z >= ARCH_SWEEP_CLR - MCC_EPS,
-        str("mcc: arch-tv-bracket T1-51 slide-on sweep clearance=", z_rail + MCC_FLOOR_T - arm_top_z,
+    // T1-51 (A5): the +X slide-on sweep clears the right arm's pad (§1.3). D44: the case floor rides
+    // flush at z_rail (no pedestal), so there is no MCC_FLOOR_T term any more.
+    assert(z_rail - arm_top_z >= ARCH_SWEEP_CLR - MCC_EPS,
+        str("mcc: arch-tv-bracket T1-51 slide-on sweep clearance=", z_rail - arm_top_z,
             " below ARCH_SWEEP_CLR=", ARCH_SWEEP_CLR));
 
     // T1-52 (A6): rib proportions (fdm-rugged-enclosure-guidelines.md:67-68, D22).
@@ -477,7 +488,7 @@ module mcc_arch_tv_assert(g) {
     assert(edge_ss >= 2.0, str("mcc: arch-tv-bracket T1-56 hole-to-hole (S) distance=", edge_ss, " below 2.0 mm"));
 
     // T1-57 (A11): the M3 screw stack (§3.3) -- tip clears the bore floor, and engagement is real.
-    m3_counterbore_depth = M3_HEAD_K + 0.3;
+    m3_counterbore_depth = M3_COUNTERBORE_DEPTH;
     m3_head_seat_z = z_rail - m3_counterbore_depth;
     m3_tip_z       = m3_head_seat_z - M3_JOINT_SCREW_L;
     bore_floor_z   = ARCH_PLATE_T - bore_depth;
@@ -564,15 +575,14 @@ module mcc_arch_tv_arm(g) {
 //   The exported "centre" part: a flat body carrying two angled tabs (the arms' own lap footprint,
 //   keying the assembly to one orientation -- §3.1) and the male mount rail on top, with 4 M3
 //   counterbored clearance holes per tab and a cosmetic "UP" arrow deboss (§3.5, B3). Bottom (TV-
-//   facing, but standing 8 mm off the TV -- PLAN-ASSUMPTION-3) face on the bed (local Z=0).
+//   facing, but standing 11 mm off the TV -- PLAN-ASSUMPTION-3) face on the bed (local Z=0).
 module mcc_arch_tv_centre(g) {
     z_rail = struct_val(g, "z_rail");
     m3_counterbore_d     = M3_HEAD_D + 2 * MCC_CLR_SLIDE;
-    m3_counterbore_depth = M3_HEAD_K + 0.3;
+    m3_counterbore_depth = M3_COUNTERBORE_DEPTH;
     arrow_y = (RAIL_KEEPOUT_Y[1] + CENTRE_W / 2) / 2;
 
-    // The rail is unioned AFTER the plate's own cuts: its latch arm's leg fills the window
-    // mcc_rail_male_window() cuts through this plate (issue #46, D34) down to the bed.
+    // The rail is unioned after the plate's own cuts; it needs no cut of its own in the plate (D50).
     union() {
     difference() {
         union() {
@@ -586,7 +596,6 @@ module mcc_arch_tv_centre(g) {
                     translate([struct_val(g, "arm_len"), 0, 0])
                         cuboid([LAP_L, ARM_W, ARCH_PLATE_T], anchor = BOTTOM);
         }
-        translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male_window(plate_t = ARCH_PLATE_T);
         // 4 M3 counterbored clearance holes per tab, same placement transform as the tabs above.
         for (side = [-1, 1], h = _mcc_arch_tv_joint_holes(g)) {
             p = _mcc_arch_tv_xform(h, side, g);
@@ -601,9 +610,9 @@ module mcc_arch_tv_centre(g) {
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }
-    // Rail (B1: RAIL_X-centred on this plate) -- identical call to tv-bracket.scad's, just lifted
-    // onto this plate's own top face; plate_t lets the latch arm's leg reach the bed.
-    translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male(plate_t = ARCH_PLATE_T);
+    // Rail (B1: RAIL_X-centred on this plate) -- the standard rotate([0,0,180]) rail call, lifted
+    // onto this plate's own top face (D50: one union, no plate cut).
+    translate([RAIL_X, 0, ARCH_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male();
     }
 }
 
@@ -658,17 +667,16 @@ if (part == "arm") {
     // decision), same variant its own case.scad uses. "assembly_sweep" shifts it by slide_clear
     // (B6) to show the floor passing over the right arm and pad during the +X slide-on approach.
     dev = MCC_DEV_PRO_CONVERT_HDMI_PLUS;
-    variant = [["fan", true], ["splitter", false], ["fan_switch", true], ["tripod_insert", true], ["lid_vents", true]];
+    variant = [["fan", true], ["splitter", false], ["fan_switch", true], ["tripod_insert", false], ["lid_vents", true]]; // tripod off: T1-63 (D44)
     layout = mcc_case_layout(dev, variant);
     x_shift = (part == "assembly_sweep") ? struct_val(G, "slide_clear") : 0;
 
-    translate([RAIL_X + x_shift, rise + MCC_RAIL_Y, z_rail + MCC_FLOOR_T]) rotate([0, 0, 180]) {
+    translate([RAIL_X + x_shift, rise + MCC_RAIL_Y, z_rail]) rotate([0, 0, 180]) { // D44: flush
         color("SlateGray") mcc_shell_base(dev = dev, cfg = variant);
         color("LightSteelBlue", 0.6) mcc_shell_lid(dev = dev, cfg = variant);
         translate([struct_val(layout, "x_dev_c"), struct_val(layout, "y_dev_c"),
                    struct_val(layout, "z_dev_lo") + mcc_dev_size(dev)[2] / 2])
-            mcc_ghost(dev, show = true); // force-shown regardless of MCC_SHOW_GHOST, same
-                                          // precedent as tv-bracket.scad's own "assembly" branch.
+            mcc_ghost(dev, show = true); // force-shown regardless of MCC_SHOW_GHOST (preview only).
     }
 
 } else {

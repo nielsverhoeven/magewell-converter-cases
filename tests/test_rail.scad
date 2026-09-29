@@ -6,9 +6,10 @@
 //     - T1-38 (lib/mcc/rail.scad mcc_rail_female_cut()): >= MCC_FLOOR_T of residual floor over the
 //       groove (layout-patch-wall.md §17.2 R1).
 //     - D16 (lib/mcc/mounts.scad mcc_assert_floor_keepout_no_overlap()): no two
-//       mcc_floor_keepout() rows overlap, except the concentric "case_tripod_insert"/
-//       "fishtail_reserve" pair (D19) -- run against a real device record so the exemption is
-//       actually proven, not merely asserted to exist.
+//       mcc_floor_keepout() rows overlap (no exemptions since D44), run against a real device record.
+//     - T1-64 .. T1-66 (D48): the gravity lock's lift budget, profile and walls; D50: the
+//       rail's plate-side keep-out, mcc_rail_male_keepout().
+//     - T1-62 (D44): >= MCC_RAIL_MATE_CLR normal to the flanks and at the roof.
 //   CSG export (-o out.csg) evaluates the full tree so in-model asserts fire, without tessellating.
 // Run:
 //   openscad --backend=Manifold -o out.csg tests/test_rail.scad
@@ -34,34 +35,64 @@ assert(MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T,
     str("T1-38: MCC_RAIL_SILL_H(", MCC_RAIL_SILL_H, ") - MCC_RAIL_DEPTH(", MCC_RAIL_DEPTH,
         ") must be >= MCC_FLOOR_T(", MCC_FLOOR_T, ")"));
 
-// --- Latch (issue #46, D34): snap-fit rules, checked from the constants so a regression fails here
-// before any render. ------------------------------------------------------------------------------
-assert(MCC_RAIL_LATCH_ENABLED, "D34: the rail latch is expected to be enabled");
-assert(MCC_RAIL_LATCH_ARM_L / MCC_RAIL_LATCH_ARM_T >= 8, "D34: latch arm L/t below 8");
-assert(1.5 * MCC_RAIL_LATCH_ARM_T * MCC_RAIL_LATCH_ENGAGE / pow(MCC_RAIL_LATCH_ARM_L, 2) <= MCC_SNAP_STRAIN_MAX,
-    "D34: latch tip strain above MCC_SNAP_STRAIN_MAX");
-assert(MCC_RAIL_LATCH_SLOT > MCC_RAIL_LATCH_ENGAGE, "D34: latch slot narrower than the nub's deflection");
-assert(MCC_RAIL_LATCH_RAMP_OUT >= MCC_RAIL_LATCH_RAMP_IN, "D34: exit ramp should be at least as steep as entry");
+// --- Gravity lock (D48): lift budget, profile and walls, checked from the constants so a regression
+// fails here before any render (T1-64 .. T1-66). ---------------------------------------------------
+assert(MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_LOCK_PLAY_MARGIN <= 2 * MCC_RAIL_CLR_HORIZ + MCC_EPS,
+    str("T1-64: lock bump ", MCC_RAIL_LOCK_ENGAGE, " + margin ", MCC_RAIL_LOCK_PLAY_MARGIN,
+        " does not fit the flank play ", 2 * MCC_RAIL_CLR_HORIZ));
+assert(75 <= MCC_RAIL_LOCK_RAMP_OUT && MCC_RAIL_LOCK_RAMP_OUT <= 90, "T1-65: lock exit face outside 75..90 deg");
+assert(15 <= MCC_RAIL_LOCK_RAMP_IN && MCC_RAIL_LOCK_RAMP_IN <= 60, "T1-65: lock entry ramp outside 15..60 deg");
+assert(MCC_WALL / 2 - MCC_EPS <= MCC_RAIL_SILL_SIDE_W - MCC_RAIL_CLR_HORIZ - MCC_RAIL_LOCK_ENGAGE,
+    "T1-66: sill wall behind the lock pocket below MCC_WALL/2");
+assert(MCC_RAIL_LEADIN <= MCC_WALL, "T1-66: rail lead-in deeper than MCC_WALL");
 assert(MCC_RAIL_END_STOP_L == 0 && MCC_RAIL_END_STOP_H == 0, "D34: the male end-stop flange is retired");
+
+// --- D50: the plate-side keep-out every bracket reads (never the MCC_RAIL_LOCK_* constants) --------
+_rail_ko = mcc_rail_male_keepout();
+assert(_rail_ko == [[-MCC_RAIL_LEN / 2, MCC_RAIL_LEN / 2],
+                    [-MCC_RAIL_ROOT_W / 2 - MCC_RAIL_LOCK_ENGAGE, MCC_RAIL_ROOT_W / 2]],
+    str("D50: mcc_rail_male_keepout()=", _rail_ko));
+assert(mcc_rail_male_keepout(60)[0] == [-30, 30],
+    str("D50: mcc_rail_male_keepout(60)=", mcc_rail_male_keepout(60)));
+
+// --- T1-62 / D44: >= MCC_RAIL_MATE_CLR on every non-bearing face, and the user's width range ------
+assert(MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE) >= MCC_RAIL_MATE_CLR - MCC_EPS,
+    str("T1-62: rail flank clearance ", MCC_RAIL_CLR_HORIZ * sin(MCC_RAIL_FLANK_ANGLE), " below ", MCC_RAIL_MATE_CLR));
+assert(MCC_RAIL_DEPTH - MCC_RAIL_MALE_H >= MCC_RAIL_MATE_CLR - MCC_EPS,
+    str("T1-62: rail roof clearance ", MCC_RAIL_DEPTH - MCC_RAIL_MALE_H, " below ", MCC_RAIL_MATE_CLR));
+assert(MCC_RAIL_MATE_CLR >= 0.5 - MCC_EPS, "D44: the user's minimum rail clearance is 0.5 mm");
+assert(MCC_RAIL_ROOT_W >= 60 && MCC_RAIL_ROOT_W <= 70,
+    str("D44: MCC_RAIL_ROOT_W=", MCC_RAIL_ROOT_W, " outside the user's 60-70 mm range"));
 
 // --- mcc_rail_male() / mcc_rail_female_cut() -- default (production MCC_RAIL_LEN) --------------
 translate([0, 0, 0]) mcc_rail_male();
-translate([0, -60, 0]) mcc_rail_male(plate_t = 6); // with the arm's leg through a 6 mm plate
+// D50: a consumer unions the rail onto its plate -- the rail needs no cut in the plate.
+translate([0, -60, 0])
+    union() {
+        translate([0, 0, -6]) cuboid([MCC_RAIL_LEN + 10, MCC_RAIL_ROOT_W + 10, 6], anchor = BOTTOM);
+        mcc_rail_male();
+    }
 translate([0, 60, 0])
     difference() {
         cuboid([MCC_RAIL_LEN, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
-        mcc_rail_female_cut(open_ext = 20);
+        mcc_rail_female_cut(open_ext = 20, entry_x = MCC_RAIL_LEN / 2);
     }
 
 // --- mcc_rail_male() / mcc_rail_female_cut() -- short, coupon-scale len=60 (models/coupons/
-// rail-latch.scad's own length) -- the latch must be re-derived from THIS len, not the fixed
-// MCC_RAIL_LATCH_X (constants.scad, which is only valid at len=MCC_RAIL_LEN=150); this is exactly
-// the regression the len=60 case here guards against. -------------------------------------------
+// rail-lock.scad's own length) -- the lock bump must be re-derived from THIS len
+// (len/2 - MCC_RAIL_LOCK_END_OFFSET); this is exactly the regression the len=60 case here guards
+// against. The e-ladder's largest bump (lock_e = 0.8, M15) must render too. ----------------------
 translate([200, 0, 0]) mcc_rail_male(len = 60);
 translate([200, 60, 0])
     difference() {
         cuboid([60, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
         mcc_rail_female_cut(len = 60);
+    }
+translate([300, 0, 0]) mcc_rail_male(len = 60, lock_e = 0.8);
+translate([300, 60, 0])
+    difference() {
+        cuboid([60, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
+        mcc_rail_female_cut(len = 60, open_ext = 1, entry_x = 30, lock_e = 0.8);
     }
 
 // --- D16 / D19 (lib/mcc/mounts.scad): pairwise floor-keepout non-overlap, against a real device
@@ -115,9 +146,17 @@ echo("mcc test_rail: OK");
 //    MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + 1.0 in constants.scad and re-running this file):
 //    -> "T1-38: MCC_RAIL_SILL_H(5) - MCC_RAIL_DEPTH(4) must be >= MCC_FLOOR_T(3)"
 //
-// 2. D16, violated by moving the rail on top of the case's own 1/4"-20 insert keep-out (scratch
-//    edit constants.scad MCC_RAIL_Y = 0):
-//    -> "mcc: floor features \"case_tripod_insert\" and \"mount_rail\" overlap ... (D16)"
+// 2. D16, violated by moving the rail onto the side-bolt support web (scratch edit constants.scad
+//    MCC_RAIL_Y = -40):
+//    -> "mcc: floor features \"mount_rail\" and \"side_bolt_web\" overlap ... (D16)"
+//
+// 3. T1-63 (D44), the opt-in case insert together with the (default-on) rail:
+//    mcc_cradle(DEV, [["fan", false], ["splitter", false], ["tripod_insert", true]]);
+//    -> "mcc: T1-63 cfg[\"tripod_insert\"]=true needs [\"rail\", false] ..."
+//
+// 4. T1-64 (D48), a lock bump too tall for the flank play (scratch edit constants.scad
+//    MCC_RAIL_LOCK_ENGAGE = 1.0), then render a case base or the coupon; the render fails with:
+//    "mcc: T1-64 rail lock bump 1 + margin 0.2 does not fit the flank play ..."
 // -----------------------------------------------------------------------------------------
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

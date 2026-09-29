@@ -165,7 +165,7 @@ def discover_coupons() -> list[Target]:
 
 
 def discover_brackets() -> list[Target]:
-    """models/brackets/*.scad — flat plates (VESA sandwich bracket, arch TV bracket, truss
+    """models/brackets/*.scad — flat plates (arch TV bracket, VESA-column bracket, truss
     bracket), structurally identical in shape to a coupon target (no device, no variant config), so
     this mirrors discover_coupons() exactly rather than forcing them through discover_models()'s
     case.scad-shaped mechanism (issue #26, architecture.md §3 rev 9, layout-patch-wall.md §17.2).

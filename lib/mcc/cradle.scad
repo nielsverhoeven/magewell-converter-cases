@@ -29,8 +29,8 @@ use <fasteners.scad> // mcc_side_bolt_keepout(), mcc_case_tripod_insert_bore()
 //   into the boss. Called by shell.scad in its OUTER difference() — after the floor slab and the
 //   boss are already unioned together — so the bore genuinely punches through both, rather than
 //   being differenced only against the boss's own local geometry (see mcc_cradle()'s own comment
-//   for why that would leave it a few mm short). Guarded by cfg["tripod_insert"] (default true,
-//   D-16, rev 9 issue #29) so shell.scad's unconditional call site needs no change — mirrors
+//   for why that would leave it a few mm short). Guarded by cfg["tripod_insert"] (default false since D35;
+//   rail must be off, T1-63) so shell.scad's unconditional call site needs no change — mirrors
 //   mounts.scad's own mcc_rail_features_cut() guard pattern.
 // Arguments:
 //   dev = device record.
@@ -172,9 +172,18 @@ module mcc_cradle(dev, cfg) {
     tripod_flag = struct_val(cfg, "tripod_insert");
     tripod_on = is_undef(tripod_flag) ? false : tripod_flag; // D35: default false.
 
+    // T1-63 (D44, 2026-09-28): the wide mount rail covers the floor centre this boss needs, and the
+    // floor keep-out no longer reserves it -- the two are mutually exclusive. "rail" defaults to
+    // true (mounts.scad), so an absent key still trips this.
+    rail_flag = struct_val(cfg, "rail");
+    rail_on = is_undef(rail_flag) ? true : rail_flag;
+    assert(!(tripod_on && rail_on),
+        str("mcc: T1-63 cfg[\"tripod_insert\"]=true needs [\"rail\", false] on \"", mcc_dev_slug(dev),
+            "\" -- the wide rail covers the floor centre (architecture.md §13 D44)"));
+
     LIP = MCC_WALL; // deck footprint margin beyond the device's own XY extent, mm — a small
                      // locating lip (this file's module contract), also wide enough that the
-                     // floor_center-default (0,0) case tripod insert boss below lands inside the
+                     // (0,0) case tripod insert boss below (opt-in, T1-63) lands inside the
                      // deck's hollow on every priority SKU (T1-32).
     deck_x = [x_dev_lo - LIP, x_dev_hi + LIP];
     deck_y = [y_dev_lo - LIP, y_dev_hi + LIP];
@@ -200,7 +209,7 @@ module mcc_cradle(dev, cfg) {
         // exterior face instead of reaching it. Cutting the bore separately, in shell.scad's OUTER
         // difference() (after the floor slab and this boss are already unioned together), is what
         // actually guarantees a clean through-bore. See mcc_tripod_insert_bore_cut(). Opt-in via
-        // cfg["tripod_insert"] (default true, D-16) — omitted entirely when false, leaving that
+        // cfg["tripod_insert"] (default false, D35; needs ["rail", false], T1-63) — omitted when false, leaving that
         // plan-view point open lattice like everywhere else.
         if (tripod_on) {
             assert(struct_val(MCC_INSERT_1_4_20, "len") + 1 <= z_dev_lo,

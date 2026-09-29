@@ -37,6 +37,36 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
   bore; the thread is modelled in CAD from the STEP. The `m3-thread-ladder` coupon is retired. How a
   printed case gets its thread is still open (architecture.md §12 Q20).
 - CI: a case part whose STEP falls back to the faceted converter now fails `build.py ci`.
+- **Wide, flush mount rail** (architecture.md D44, user decision 2026-09-28): the dovetail's root is
+  65 mm (was ≈14.6 mm) at `MCC_RAIL_Y` = −23.5, the case's exterior floor sits flush on the bracket
+  plate (the rail's 3 mm pedestal is gone), and every non-bearing face of the joint keeps ≥ 0.5 mm
+  clearance. Brackets and cases printed before this change do not mate with ones printed after it.
+  The arch bracket's plates are 11 mm (was 8), its centre 92 mm wide (was 40), and its lap screws
+  M3×12 (was M3×10).
+- **Floor reservations dropped** (D44): the Magewell-Fishtail M4 band and the 1/4"-20 insert keep-out
+  are gone — the rail covers the floor centre. `tripod_insert` now requires `["rail", false]`.
+- `rail-latch` coupon: the groove half now prints standing on the bed with its groove open, like the
+  case floor (it used to be sealed by the shared base plate, D46).
+
+### Removed (2026-09-28)
+
+- **`tv-bracket`** — the VESA 100/200 sandwich plate (issue #26) — is retired (architecture.md D47,
+  user decision 2026-09-28): a mated case covered the VESA mount interface it was sandwiched to. The
+  arch bracket stays as the horizontal option; a vertical VESA-column bracket is planned.
+  `MCC_BRACKET_PLATE_T` goes with it.
+
+### Changed (2026-09-28, gravity lock)
+
+- **The rail lock is a gravity lock** (architecture.md D48, user decision 2026-09-28): a rigid 0.7 mm
+  bump on the rail's upper flank drops into a pocket in the case groove's flank and is held there by
+  the case's own weight. It replaces the D34 snap latch (arm, plate window, nub and notch are gone):
+  nothing flexes; remove a case by lifting it about 1 mm and sliding it back off. Brackets and cases
+  printed before this change do not mate with ones printed after it.
+- **The groove entrance has a 1 × 45° lead-in** where it leaves the case's +X wall (D48).
+- **A mounted case always hangs patch-wall down** (D49) — the lock depends on it.
+- Brackets read the rail's plate-side keep-out from `mcc_rail_male_keepout()` and union the rail on
+  with no plate cut (D50). The arch bracket's rail no longer cuts its centre plate.
+- Coupon `rail-latch` is now `rail-lock` (tests the lock hanging, plus an e-ladder).
 
 ### Fixed (mount rail, issue #46)
 

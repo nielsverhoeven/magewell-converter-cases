@@ -531,10 +531,7 @@ MCC_FAN_APERTURE_D = 38.0; // +X end-wall fan aperture diameter, mm. DERIVED (in
                             // layout-patch-wall.md §5. assumed.
 
 // Floor keep-out geometry (layout-patch-wall.md §7.1 floor table, rev-5 corrections).
-MCC_CASE_INSERT_KEEPOUT_D = 20.0; // plan-view keep-out disc for the case's own 1/4"-20 insert, mm.
 MCC_STRAP_SLOT = [25, 5];         // strap-slot [length, width], mm. assumed.
-MCC_FISHTAIL_BAND = [60, 20];     // Magewell Fishtail M4 reservation band [x,y], mm — reserve-only,
-                                    // hole pitch unknown (knowledge/magewell/accessories.md:26, M7).
 MCC_FLOOR_FEATURE_MIN_SEP = 15.0; // minimum centre-to-centre separation between any two floor
                                     // features, mm (or r1+r2+2.0 where larger) — layout-patch-wall.md
                                     // §7.1.
@@ -549,7 +546,7 @@ MCC_FLOOR_FEATURE_EDGE_MIN = 2.0; // minimum edge-to-edge clearance between a fl
 MCC_SHOW_GHOST = false;
 
 // -----------------------------------------------------------------------------------------
-// Section: Mount rail (dovetail + spring-lip latch) — issue #25, replaces VESA (D-15, rev 9)
+// Section: Mount rail (dovetail + gravity lock) — issue #25, replaces VESA (D-15, rev 9; lock D48)
 // lib/mcc/rail.scad owns the geometry; this section owns only the shared cross-section constants
 // both mcc_rail_male() (bracket, #26/#27) and mcc_rail_female_cut() (case floor, mounts.scad) read,
 // per the D6 precedent (one file, both mating halves, so the profiles can never drift apart).
@@ -572,14 +569,14 @@ MCC_RAIL_SILL_H = MCC_RAIL_DEPTH + MCC_FLOOR_T; // = 7.0. Local floor thickening
 MCC_RAIL_FLANK_ANGLE = 60; // dovetail flank angle from the floor/horizontal plane, deg. issue #25's
                             // own "~60 deg" instruction; no repo-sourced dovetail-angle figure
                             // exists. assumed.
-MCC_RAIL_MOUTH_W = 10.0;   // dovetail mouth width (narrow end, at the case's exterior floor face /
-                            // bracket rail tip), mm. assumed — clears the >=5 mm minimum clip width
-                            // (knowledge/components/fasteners-and-hardware.md:135) either side of the
-                            // latch tab with margin.
-MCC_RAIL_ROOT_W = MCC_RAIL_MOUTH_W + 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANGLE);
-                            // dovetail root width (wide end, deepest into the case floor / at the
-                            // bracket rail's base), mm. DERIVED, not hand-typed (architecture.md §3
-                            // "formulas not magic numbers") = 10.0 + 2*4.0/tan(60) ~= 14.6188.
+MCC_RAIL_ROOT_W = 65.0;    // dovetail root width (wide end: deepest into the case floor / top of the
+                            // bracket's male rail), mm. USER DECISION 2026-09-28 (architecture.md
+                            // §13 D44): "much wider, intermediate, root 60-70 mm"; 65 validated at the
+                            // gate (max ~68.9 at MCC_RAIL_Y below before the sill meets the side-bolt
+                            // web). PRIMARY since D44 -- MOUTH_W is derived from it (was the reverse).
+MCC_RAIL_MOUTH_W = MCC_RAIL_ROOT_W - 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANGLE);
+                            // dovetail mouth width (narrow end: the case's exterior floor face / the
+                            // bracket plate top), mm. DERIVED = 65.0 - 4.6188 = 60.3812.
 MCC_RAIL_SILL_SIDE_W = MCC_WALL; // side wall of the floor sill beside the groove root, mm
                             // (2026-09-27, architecture.md D30). The sill used to be exactly
                             // MCC_RAIL_ROOT_W wide, i.e. its side walls ran out to a 0 mm knife
@@ -592,52 +589,43 @@ MCC_RAIL_LEN = 150.0;      // rail/groove length along its slide axis (case-loca
                             // §17.2 R4/§1.4). Fits the smallest family (compact, L=194.9) with
                             // >= 19 mm margin per end past the end walls' inner faces.
 
-// R2 (blocking, layout-patch-wall.md §17.2/§11 R24): NEGATIVE, not +20.0 — the plan's own derivation
-// form (MCC_CASE_INSERT_KEEPOUT_D/2 + MCC_RAIL_ROOT_W/2 + MCC_FLOOR_FEATURE_EDGE_MIN, ~=19.31,
-// rounded up to 20.0 for margin) is kept, but NEGATED: the rail sits under the cradle deck and the
-// device (not free-standing in the connector bay), putting the case's mass BELOW the mount line when
-// the patch wall hangs down (#26's own orientation requirement). Rounded to 20.0 (not the exact
-// 19.31) so the disc/rect clearance in §1.4 (2.69 mm) comfortably exceeds MCC_FLOOR_FEATURE_EDGE_MIN.
-MCC_RAIL_Y = -20.0;
+// Rail Y (D44, 2026-09-28 -- supersedes rev 9's R2 value -20.0). As close to the device's own centre
+// of mass (y_dev_c = -30.825 on every HDMI-ended SKU, ~0.5 mm less negative on the BNC-ended ones) as
+// the 65 mm root allows. Binding neighbour: the side-bolt support web's floor footprint. On the
+// tightest SKU (W = 158.80) the sill's -Y edge (MCC_RAIL_Y - MCC_RAIL_ROOT_W/2 - MCC_RAIL_SILL_SIDE_W =
+// -59.0) stays 3.4 mm clear of the web top (-62.4), and the groove's "mount_rail" keep-out row clears
+// it by 4.4 mm beyond MCC_FLOOR_FEATURE_EDGE_MIN (D16). Negative as before (R24): the rail sits under
+// the device, so the case's mass stays on the rail band when the patch wall hangs down. The case-insert
+// and Fishtail reservations that pinned the rail to |y| >= 19.31 are gone (D44).
+MCC_RAIL_Y = -23.5;
 
-// Rail latch — REDESIGNED 2026-09-28 (issue #46, architecture.md §13 D34; replaces the D28
-// disabled spring-lip). An in-plane snap arm cut out of the male rail's own -Y flank: a flank-
-// parallel strip MCC_RAIL_LATCH_ARM_T thick, freed from the rail core by a MCC_RAIL_LATCH_SLOT slot
-// and from the bracket plate by a window through the plate, so it stands on the bed and is joined
-// only at its root. It bends in Y — in the printed layer plane, the strong FDM axis
-// (fasteners-and-hardware.md:137). A nub on its free tip rides the groove flank during the slide
-// and snaps into a notch in the case groove's flank at full insertion; it releases by pulling
-// (ramped both ways, steeper on the way out) — no thumb access through the case floor any more.
-// Root at the +X end (towards the case's open end), tip at -X: the pull-off load puts the arm in
-// tension, not compression.
-MCC_RAIL_LATCH_ENABLED = true;
-MCC_RAIL_LATCH_ARM_L = 18.0;  // snap arm free length, root to tip, mm. assumed — L/t = 11.25 >= 8
-                               // (fasteners-and-hardware.md:133) and tip strain ~1.5 % (asserted
-                               // against MCC_SNAP_STRAIN_MAX in rail.scad).
-MCC_RAIL_LATCH_ARM_T = 1.6;   // snap arm thickness (Y, flank-parallel), mm. assumed — MCC_TG_W's
-                               // 1.6 mm feature-thickness precedent; 4 lines at 0.42 mm.
-MCC_RAIL_LATCH_ROOT_FILLET = 0.5 * MCC_RAIL_LATCH_ARM_T; // = 0.8. DERIVED — minimum root radius,
-                               // fasteners-and-hardware.md:134 "fillet >= 0.5x base thickness".
-MCC_RAIL_LATCH_ENGAGE = 2.0;  // nub protrusion beyond the flank, mm.
-                               // fasteners-and-hardware.md:136 "≥ ~2 mm for a secure catch".
-MCC_RAIL_LATCH_SLOT = MCC_RAIL_LATCH_ENGAGE + 0.6; // = 2.6. gap between arm and rail core, mm —
-                               // room for the full inward deflection plus margin; its rounded root
-                               // end (radius SLOT/2 = 1.3) is the root fillet (>= ROOT_FILLET).
-MCC_RAIL_LATCH_RAMP_IN = 30;  // nub entry ramp angle to the slide axis, deg. assumed — easy snap-in.
-MCC_RAIL_LATCH_RAMP_OUT = 45; // nub exit ramp angle, deg. assumed — steeper = more pull-off force;
-                               // tune against the >= 30 N target on models/coupons/rail-latch.scad.
-MCC_RAIL_LATCH_FLAT = 3.0;    // nub flat length at full protrusion, mm. assumed.
-MCC_RAIL_LATCH_WINDOW_CLR = 0.6; // clearance of the bracket-plate window around the arm leg and
-                               // slot, mm. assumed — keeps the arm from fusing to the plate.
-MCC_SNAP_STRAIN_MAX = 0.025;  // allowed peak bending strain of a printed ASA snap arm at full
-                               // deflection (1.5 t d / L^2). assumed — the usual ~2.5 % design limit
-                               // for ABS-class snap fits; no sourced ASA figure in knowledge/**.
-MCC_RAIL_LATCH_LEAD_IN = 20.0; // mm, from the case's OPEN (+X) end of the working length to the
-                               // latch, so the case self-aligns on the dovetail before the nub has
-                               // to ride the flank. assumed. rail.scad re-derives the latch X from
-                               // its own `len` (+len/2 - LEAD_IN) so a short coupon rail works too.
-MCC_RAIL_LATCH_X = MCC_RAIL_LEN / 2 - MCC_RAIL_LATCH_LEAD_IN; // = +55.0 at the production length.
-                               // Informational/BOM; geometry re-derives from `len`.
+// Rail lock -- a GRAVITY lock (user decision 2026-09-28, architecture.md §13 D48; it replaces the D34
+// snap latch, which is removed). A rigid bump on the male rail's -Y flank, near its +X end, drops into
+// a pocket in the case groove's -Y flank at full insertion. Every bracket places the rail with
+// rotate([0,0,180]) and a mounted case always hangs patch-wall down (fixed decision, D49), so the -Y
+// flank is the upper one: the case's weight rests on it (about 1.15 x the weight, normal to the 60 deg
+// flank) and holds the bump in its pocket. Nothing flexes: sliding on, the case rides over the bump
+// inside the dovetail's own flank play (2 x MCC_RAIL_CLR_HORIZ = 1.155 mm horizontal, T1-64); the exit
+// face is square to the slide axis, so an axial pull cannot cam a hanging case out. Release: lift the
+// case about 1 mm (it stops on the lower flank) and slide it back off. Reference: the external
+// specialist's DP48 plate -- 0.8 mm strips riding inside 0.97 mm of dovetail play (analysis F2).
+MCC_RAIL_LOCK_ENGAGE = 0.70;      // bump protrusion beyond the flank, horizontal (Y), mm (0.61 normal to
+                                   // the flank). assumed: the DP48 uses 82 % of its lift play, this is
+                                   // 61 % of ours, leaving 0.45 mm for FDM tolerance. Tuned on the
+                                   // rail-lock coupon's e-ladder (M15).
+MCC_RAIL_LOCK_PLAY_MARGIN = 0.2;  // horizontal flank play that must remain while the bump rides the
+                                   // groove flank, mm (T1-64). assumed.
+MCC_RAIL_LOCK_RAMP_IN = 30;       // entry ramp (the bump's -X side) to the slide axis, deg. assumed (the
+                                   // D34 nub's entry angle).
+MCC_RAIL_LOCK_RAMP_OUT = 90;      // exit face (the bump's +X side) to the slide axis, deg. 90 = square:
+                                   // self-locking against an axial pull at any friction (T1-65). assumed.
+MCC_RAIL_LOCK_FLAT = 1.0;         // bump flat top length along X, mm. assumed.
+MCC_RAIL_LOCK_END_OFFSET = 3.0;   // male's +X (trailing) end to the bump's exit face, mm. assumed -- the
+                                   // DP48 strips sit 3.0-5.0 mm from their trailing end (F2). rail.scad
+                                   // derives the position from its own `len`, so the 60 mm coupon works.
+MCC_RAIL_LEADIN = 1.0;            // 45-deg lead-in where the groove leaves the case's +X wall: flanks and
+                                   // mouth flare by this much per side (horizontal) over the last this-many
+                                   // mm; the roof stays. The DP48's 1.0 x 45 deg entry chamfer (F2). assumed.
 MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs out through the case's
                                // +X end zone (D34). There the passage only guides the male during
                                // insertion — at full mate nothing loads it — so the T1-38 residual
@@ -651,30 +639,35 @@ MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs o
 MCC_RAIL_END_STOP_L = 0;
 MCC_RAIL_END_STOP_H = 0;
 
-// MCC_RAIL_CLR: deliberately NOT a new constant. Reuse MCC_CLR_SLIDE (0.3, above) for the
-// per-side dovetail sliding-fit clearance — same coupon (tolerance-ladder / the new rail-latch
-// coupon) calibrates both, and a second clearance constant for the same physical fit class would
-// only drift from the first (docs/plans/2026-09-09-mount-rail-and-brackets.md §1.1).
+// Rail clearances (D44, user decision 2026-09-28, from the external specialist's review): at least
+// 0.5 mm on EVERY non-bearing surface of the joint. The only designed bearing face is the case's flat
+// exterior floor on the bracket plate (the male has no MCC_FLOOR_T pedestal any more); on a vertical,
+// TV-mounted bracket the upper flank (rail-local −Y) also bears (architecture.md R41). These replace the
+// rev-9 rule "reuse MCC_CLR_SLIDE for the rail": 0.3 mm horizontal at a 60 deg flank is only 0.26 mm
+// normal to it -- below the requirement. MCC_CLR_SLIDE stays for every other sliding fit.
+MCC_RAIL_MATE_CLR = 0.5;    // minimum clearance on every non-bearing rail face, mm. User decision (D44).
+MCC_RAIL_CLR_HORIZ = MCC_RAIL_MATE_CLR / sin(MCC_RAIL_FLANK_ANGLE); // = 0.5774. Per-side horizontal
+                            // offset of the female groove and lock pocket from the male profile that
+                            // gives MCC_RAIL_MATE_CLR normal to a MCC_RAIL_FLANK_ANGLE flank (T1-62).
+MCC_RAIL_ROOF_CLR = MCC_RAIL_MATE_CLR; // = 0.5. Gap between the male's flat top (and the lock bump's) and
+                            // the groove roof, mm. Its own constant on purpose: the roof is a ~66 mm
+                            // bridge in the base's print pose (architecture.md R40) -- if the rail-lock
+                            // coupon (M15) shows it sags into this gap, raise THIS; never narrow the rail.
+MCC_RAIL_MALE_H = MCC_RAIL_DEPTH - MCC_RAIL_ROOF_CLR; // = 3.5. The male taper's built height above the
+                            // bracket plate (no pedestal since D44).
 
 // -----------------------------------------------------------------------------------------
-// Section: Mounting brackets (issue #26 — VESA sandwich plate carrying the mount rail; §17.2's
-// R4/R5/D22 apply here too: the rib rule is stated once, generic, not duplicated per bracket)
-// docs/plans/2026-09-09-mount-rail-and-brackets.md §3. `MCC_M8_CLR_D` (above, in the fastener
-// section — a generic clearance size, not bracket-specific) is the only other new constant #26
-// needs; VESA hole *positions* (±50/±100) are plan-fixed geometry, not calibrated constants, so
-// they stay as literals inside tv-bracket.scad per the plan's own §3.1 table.
+// Section: Mounting brackets (models/brackets/*.scad). Bracket-own geometry stays inside each bracket
+// file; only cross-cutting rules live here (§17.2's R4/R5/D22: the rib rule is stated once, generic,
+// not duplicated per bracket). The VESA 100/200 sandwich plate that opened this section
+// (tv-bracket.scad, #26) was retired in rev 16, with MCC_BRACKET_PLATE_T (architecture.md D47).
 // -----------------------------------------------------------------------------------------
-
-MCC_BRACKET_PLATE_T = 6.0; // TV-bracket sandwich-plate thickness, mm. assumed (PLAN-ASSUMPTION 6,
-                           // layout-patch-wall.md §17.5 — RATIFIED for #26: sandwiched flat
-                           // against a TV, the plate is a shim, not a beam, so 6 mm is not
-                           // re-derived from the rib rule below).
 
 MCC_RIB_HEIGHT_RATIO_MAX = 3.0; // stiffening-rib height <= this x rib thickness, unitless.
                                  // fdm-rugged-enclosure-guidelines.md:65-70 "Rib height ... about
                                  // 3x rib thickness as a practical limit". First codified here
-                                 // (D22, architecture.md §13/§17.2) — the bracket's own cross ribs
-                                 // are exactly the floor-standing stiffening fin this rule targets;
+                                 // (D22, architecture.md §13/§17.2) — bracket ribs (the arch arm's
+                                 // edge ribs) are exactly the standing stiffening fin this rule targets;
                                  // the cradle-deck lattice (#29) explicitly does NOT use it
                                  // (layout-patch-wall.md §17.3 R6 — those ribs are cross-braced webs,
                                  // a different structural class).

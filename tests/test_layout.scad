@@ -91,7 +91,9 @@ assert(dims == [struct_val(l, "L"), struct_val(l, "W"), struct_val(l, "H")], str
 // --- mcc_floor_keepout() is non-nullary and returns a sane list ---
 fk = mcc_floor_keepout(DEV, VARIANT);
 assert(len(fk) > 0, "mcc_floor_keepout empty");
-assert(len([for (f = fk) if (f[4] == "case_tripod_insert") f]) == 1, "case_tripod_insert missing");
+// D44: the case-insert and Fishtail reservations are retired -- neither row may come back silently.
+assert(len([for (f = fk) if (f[4] == "case_tripod_insert" || f[4] == "fishtail_reserve") f]) == 0,
+    "D44: case_tripod_insert/fishtail_reserve keep-out rows must not exist");
 
 echo(str("mcc test_layout: L=", struct_val(l, "L"), " W=", struct_val(l, "W"), " H=", struct_val(l, "H"),
     " n_slots=", struct_val(l, "n_slots"), " pitch=", struct_val(l, "pitch"),

@@ -172,14 +172,14 @@ def _package_flat_parts(
     contents: list[str] = []
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, files in per_target.items():
-            slug = Path(name).name  # "coupons/neutrik-tile" -> "neutrik-tile"; "brackets/tv-bracket" -> "tv-bracket"
+            slug = Path(name).name  # "coupons/neutrik-tile" -> "neutrik-tile"; "brackets/arch-tv-bracket" -> "arch-tv-bracket"
             for f in files:
                 arcname = f"{slug}/{f.name}"
                 zf.write(f, arcname=arcname)
                 contents.append(arcname)
         # Coupons AND brackets are pre-release/unmeasured hardware (architecture.md §9 Tier 4 for
-        # coupons; the bracket's own PLAN-ASSUMPTION 5/6 retention-force and plate-thickness
-        # figures, layout-patch-wall.md §17.5, are likewise un-coupon-verified) — always flag.
+        # coupons; the brackets' rail retention force (M15) and TV measurements (M18) are likewise
+        # unmeasured) — always flag.
         _write_readme(
             zf, title=title, version=version, sha=sha,
             contents=sorted(contents), prerelease=True,

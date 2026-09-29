@@ -59,13 +59,13 @@ tap-drill bore in the patch wall itself (D41 — no printed thread, no insert; h
 M3×0.5 thread is open, architecture.md §12 Q20) — are in each per-variant table below, since the
 connector count varies 3–4 by SKU.)*
 
-### Case floor mounting (own tripod/cheeseplate feature, distinct from the device-retention bolt above)
+### Case floor mounting (the mount-rail groove — no floor insert or reservations since D35/D44)
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
-| ~~1/4"-20 brass heat-set insert~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D35):** the case has no floor insert any more — the side bolt (above) is the only screw. `cfg["tripod_insert"]` can bring it back per variant. | architecture.md §13 D35 |
-| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**) needs no BOM hardware of its own: both the female groove (case floor) and the male rail + spring-lip latch are printed features, no fasteners. See a future bracket's own `## Mounting brackets` section (issue #26/#27, not yet on `main`) for its own hardware. The Magewell-Fishtail-compatible M4 pattern remains a **reserve-only** band (hole pitch `unknown`, M7) — no hardware row until it is actually cuttable | `.claude/knowledge/architecture.md` §6 floor rule (rev 9); `lib/mcc/rail.scad` |
-| Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
+| ~~1/4"-20 brass heat-set insert~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D35):** the case has no floor insert any more — the side bolt (above) is the only screw. `cfg["tripod_insert"]` can bring it back per variant, but only together with `["rail", false]` (D44, assert T1-63). | architecture.md §13 D35 |
+| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**; widened and made flush by D44: 65 mm root, the case floor sits flush on the bracket plate, ≥ 0.5 mm clearance on every non-bearing face) needs no BOM hardware of its own: the female groove (case floor, with the lock pocket) and the male rail (with the rigid gravity-lock bump, D48) are printed features. See `## Mounting brackets` for bracket hardware. The Magewell-Fishtail M4 reservation is **dropped** (D44) — no Fishtail hardware | `.claude/knowledge/architecture.md` §6 floor rule (rev 16), §13 D44; `lib/mcc/rail.scad` |
+| Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside — **free-standing use only**: never on a case that mounts on a bracket, where feet would hold the floor off the plate that D44 requires it to sit flush on | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
 | Cable zip tie / adhesive mount base | generic | as needed | Internal cable dressing | `knowledge/components/fasteners-and-hardware.md:215-222` |
 
 ### Fan bay (optional — only when a variant sets `fan=true`)
@@ -134,23 +134,11 @@ sections below from a device's port map + variant config; a bracket has neither
 (`docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3, `.claude/knowledge/layout-patch-wall.md`
 §17.2). Update this section by hand whenever `models/brackets/*.scad` changes.
 
-`tv-bracket.scad` (issue #26) is a VESA 100×100/200×200 sandwich plate that sits between a TV's
-own back panel and its existing wall/stand mount, carrying the male mount rail
-(`lib/mcc/rail.scad`, issue #25) so a case clicks onto it tool-less. It is printed once per
-mounting point, not per case — not part of any per-device BOM above.
-
-| Item | Part number | Qty | Notes | Source |
-|---|---|---|---|---|
-| `tv-bracket` printed plate | `models/brackets/tv-bracket.scad`, ASA, 230×230×6 mm | 1 | Prints flat, either face down (see `models/brackets/README.md` "Orientation (Bambu Studio)") | `models/brackets/tv-bracket.scad` |
-| M4 machine screw, TV's own stock length **+ 6 mm** | generic, TV-specific | 4 | Passes through the bracket's 100×100 clearance holes (`MCC_M4_CLR_D` = 4.5 mm) into the TV's own VESA threads, sandwiching the plate | VESA MIS-D spec ([Wikipedia](https://en.wikipedia.org/wiki/VESA_mount)); `docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3 |
-| M6 or M8 machine screw, existing mount's own stock length **+ 6 mm** | generic, mount-specific | 4 | Passes through the bracket's 200×200 clearance holes (`MCC_M8_CLR_D` = 9.0 mm, `assumed` — generous enough for either bolt size) | VESA MIS-F spec ([Wikipedia](https://en.wikipedia.org/wiki/VESA_mount)); [Alibaba VESA screw-size guide](https://electronics.alibaba.com/question/monitor-bracket-screws-size,-vesa-fit-installation-guide) (M6×15/M8×16 for 200×200+) |
-| M6/M8 spacer/standoff washer, 6 mm | generic | 0–8 (situational) | Only if the user's existing mount's screws are not already long enough for the extra 6 mm plate thickness — `assumed`, stock-length dependent, check before ordering | `docs/plans/2026-09-09-mount-rail-and-brackets.md` §3.3 |
-
-No new fasteners are added to the BOM for the VESA side beyond the above — the *same* screws that
-normally go TV→mount now go TV→(through this plate)→mount; only their length needs checking
-against the plate's own 6 mm thickness. The case side needs no extra hardware either: the rail/
-latch interface is tool-less by design (see `models/coupons/rail-latch.scad`'s own measurement
-form for the retention target this depends on).
+The VESA 100×100/200×200 sandwich plate `tv-bracket.scad` (issue #26) was **retired** on 2026-09-28
+(user decision, `.claude/knowledge/architecture.md` §13 D47): a mated case covered the VESA mount
+interface it was sandwiched to. The case side of every bracket needs no hardware: the rail/lock
+interface is tool-less — a rigid gravity lock, released by lifting the case about 1 mm (D48; its
+tests: `models/coupons/rail-lock.scad`, M15).
 
 Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
 user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
@@ -159,22 +147,22 @@ user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
 
 `arch-tv-bracket.scad` screws **directly** onto a TV's top two VESA 400 screw positions (M8); no
 VESA plate. Printed once per mounting point, not per case. **Do not print for use before M15
-(rail-latch), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
+(rail-lock), M18 (the TV measurements below) and R38 (rail entry/interference, an inherited
 defect tracked as issue #48) are closed** — see `models/brackets/README.md`.
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
 | `arch-tv-bracket` arm | `models/brackets/arch-tv-bracket.scad` part `arm`, ASA | 2 | Same STL printed twice — the left arm is the right one rotated (not mirrored), see the file's own `PLAN-ASSUMPTION-4` header note | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.1 |
 | `arch-tv-bracket` centre | same file, part `centre`, ASA | 1 | Carries the rail; sits stacked on the two arms' laps | `docs/plans/2026-09-27-arch-tv-bracket.md` §1.5 |
-| M8 socket head cap screw (ISO 4762) | generic | 2 | **Length: MEASURE, do not guess.** Under-head length = `pad_clamp_t` (echoed by the render, `-D part="arm"` or `"centre"`; 7.0 mm at the current parameters) + the usable thread depth of *your* TV's VESA inserts, minus >= 1 mm, rounded **down** to a stock length. Too long can damage the TV panel | measurement M18b; user decision #47 |
+| M8 socket head cap screw (ISO 4762) | generic | 2 | **Length: MEASURE, do not guess.** Under-head length = `pad_clamp_t` (echoed by the render, `-D part="arm"` or `"centre"`; 10.0 mm at the current parameters (11 mm plates since D44)) + the usable thread depth of *your* TV's VESA inserts, minus >= 1 mm, rounded **down** to a stock length. Too long can damage the TV panel | measurement M18b; user decision #47 |
 | M8 flat washer (ISO 7089, ⌀16) | generic | 2 | Under the head, in the pad counterbore — spreads the clamp load on ASA | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.4 (`assumed` ISO nominal, `PLAN-ASSUMPTION-9`) |
 | M8 washer, as a spacer | generic | 0–4 (situational) | Only if the TV back is not flat along an arm (arms bear directly on the TV — the centre never touches it); adding spacers lengthens the required screw by their thickness | risk R-F (proposed R33) |
-| M3 socket head cap screw M3×10 (ISO 4762) | generic | 8 | Lap joints, 4 per side, driven from the top face | `docs/plans/2026-09-27-arch-tv-bracket.md` §3.3 derivation |
+| M3 socket head cap screw M3×12 (ISO 4762) | generic | 8 | Lap joints, 4 per side, driven from the top face (M3×12 since D44: 11 mm centre plate, counterbore `M3_HEAD_K + 1.3` — T1-57) | `models/brackets/arch-tv-bracket.scad` T1-57; `docs/plans/2026-09-27-arch-tv-bracket.md` §3.3 derivation |
 | M3 heat-set insert Ruthex RX-M3x5.7 | RX-M3x5.7 | 8 | In the arm laps, installed from the top face | `knowledge/components/fasteners-and-hardware.md:35` (length), `:40` (hole diameter) |
 
 Deviations from the issue's own text, flagged for the user at PR review (`PLAN-ASSUMPTION-1`,
-`-3`): the lap joints use **M3**, not M4 (a sourced insert, blind in the 8 mm arm, >10x pull-out
-margin — `fasteners-and-hardware.md:56`, `:59`); and the **centre plate stands 8 mm off the TV** —
+`-3`): the lap joints use **M3**, not M4 (a sourced insert, blind in the 11 mm arm, >10x pull-out
+margin — `fasteners-and-hardware.md:56`, `:59`); and the **centre plate stands 11 mm off the TV** (D44) —
 only the two arms bear directly on it, forced by the case's own +X slide-on sweep over the right
 arm's M8 pad (see the `.scad` file's own header comment for the full Z-stack derivation).
 
