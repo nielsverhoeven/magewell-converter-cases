@@ -632,12 +632,10 @@ MCC_RAIL_PASSAGE_ROOF_MIN = 1.2; // minimum roof over the groove where it runs o
                                // (MCC_FLOOR_T) does not apply; the fan-bay reservation above caps
                                // the passage sill at fan_bay_z[0]. assumed.
 
-// End stop: the CLOSED (-X) end of the case groove itself (D34). The old separate end-stop flange
-// on the male rail sat inside the case footprint and 6 mm above the case bottom — it would have hit
-// the case floor — so it is retired. The constants stay at 0 so bracket placement math that still
-// adds them keeps its meaning; drop them at the next bracket rework.
-MCC_RAIL_END_STOP_L = 0;
-MCC_RAIL_END_STOP_H = 0;
+// End stop: the CLOSED (-X) end of the case groove itself (D34). The male rail has no end stop of its
+// own -- its old flange sat inside the case footprint and would have hit the case floor. D34 retired
+// it; D52 removed its zero-valued MCC_RAIL_END_STOP_L/H constants. Any future male-side feature is a
+// rail.scad change that mcc_rail_male_keepout() reports (D50), never a constant brackets add by hand.
 
 // Rail clearances (D44, user decision 2026-09-28, from the external specialist's review): at least
 // 0.5 mm on EVERY non-bearing surface of the joint. The only designed bearing face is the case's flat
