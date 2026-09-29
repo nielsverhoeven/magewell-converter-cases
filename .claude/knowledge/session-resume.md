@@ -40,6 +40,13 @@ Working memory for agents resuming this repo. Keep it short and current; history
    under the head, M3×6 recommended) and measure head ⌀ across the knurl, head height and length; try it
    in a printed ⌀8 × 1.5 counterbore. A head over ≈ 7.8 mm means a bigger counterbore — an architect
    re-gate (T1-62.1 fires above ⌀8.09), not a constant tweak. Feeds `MCC_LID_CB_D`.
+   Also **M63.1** (issue #63, R44/R63.1): weigh one assembled case per family with its device (and the
+   fan where fitted; about 0.8 kg `assumed`) — every release force of the top lock scales with it, and it
+   is the dummy mass for M15. Then **M15** (rewritten by #63): print `models/coupons/rail-lock` and test
+   the roof sag, the play and the lock hanging under that mass, incl. the e-ladder (`LOCK_E` 0.4 / 0.5 /
+   0.7); no full-size bracket prints before it passes. Feeds `MCC_RAIL_ROOF_CLR` and
+   `MCC_RAIL_LOCK_ENGAGE`. Then **M21** on the first arch bracket print with a real case and device:
+   release forces and the one-hand pull-and-slide removal (R63.1).
 4. Update the device files (`side_bolt` `pos`, `confidence`), re-render, `golden --update` with
    justification, then `print-check` and the **first full-size print** (NDI to HDMI first).
 5. A release with every exported port at `measured` becomes a normal (non-pre) release automatically.

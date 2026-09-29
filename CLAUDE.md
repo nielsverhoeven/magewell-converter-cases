@@ -74,11 +74,13 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   features (one owner, `mounts.scad`): the dovetail mount-rail groove (D-15/D34), strap slots,
   stacking profile. **Wide, flush dovetail** (user decision 2026-09-28, D44): 65 mm root at
   `MCC_RAIL_Y` = −23.5; the case's exterior floor sits flush on the bracket plate (no pedestal) and
-  every non-bearing face of the joint keeps ≥ 0.5 mm clearance (flanks and roof). **The lock is a
-  gravity lock** (user decision 2026-09-28, D48): a rigid 0.7 mm bump on the rail's upper flank drops
-  into a pocket in the groove flank and is held there by the case's own weight; nothing flexes, there
-  is no latch and no actuator — remove a case by lifting it about 1 mm and sliding it back off. The
-  groove's entrance through the +X wall has a 1 × 45° lead-in. **No floor insert and no floor reservations** (D35, D44): the side bolt is the only
+  every non-bearing face of the joint keeps ≥ 0.5 mm clearance (flanks and roof). **The lock sits on
+  top of the dovetail** (user decision 2026-09-29, D63.1 — replaces the D48 flank bump): two rigid
+  0.6 mm strips on the rail's top drop into one full-width slot in the groove roof, held there because
+  the case's weight on the rail's upper flank wedges the case onto the plate; nothing flexes, there is
+  no latch and no actuator — remove a case by pulling it about 1 mm away from the TV (the dovetail
+  stops it) and sliding it back off. The groove's entrance through the +X wall has a 1 × 45° lead-in on
+  flanks and roof; its closed −X end has a full 3 mm end wall (the rail is 136 mm long, D64.1). **No floor insert and no floor reservations** (D35, D44): the side bolt is the only
   screw; the Magewell-Fishtail M4 and 1/4"-20 insert reservations are dropped because the rail covers
   the floor centre — `cfg["tripod_insert"]` stays available only with `["rail", false]` (assert
   T1-63). Hole position per SKU is
@@ -93,8 +95,8 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   **printed ASA in that clamp path is accepted** (architecture.md §11 R42). The VESA 100/200
   `tv-bracket` is **retired** (D47) — do not reintroduce it.
   **A mounted case always hangs patch-wall down** (user decision 2026-09-28, D49) — on every bracket,
-  the truss mount (#27) included, and never on a TV turned to portrait: the gravity lock only engages
-  when the case's weight rests on the rail's upper flank. Take the case off before the TV is laid
+  the truss mount (#27) included, and never on a TV turned to portrait: the top lock is only held
+  shut while the case's weight rests on the rail's upper flank. Take the case off before the TV is laid
   down, carried or tilted (R44).
 - **Ruggedness**: 1 m drop onto concrete, ASA only, 3 mm walls / 5 perimeters, connectors recessed
   behind a shell bezel. **The connectors mount straight into the patch wall** (user decision
@@ -118,14 +120,14 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
 - Third-party reference assets live in `knowledge/**/assets/` with attribution, nowhere else.
 - **Coupons before cases** — `neutrik-tile`, `depth-mockup`, `tg-ladder`, `insert-boss`,
   `tolerance-ladder` and `rail-lock` are printed and measured before any full-size case is printed.
-  The rail-lock coupon is the physical gate for the case's groove roof (R40), pocket and lead-in (M15).
+  The rail-lock coupon is the physical gate for the case's groove roof (R40), lock slot, strips and lead-in (M15).
 
 ## Standard commands
 
 ```
 python scripts/build.py doctor        # environment sanity (OpenSCAD, BOSL2 submodule pinned)
 python scripts/build.py render        # render all models, --backend=Manifold
-python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire; + the lid see-through check's self-test; non-zero exit = fail
+python scripts/build.py smoke         # tests/*.scad -> .csg, asserts fire; + the printability checkers' self-tests (see-through, cantilever); non-zero exit = fail
 python scripts/build.py check         # mesh checks (watertight, winding, single shell) + no floating islands + no see-through opening in a case lid
 python scripts/build.py golden        # diff tests/golden/*.json, --update to refresh
 python scripts/build.py review        # exports/review.3mf: every design in one Bambu Studio project
@@ -163,8 +165,8 @@ Studio project; every part (8 cases as base + lid, coupons, `arch-tv-bracket` di
 parts, `vertical-tv-bracket`) slices with **zero Bambu Studio warnings**, enforced in CI by the
 slicer gate (render.yml: six parallel "Validate parts — group k of 6" jobs, ≈ 3 min). Geometry
 evolutions since — the connectors mount straight into the patch wall, no panel part (D36), no floor
-insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail gravity lock that
-replaced the D34 latch (D48), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
+insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail's top lock (D63.1,
+which replaced the D48 flank lock), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
 instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47),
 the vertical VESA-column bracket and the arch's sandwich parts (D51), and the patch-wall
 tongue-and-groove moved clear of the lid's thumbscrew counterbores (D62.1) — are in architecture.md §13.

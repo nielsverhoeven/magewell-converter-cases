@@ -12,6 +12,24 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Changed (2026-09-29, issues #63–#65, user decisions) — MAJOR: printed bases and brackets are not interchangeable
+
+- **The rail lock moves on top of the dovetail** (#63, architecture.md D63.1): two rigid 0.6 mm strips on
+  the male rail's top drop into one full-width slot in the case groove's roof (backed by extra floor
+  material); the D48 flank bump and pocket are gone. Remove a case by pulling it about 1 mm away from
+  the TV and sliding it off. The groove entry's 1 × 45° lead-in now chamfers the roof too.
+- **The groove's closed end is closed** (#64, D64.1): the rail is 136 mm (was 150) and the case sill keeps
+  a full 3 mm end wall behind the groove's −X end; before, the groove opened into the case between 3 and
+  4 mm above the floor. The sill now clears the reserved PoE-splitter bay by ≥ 2 mm on every SKU (D45).
+- **No zip-tie slots in the floor** (#65, D65.1): the PoE-splitter tie-down slots are removed from every
+  base (`mcc_splitter_tiedown()` retired); the splitter bay stays reserved.
+
+### Fixed (2026-09-29, issue #66)
+
+- `build.py check` measures a cantilever's reach on an outline stripped of collinear mesh vertices
+  (architecture.md D66.1): no false alarm from triangulation vertices on a straight bridge edge.
+  `build.py smoke` runs a self-test that still fails a real 6 mm cantilever.
+
 ### Fixed (2026-09-29, issue #62, external CAD review of `lid.step`) — MAJOR: a base and a lid printed on either side of this change do not mate
 
 - **Lid thumbscrew holes had openings** (architecture.md D62.1): on all 8 SKUs the 3 patch-wall-side

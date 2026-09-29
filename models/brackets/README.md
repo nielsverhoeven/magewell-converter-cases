@@ -75,7 +75,7 @@ spacer:2`):
   #47). **Sandwich mode** (issue #56, D51) is exactly the fix for a TV whose own mount (a TV lift)
   already uses all four holes — print `arm_sandwich`/`centre_sandwich`/`spacer` instead, with the
   §7.1 Z-clearance caveat above (T1-87).
-- **Do not print for use** before M15 (the gravity-lock coupon, as plan F redefines it — see
+- **Do not print for use** before M15 (the rail-lock coupon — see
   `models/coupons/rail-lock.scad`), M18/M20 (the TV/TV-lift measurements: top-screw-to-edge
   clearance, VESA insert thread depth, sweep-band obstacles, the lift's own rail/plate dimensions)
   and M22 (the sandwich tilt/preload check, sandwich mode only) are closed. See
@@ -114,7 +114,7 @@ file (`// build.py: parts = arm, centre, spacer`, `// build.py: print_count = ar
   top, on a table) → offer the assembled bracket, plus the two spacers on the lift's other column,
   to the TV/lift sandwich → four M8 bolts through the pads/spacers (length MEASURE, see `BOM.md`) →
   hang the case on and slide it until the lock clicks (see "Installing and removing a case").
-- **Do not print for use** before M15 (the gravity-lock coupon), M20 (the TV/TV-lift measurements:
+- **Do not print for use** before M15 (the rail-lock coupon), M20 (the TV/TV-lift measurements:
   VESA pitch/thread depth, the lift's own rail width/thickness, bolt-head height, the TV-to-wall
   standoff) and M22 (the sandwich tilt/preload check) are closed. See
   `docs/plans/2026-09-28-vesa-column-bracket.md` for the full risk list and measurement plan.
@@ -129,17 +129,18 @@ carries the one-line go/no-go version.
 
 **A mounted case always hangs patch-wall down** (user decision 2026-09-28, architecture.md D49) — on
 every bracket, the planned truss bracket (#27) included, and never on a TV turned to portrait. The
-rail's gravity lock (D48) only engages in that pose: the case's weight must rest on the rail's upper
-flank, where the lock bump is.
+rail's top lock (D63.1) is only held shut in that pose: the case's weight must rest on the rail's upper
+flank, whose wedge presses the case onto the rail and keeps the lock strips in their slot.
 
 ## Installing and removing a case
 
 - **Install:** hold the case patch-wall down, with its +X end wall (the fan end, where the floor
   groove opens) toward the rail's free end; set the groove onto the rail's end — the 45° lead-in at
   the groove entrance guides it — and slide the case along until it stops and the lock clicks (the
-  case rises about 0.7 mm over the lock bump on the way and drops into place).
-- **Remove:** lift the case until it stops (about 1 mm — the dovetail itself limits it), then slide it
-  back off the way it went on. A plain pull along the rail does not release a hanging case.
+  case moves about 0.6 mm off the bracket over the lock strips on the way and drops into place).
+- **Remove:** pull the case toward you, away from the TV, until it stops (about 1 mm — the dovetail
+  itself limits it), then slide it back off the way it went on. A pull along the rail, or on the
+  cables, does not release a hanging case; nor does pushing it up.
 - **Before the TV moves:** take the case off before the TV is laid down, carried or tilted — including
   by a TV lift that tilts or flips it. The lock only holds while the case hangs patch-wall down (R44).
 
@@ -160,7 +161,7 @@ flank, where the lock bump is.
 | Bracket | Orientation | Why |
 |---|---|---|
 | `arch-tv-bracket` `arm` / `arm_sandwich` | **TV face down on the bed** — ribs (and, direct mode only, the pad boss) and insert bores all print up, no supports. | Flat bar, minimal warp; the M8 counterbore (direct mode) and insert bores open upward, printable without bridging. Sandwich mode's flat pad is even simpler — no boss to print at all. |
-| `arch-tv-bracket` `centre` / `centre_sandwich` | **Flat (TV-side, standoff) face down on the bed, rail up** — the same rail orientation as the `rail-lock` coupon. | The dovetail taper and the lock bump that follows its upper flank are the only overhangs (D44, D48), both self-supporting at 30° from vertical; the rail needs no plate window (D50); the tabs print flat with the body. Sandwich mode is simply taller — same overhangs, same orientation. |
+| `arch-tv-bracket` `centre` / `centre_sandwich` | **Flat (TV-side, standoff) face down on the bed, rail up** — the same rail orientation as the `rail-lock` coupon. | The dovetail taper is the only overhang (D44), self-supporting at 30° from vertical; the lock strips stand on the rail's flat top and print straight up, their entry chamfer at 45° (D63.1); the rail needs no plate window (D50); the tabs print flat with the body. Sandwich mode is simply taller — same overhangs, same orientation. |
 | `arch-tv-bracket` `spacer` / `vertical-tv-bracket` `spacer` | Either face down (flat disc, no features to orient around). | Trivially self-supporting. |
 | `vertical-tv-bracket` `arm` | **TV face down on the bed** — ribs and insert bores print up, no supports. | Same reasoning as the arch's own sandwich arm — flat rounded pad end, no boss. |
-| `vertical-tv-bracket` `centre` | **Flat (TV-side, standoff) face down on the bed, rail up.** | Same rail/lock overhangs as arch's own centre, self-supporting at 30° from vertical. |
+| `vertical-tv-bracket` `centre` | **Flat (TV-side, standoff) face down on the bed, rail up.** | Same rail as arch's own centre: the taper at 30° from vertical, the lock strips printing straight up on its top (D63.1). |

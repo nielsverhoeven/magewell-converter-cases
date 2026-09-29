@@ -64,7 +64,7 @@ connector count varies 3–4 by SKU.)*
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
 | ~~1/4"-20 brass heat-set insert~~ | — | **0** | **Removed (user decision 2026-09-28, architecture.md D35):** the case has no floor insert any more — the side bolt (above) is the only screw. `cfg["tripod_insert"]` can bring it back per variant, but only together with `["rail", false]` (D44, assert T1-63). | architecture.md §13 D35 |
-| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**; widened and made flush by D44: 65 mm root, the case floor sits flush on the bracket plate, ≥ 0.5 mm clearance on every non-bearing face) needs no BOM hardware of its own: the female groove (case floor, with the lock pocket) and the male rail (with the rigid gravity-lock bump, D48) are printed features. See `## Mounting brackets` for bracket hardware. The Magewell-Fishtail M4 reservation is **dropped** (D44) — no Fishtail hardware | `.claude/knowledge/architecture.md` §6 floor rule (rev 16), §13 D44; `lib/mcc/rail.scad` |
+| — | — | — | Tool-less dovetail mount rail (D-15, rev 9, issue #25 — **replaces VESA 75×75**; widened and made flush by D44: 65 mm root, the case floor sits flush on the bracket plate, ≥ 0.5 mm clearance on every non-bearing face) needs no BOM hardware of its own: the female groove (case floor, with the lock's roof slot and a closed −X end, D64.1) and the male rail (136 mm, with the two rigid top-lock strips, D63.1) are printed features. See `## Mounting brackets` for bracket hardware. The Magewell-Fishtail M4 reservation is **dropped** (D44) — no Fishtail hardware | `.claude/knowledge/architecture.md` §6 floor rule (rev 16), §13 D44; `lib/mcc/rail.scad` |
 | Rubber/EPDM adhesive foot | generic, size TBD | 4 (typical) | Case underside — **free-standing use only**: never on a case that mounts on a bracket, where feet would hold the floor off the plate that D44 requires it to sit flush on | `knowledge/components/fasteners-and-hardware.md:180-187` (materials, common commodity size range 10–70 mm) |
 | Cable zip tie / adhesive mount base | generic | as needed | Internal cable dressing | `knowledge/components/fasteners-and-hardware.md:215-222` |
 
@@ -137,8 +137,8 @@ sections below from a device's port map + variant config; a bracket has neither
 The VESA 100×100/200×200 sandwich plate `tv-bracket.scad` (issue #26) was **retired** on 2026-09-28
 (user decision, `.claude/knowledge/architecture.md` §13 D47): a mated case covered the VESA mount
 interface it was sandwiched to. The case side of every bracket needs no hardware: the rail/lock
-interface is tool-less — a rigid gravity lock, released by lifting the case about 1 mm (D48; its
-tests: `models/coupons/rail-lock.scad`, M15).
+interface is tool-less — a rigid top lock, released by pulling the case about 1 mm away from the TV and
+sliding it off (D63.1; its tests: `models/coupons/rail-lock.scad`, M15).
 
 Issue #27's truss bracket has no BOM rows here yet — deferred, blocked on measurement M14 and a
 user safety sign-off (`layout-patch-wall.md` §17.1/§17.5).
@@ -150,7 +150,7 @@ fixed by which STL you print — **direct** (`arm`/`centre`, no VESA plate, scre
 the TV) or **sandwich** (`arm_sandwich`/`centre_sandwich`/`spacer`, for a TV whose own mount — a TV
 lift in the user's installation — already uses all four VESA holes: this bracket clamps between the
 TV and the lift on longer M8 bolts). Printed once per mounting point, not per case. **Do not print
-for use before M15 (the gravity-lock coupon, as plan F redefines it), M18/M20 (the TV/TV-lift
+for use before M15 (the rail-lock coupon), M18/M20 (the TV/TV-lift
 measurements) and M22 (the sandwich tilt/preload check) are closed** — see
 `models/brackets/README.md`.
 
@@ -181,7 +181,7 @@ derivation).
 Sandwich-only (no direct-mount option exists for this bracket): mounts on ONE vertical VESA column
 (Samsung 400×300, 300 mm pitch), clamped between the TV and its own TV lift on longer M8 bolts,
 case outboard of the +X column (seen from behind the TV). Printed once per mounting point, not per
-case. **Do not print for use before M15 (the gravity-lock coupon), M20 (the TV/TV-lift measurements)
+case. **Do not print for use before M15 (the rail-lock coupon), M20 (the TV/TV-lift measurements)
 and M22 (the sandwich tilt/preload check) are closed** — see `models/brackets/README.md`.
 
 | Item | Part number | Qty | Notes | Source |
