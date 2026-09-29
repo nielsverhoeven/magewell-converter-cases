@@ -45,9 +45,9 @@ assert(15 <= MCC_RAIL_LOCK_RAMP_IN && MCC_RAIL_LOCK_RAMP_IN <= 60, "T1-65: lock 
 assert(MCC_WALL / 2 - MCC_EPS <= MCC_RAIL_SILL_SIDE_W - MCC_RAIL_CLR_HORIZ - MCC_RAIL_LOCK_ENGAGE,
     "T1-66: sill wall behind the lock pocket below MCC_WALL/2");
 assert(MCC_RAIL_LEADIN <= MCC_WALL, "T1-66: rail lead-in deeper than MCC_WALL");
-assert(MCC_RAIL_END_STOP_L == 0 && MCC_RAIL_END_STOP_H == 0, "D34: the male end-stop flange is retired");
 
-// --- D50: the plate-side keep-out every bracket reads (never the MCC_RAIL_LOCK_* constants) --------
+// --- D50: the plate-side keep-out every bracket reads (never the MCC_RAIL_LOCK_* constants). Its X
+// extent is exactly the working length -- the male rail has no end stop of its own (D34/D52). ------
 _rail_ko = mcc_rail_male_keepout();
 assert(_rail_ko == [[-MCC_RAIL_LEN / 2, MCC_RAIL_LEN / 2],
                     [-MCC_RAIL_ROOT_W / 2 - MCC_RAIL_LOCK_ENGAGE, MCC_RAIL_ROOT_W / 2]],

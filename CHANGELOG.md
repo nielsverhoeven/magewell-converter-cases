@@ -12,6 +12,14 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Removed (2026-09-29, end-stop remnants)
+
+- `MCC_RAIL_END_STOP_L`/`MCC_RAIL_END_STOP_H` and the arch bracket's `RAIL_X` rail offset — all zero
+  since the end-stop flange was retired (D34) — are gone, with the comments that still described that
+  flange (architecture.md D52). The arch (T1-53) and vertical (T1-76) rail-containment asserts now take
+  the rail's X extent from `mcc_rail_male_keepout()`, and the arch's in-code print gate matches
+  `models/brackets/README.md`. No geometry change; every golden is unchanged.
+
 ### Added (2026-09-28, issue #56)
 
 - **Vertical VESA-column bracket** (`models/brackets/vertical-tv-bracket.scad`, architecture.md rev 18):

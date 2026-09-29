@@ -144,9 +144,9 @@ PAD_D = ARM_W; // = 40.0. DB5 -- was a separate PAD_BOSS_D=30 boss diameter pre-
 
 CENTRE_HALF_L = 90.0; // mm. assumed -- centre-body half-length (was C_HALF pre-verdict; renamed only
                        // to avoid a same-named-different-meaning clash with arch's own C_HALF, which
-                       // this file never references). Rail footprint half-length is
-                       // MCC_RAIL_LEN/2 = 75 (no end-stop flange since D48 -- MCC_RAIL_END_STOP_L=0),
-                       // leaving a 15 mm end web (>= MCC_WALL, asserted B7/T1-76).
+                       // this file never references). The rail keep-out's X half-length is
+                       // MCC_RAIL_LEN/2 = 75 (no end-stop flange since D34), leaving a 15 mm end web
+                       // (>= MCC_WALL, asserted B7/T1-76).
 LAP_L = 30.0;    // mm. assumed -- lap length along the arm axis. Same M3 insert class/edge-distance
                   // arithmetic as arch-tv-bracket.scad.
 JOINT_S = 14.0;  // mm. assumed -- joint hole pitch along the arm axis (2x2 pattern).
@@ -280,7 +280,7 @@ function mcc_vert_tv_geom(tv_side_clear = TV_SIDE_CLEAR, w_lift_rail = W_LIFT_RA
         tab_y_max   = yj_v + (LAP_L / 2) * sin(alpha) + (ARM_W / 2) * cos(alpha),
         centre_x_max = max(CENTRE_HALF_L, tab_x_max),
         centre_y_max = max(centre_h / 2, tab_y_max),
-        centre_z_max = VTV_PLATE_T + MCC_RAIL_MALE_H, // = 14.5 (MCC_RAIL_END_STOP_H is 0 since D34/D48)
+        centre_z_max = VTV_PLATE_T + MCC_RAIL_MALE_H, // = 14.5 (the rail's top; no end-stop flange since D34)
         centre_bbox  = [2 * centre_x_max, 2 * centre_y_max, centre_z_max],
 
         // Case footprint at full mate (assembly frame): centred on the rail axis (X=reach,
@@ -454,11 +454,12 @@ module mcc_vert_tv_assert(g) {
     assert(RIB_H <= MCC_RIB_HEIGHT_RATIO_MAX * RIB_T,
         str("mcc: vertical-tv-bracket T1-75 rib height ", RIB_H, " exceeds ", MCC_RIB_HEIGHT_RATIO_MAX, "x rib thickness ", RIB_T));
 
-    // T1-76 (B7): the rail sits entirely on the centre body, and its keep-out Y-span sits inside
+    // T1-76 (B7): the rail sits entirely on the centre body -- its keep-out (mcc_rail_male_keepout(),
+    // D50) plus an MCC_WALL end web inside +-CENTRE_HALF_L -- and its keep-out Y-span sits inside
     // +-centre_h/2.
-    assert(MCC_RAIL_LEN / 2 + MCC_WALL <= CENTRE_HALF_L + MCC_EPS,
-        str("mcc: vertical-tv-bracket T1-76 rail footprint half-length+wall=", MCC_RAIL_LEN / 2 + MCC_WALL,
-            " exceeds CENTRE_HALF_L=", CENTRE_HALF_L));
+    assert(RAIL_KEEPOUT_X[0] - MCC_WALL >= -CENTRE_HALF_L - MCC_EPS && RAIL_KEEPOUT_X[1] + MCC_WALL <= CENTRE_HALF_L + MCC_EPS,
+        str("mcc: vertical-tv-bracket T1-76 rail keep-out X span ", RAIL_KEEPOUT_X, " + MCC_WALL=", MCC_WALL,
+            " exceeds +/-CENTRE_HALF_L=", CENTRE_HALF_L));
     assert(RAIL_KEEPOUT_Y[1] <= centre_h / 2 + MCC_EPS && RAIL_KEEPOUT_Y[0] >= -centre_h / 2 - MCC_EPS,
         str("mcc: vertical-tv-bracket T1-76 rail keep-out Y span ", RAIL_KEEPOUT_Y,
             " exceeds +/-centre_h/2=", centre_h / 2));
@@ -651,8 +652,8 @@ module mcc_vert_tv_centre(g) {
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }
-    // Rail -- no RAIL_X-style shift needed (unlike arch-tv-bracket.scad's legacy one): the male
-    // rail's own physical footprint is symmetric about its centre since D48 (no end-stop flange).
+    // Rail -- centred on this plate, no X shift: the male rail's footprint (mcc_rail_male_keepout())
+    // is symmetric in X about its own centre (no end-stop flange since D34).
     translate([0, 0, VTV_PLATE_T]) rotate([0, 0, 180]) mcc_rail_male();
     }
 }
