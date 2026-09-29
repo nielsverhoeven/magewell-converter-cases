@@ -212,8 +212,8 @@ module _mcc_patch_wall_aperture(l, dev) {
 //   (mounts.scad) and cradle (cradle.scad), minus the far/-X/+X wall vent arrays (vents.scad,
 //   never the patch wall — T1-19). Fan/splitter bays are ALWAYS reserved (architecture.md §6):
 //   the fan aperture is only actually cut when `cfg`'s "fan" flag is true; the splitter bay is
-//   never cut into the shell at all (it is empty interior volume by construction — only
-//   mounts.scad's tie-down and the reservation asserts below touch it).
+//   never cut into the shell at all (it is empty interior volume by construction — only the
+//   reservation asserts below and mounts.scad's T1-17 touch it).
 // Arguments:
 //   dev = device record.
 //   cfg = variant-config assoc-list (keys: "fan", "splitter", optionally "fan_y", "rail" — see

@@ -189,7 +189,7 @@ function _mcc_nearest_zero(vals) =
 //   features = mcc_floor_keepout(dev, cfg);
 // Description:
 //   Pure function: every floor-plan feature `mounts.scad` places (the mount rail -- D-15, rev 9,
-//   replaces VESA; widened by D44 -- strap slots, splitter tie-down anchor, the side-bolt support-web
+//   replaces VESA; widened by D44 -- strap slots, the side-bolt support-web
 //   footprint), each `[cx, cy, "circle"|"rect", size_or_d, "label"]`. NOT nullary (rev-5 correction 2,
 //   layout-patch-wall.md §7.1) — strap slots, the splitter bay and the side-bolt web all depend on `L`,
 //   `W`, and `x_bolt`. `mounts.scad` draws the real geometry from this list and asserts pairwise

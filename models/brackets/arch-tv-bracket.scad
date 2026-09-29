@@ -6,7 +6,7 @@
 //   the retired tv-bracket.scad (#26, D47); consumes lib/mcc/rail.scad's mount-rail interface (#25)
 //   only through mcc_rail_male() and mcc_rail_male_keepout() (D50). The rail-interface defect F1 this
 //   file inherited (§12.3, issue #48) was fixed in the library -- D34 opened the groove and retired the
-//   male's end-stop flange, D48 replaced the latch with the gravity lock. Every rail-dependent value
+//   male's end-stop flange, D48 replaced the latch with a gravity lock, D63.1 moved it on top of the rail. Every rail-dependent value
 //   here (keep-out rectangle, Z stack, slide_clear) derives from MCC_RAIL_* or mcc_rail_male_keepout(),
 //   so a rail change is absorbed by a re-golden or stopped by an assert, not by a code edit here.
 //
@@ -57,7 +57,7 @@
 //   T1-60 hold in BOTH modes (D-vesa-400x300-bracket.VERDICT-rev2.md, "Ids for rev 18").
 //
 //   PRINT GATE (B10; same gate as models/brackets/README.md): do not print this bracket FOR USE
-//   before M15 (the gravity-lock coupon, models/coupons/rail-lock.scad), M18/M20 (the TV / TV-lift
+//   before M15 (the rail-lock coupon, models/coupons/rail-lock.scad), M18/M20 (the TV / TV-lift
 //   measurements) and M22 (the sandwich tilt/preload check, sandwich parts only) are closed. The
 //   released STL is rendered for the PLACEHOLDER TV_TOP_CLEAR=150; a measured TV needs
 //   `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
@@ -160,12 +160,12 @@ ARM_W = 40.0; // mm. assumed -- arm width; carries the 2x2 joint pattern, two ed
 PAD_BOSS_D = 30.0; // mm. assumed -- >= counterbore diameter (16.6) + 2 x 2*MCC_WALL; asserted
                     // (T1-58).
 CENTRE_W = 92.0; // mm. D44: holds the rail keep-out Y span (T1-53) and the UP arrow above it
-                  // (T1-60). Sized for the D34 latch's [-32.5, +36.1]; since D48 the keep-out
-                  // (mcc_rail_male_keepout()) is [-32.5, +33.2], so T1-60 needs only
-                  // 2 x (33.2 + 1 + 6 + 1) = 82.4 and 92 leaves 2.4 mm on both of its bounds.
-                  // Kept at 92 so D48 moves no bracket outline. Was 40 for the 14.6 mm rail.
+                  // (T1-60). Sized for the D34 latch's [-32.5, +36.1]; since D63.1 the keep-out
+                  // (mcc_rail_male_keepout()) is [-32.5, +32.5], so T1-60 needs only
+                  // 2 x (32.5 + 1 + 6 + 1) = 81.0 and 92 leaves 2.75 mm on both of its bounds.
+                  // Kept at 92 so neither D48 nor D63.1 moves a bracket outline. Was 40 for the 14.6 mm rail.
 C_HALF = 90.0; // mm. assumed -- centre-body half-length. The rail keep-out's X half-length is
-               // MCC_RAIL_LEN/2 = 75 (no end-stop flange since D34), leaving a 15 mm end web
+               // MCC_RAIL_LEN/2 = 68 (no end-stop flange since D34), leaving a 22 mm end web
                // (>= MCC_WALL, asserted T1-53).
 XJ = 95.0; // mm. assumed -- |x| of each lap centre in the assembly frame (plan §3.2 numeric sweep).
 LAP_L = 30.0; // mm. assumed -- lap length along the arm axis.
@@ -213,8 +213,8 @@ ARROW_W = 6.0; // mm. assumed (B3).
 
 // Rail keep-out rectangle, centre-local frame (the rail sits at the plate origin): the rail's own
 // plate-side keep-out (mcc_rail_male_keepout(), rail-local) mapped through this file's
-// rotate([0,0,180]) rail placement, which negates and swaps both ranges -- the lock bump on the
-// rail-local -Y flank lands at +Y here. D50 / F-R1: never built from MCC_RAIL_* internals.
+// rotate([0,0,180]) rail placement, which negates and swaps both ranges (symmetric in Y since D63.1:
+// the lock strips sit on the rail's top). D50 / F-R1: never built from MCC_RAIL_* internals.
 _RAIL_KO = mcc_rail_male_keepout(MCC_RAIL_LEN);
 RAIL_KEEPOUT_X = [-_RAIL_KO[0][1], -_RAIL_KO[0][0]];
 RAIL_KEEPOUT_Y = [-_RAIL_KO[1][1], -_RAIL_KO[1][0]];

@@ -7,8 +7,10 @@
 //       groove (layout-patch-wall.md §17.2 R1).
 //     - D16 (lib/mcc/mounts.scad mcc_assert_floor_keepout_no_overlap()): no two
 //       mcc_floor_keepout() rows overlap (no exemptions since D44), run against a real device record.
-//     - T1-64 .. T1-66 (D48): the gravity lock's lift budget, profile and walls; D50: the
+//     - T1-63.1 .. T1-63.3 (D63.1): the top lock's ride budget, strips and roof lead-in; D50: the
 //       rail's plate-side keep-out, mcc_rail_male_keepout().
+//     - T1-64.1 (D64.1): the groove's closed -X end keeps a full end wall; T1-17 (D45/D64.1): the rail sill
+//       clears the reserved splitter bay, against the tightest SKU (L = 193.9).
 //     - T1-62 (D44): >= MCC_RAIL_MATE_CLR normal to the flanks and at the roof.
 //   CSG export (-o out.csg) evaluates the full tree so in-model asserts fire, without tessellating.
 // Run:
@@ -22,7 +24,7 @@ include <mcc/devices/pro-convert-for-ndi-to-hdmi.scad>
 
 // --- mcc_rail_sill_size() -- pure function, no geometry ----------------------------------------
 _sill = mcc_rail_sill_size();
-assert(_sill[0] == MCC_RAIL_LEN, str("mcc_rail_sill_size len=", _sill[0]));
+assert(_sill[0] == MCC_RAIL_LEN + 2 * MCC_RAIL_END_WALL, str("mcc_rail_sill_size len=", _sill[0]));
 assert(_sill[1] == MCC_RAIL_ROOT_W + 2 * MCC_RAIL_SILL_SIDE_W, str("mcc_rail_sill_size width=", _sill[1]));
 // D30: the sill's side walls beside the groove root must be real walls, not knife edges.
 assert(MCC_RAIL_SILL_SIDE_W >= MCC_WALL - MCC_EPS, str("D30: MCC_RAIL_SILL_SIDE_W=", MCC_RAIL_SILL_SIDE_W, " below MCC_WALL"));
@@ -35,22 +37,29 @@ assert(MCC_RAIL_SILL_H - MCC_RAIL_DEPTH >= MCC_FLOOR_T,
     str("T1-38: MCC_RAIL_SILL_H(", MCC_RAIL_SILL_H, ") - MCC_RAIL_DEPTH(", MCC_RAIL_DEPTH,
         ") must be >= MCC_FLOOR_T(", MCC_FLOOR_T, ")"));
 
-// --- Gravity lock (D48): lift budget, profile and walls, checked from the constants so a regression
-// fails here before any render (T1-64 .. T1-66). ---------------------------------------------------
-assert(MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_LOCK_PLAY_MARGIN <= 2 * MCC_RAIL_CLR_HORIZ + MCC_EPS,
-    str("T1-64: lock bump ", MCC_RAIL_LOCK_ENGAGE, " + margin ", MCC_RAIL_LOCK_PLAY_MARGIN,
-        " does not fit the flank play ", 2 * MCC_RAIL_CLR_HORIZ));
-assert(75 <= MCC_RAIL_LOCK_RAMP_OUT && MCC_RAIL_LOCK_RAMP_OUT <= 90, "T1-65: lock exit face outside 75..90 deg");
-assert(15 <= MCC_RAIL_LOCK_RAMP_IN && MCC_RAIL_LOCK_RAMP_IN <= 60, "T1-65: lock entry ramp outside 15..60 deg");
-assert(MCC_WALL / 2 - MCC_EPS <= MCC_RAIL_SILL_SIDE_W - MCC_RAIL_CLR_HORIZ - MCC_RAIL_LOCK_ENGAGE,
-    "T1-66: sill wall behind the lock pocket below MCC_WALL/2");
-assert(MCC_RAIL_LEADIN <= MCC_WALL, "T1-66: rail lead-in deeper than MCC_WALL");
+// --- Top lock (D63.1): ride budget, strips and roof lead-in, checked from the constants so a regression
+// fails here before any render (T1-63.1 .. T1-63.3, T1-64.1). ----------------------------------------------
+assert(abs(mcc_rail_z_play() - MCC_RAIL_MATE_CLR / cos(MCC_RAIL_FLANK_ANGLE)) < 1e-6,
+    str("mcc_rail_z_play()=", mcc_rail_z_play()));
+assert(MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_LOCK_PLAY_MARGIN <= mcc_rail_z_play() + MCC_EPS,
+    str("T1-63.1: lock strip ", MCC_RAIL_LOCK_ENGAGE, " + margin ", MCC_RAIL_LOCK_PLAY_MARGIN,
+        " does not fit the Z-play ", mcc_rail_z_play()));
+assert(30 <= MCC_RAIL_LOCK_RAMP_IN && MCC_RAIL_LOCK_RAMP_IN <= 60, "T1-63.2: lock entry chamfer outside 30..60 deg");
+assert(MCC_RAIL_LOCK_STRIP_Y_OUT <= MCC_RAIL_MOUTH_W / 2 + MCC_RAIL_MALE_H / tan(MCC_RAIL_FLANK_ANGLE) - 1,
+    "T1-63.2: lock strips reach within 1 mm of the male's top edge");
+assert(MCC_RAIL_LOCK_ENGAGE < MCC_RAIL_LEADIN && MCC_RAIL_LEADIN <= MCC_WALL,
+    "T1-63.3: rail lead-in not taller than the lock engagement, or deeper than MCC_WALL");
+assert(MCC_RAIL_END_WALL >= MCC_WALL - MCC_EPS, "T1-64.1: the groove's closed end wall is thinner than MCC_WALL");
+_slot = mcc_rail_lock_slot();
+assert(_slot[1] == [-(MCC_RAIL_ROOT_W / 2 + MCC_RAIL_CLR_HORIZ), MCC_RAIL_ROOT_W / 2 + MCC_RAIL_CLR_HORIZ],
+    str("D63.1: the lock slot must span the whole roof, got y=", _slot[1]));
+assert(abs(_slot[2][1] - (MCC_RAIL_DEPTH + MCC_RAIL_LOCK_ENGAGE + MCC_RAIL_ROOF_CLR)) < 1e-6,
+    str("D63.1: lock slot ceiling z=", _slot[2][1]));
 
-// --- D50: the plate-side keep-out every bracket reads (never the MCC_RAIL_LOCK_* constants). Its X
-// extent is exactly the working length -- the male rail has no end stop of its own (D34/D52). ------
+// --- D50: the plate-side keep-out every bracket reads (never the MCC_RAIL_LOCK_* constants) --------
 _rail_ko = mcc_rail_male_keepout();
 assert(_rail_ko == [[-MCC_RAIL_LEN / 2, MCC_RAIL_LEN / 2],
-                    [-MCC_RAIL_ROOT_W / 2 - MCC_RAIL_LOCK_ENGAGE, MCC_RAIL_ROOT_W / 2]],
+                    [-MCC_RAIL_ROOT_W / 2, MCC_RAIL_ROOT_W / 2]],
     str("D50: mcc_rail_male_keepout()=", _rail_ko));
 assert(mcc_rail_male_keepout(60)[0] == [-30, 30],
     str("D50: mcc_rail_male_keepout(60)=", mcc_rail_male_keepout(60)));
@@ -79,20 +88,24 @@ translate([0, 60, 0])
     }
 
 // --- mcc_rail_male() / mcc_rail_female_cut() -- short, coupon-scale len=60 (models/coupons/
-// rail-lock.scad's own length) -- the lock bump must be re-derived from THIS len
+// rail-lock.scad's own length) -- the lock strips must be re-derived from THIS len
 // (len/2 - MCC_RAIL_LOCK_END_OFFSET); this is exactly the regression the len=60 case here guards
-// against. The e-ladder's largest bump (lock_e = 0.8, M15) must render too. ----------------------
+// against. The e-ladder's largest strip (lock_e = 0.7, M15; T1-63.1's ceiling) must render too, with
+// its backing. ------------------------------------------------------------------------------------
 translate([200, 0, 0]) mcc_rail_male(len = 60);
 translate([200, 60, 0])
     difference() {
         cuboid([60, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
         mcc_rail_female_cut(len = 60);
     }
-translate([300, 0, 0]) mcc_rail_male(len = 60, lock_e = 0.8);
+translate([300, 0, 0]) mcc_rail_male(len = 60, lock_e = 0.7);
 translate([300, 60, 0])
     difference() {
-        cuboid([60, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
-        mcc_rail_female_cut(len = 60, open_ext = 1, entry_x = 30, lock_e = 0.8);
+        union() {
+            cuboid([62, MCC_RAIL_ROOT_W + 20, MCC_RAIL_SILL_H], anchor = BOTTOM);
+            mcc_rail_female_backing(len = 60, lock_e = 0.7);
+        }
+        mcc_rail_female_cut(len = 60, open_ext = 1, entry_x = 31, lock_e = 0.7);
     }
 
 // --- D16 / D19 (lib/mcc/mounts.scad): pairwise floor-keepout non-overlap, against a real device
@@ -154,9 +167,13 @@ echo("mcc test_rail: OK");
 //    mcc_cradle(DEV, [["fan", false], ["splitter", false], ["tripod_insert", true]]);
 //    -> "mcc: T1-63 cfg[\"tripod_insert\"]=true needs [\"rail\", false] ..."
 //
-// 4. T1-64 (D48), a lock bump too tall for the flank play (scratch edit constants.scad
-//    MCC_RAIL_LOCK_ENGAGE = 1.0), then render a case base or the coupon; the render fails with:
-//    "mcc: T1-64 rail lock bump 1 + margin 0.2 does not fit the flank play ..."
+// 4. T1-63.1 (D63.1), lock strips too tall for the Z-play (scratch edit constants.scad
+//    MCC_RAIL_LOCK_ENGAGE = 0.8), then render a case base or the coupon; the render fails with:
+//    "mcc: T1-63.1 rail lock strip 0.8 + margin 0.3 does not fit the Z-play 1"
+//
+// 5. T1-17 (D64.1), the rail sill running into the splitter bay (scratch edit constants.scad
+//    MCC_RAIL_LEN = 150.0), then run this file; it fails with:
+//    "mcc: T1-17 rail sill -X end x=-78 is within MCC_FAN_BAY_CLR=2 of the reserved splitter bay ..."
 // -----------------------------------------------------------------------------------------
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap

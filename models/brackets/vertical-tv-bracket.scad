@@ -56,8 +56,8 @@
 //   Assert ids: T1-70 ... T1-85 (architect-assigned, D-vesa-400x300-bracket.VERDICT-rev2.md, "Ids
 //   for rev 18"), one T1- id per plan B1...B16 in order (B16/T1-85 is new -- DB5, the spacer).
 //
-//   PRINT GATE: do not print this bracket FOR USE before M15 (the gravity-lock coupon, as plan F
-//   redefines it), M20 (the TV and TV-lift measurements below) and M22 (the sandwich tilt/preload
+//   PRINT GATE: do not print this bracket FOR USE before M15 (the rail-lock coupon,
+//   models/coupons/rail-lock.scad), M20 (the TV and TV-lift measurements below) and M22 (the sandwich tilt/preload
 //   check) are closed. The released STL is rendered at every M20 figure's own placeholder; a
 //   measured TV/lift needs `-D W_LIFT_RAIL=<mm> -D T_LIFT_RAIL=<mm> -D WALL_GAP=<mm>` and a
 //   re-golden.
@@ -145,7 +145,7 @@ PAD_D = ARM_W; // = 40.0. DB5 -- was a separate PAD_BOSS_D=30 boss diameter pre-
 CENTRE_HALF_L = 90.0; // mm. assumed -- centre-body half-length (was C_HALF pre-verdict; renamed only
                        // to avoid a same-named-different-meaning clash with arch's own C_HALF, which
                        // this file never references). The rail keep-out's X half-length is
-                       // MCC_RAIL_LEN/2 = 75 (no end-stop flange since D34), leaving a 15 mm end web
+                       // MCC_RAIL_LEN/2 = 68 (no end-stop flange since D34), leaving a 22 mm end web
                        // (>= MCC_WALL, asserted B7/T1-76).
 LAP_L = 30.0;    // mm. assumed -- lap length along the arm axis. Same M3 insert class/edge-distance
                   // arithmetic as arch-tv-bracket.scad.
