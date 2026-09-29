@@ -1,5 +1,15 @@
 # Architecture — magewell-converter-cases
 
+**Revision 18, 2026-09-28 (vertical VESA-column bracket + arch sandwich parts — plan D rev 2, issue #56;
+`docs/plans/2026-09-28-vesa-column-bracket.md`).** The user's Samsung TVs sit on a **TV lift** that uses all
+four VESA holes, so both TV brackets are **sandwiched** between the TV and the lift on longer M8 bolts,
+with printed ASA in the clamp path accepted (R42). New `models/brackets/vertical-tv-bracket.scad`: hub
+topology (one arm printed twice by ±α rotation, a centre carrying the rail, printed spacers for the
+unused column), the case outboard of the +X column (R43). The arch bracket ships **sandwich parts**
+(`arm_sandwich`, `centre_sandwich`, `spacer`) beside its unchanged direct parts (D51). Both brackets
+consume the rail only through `mcc_rail_male()` and `mcc_rail_male_keepout()` (rev 17). New: **T1-70 …
+T1-90**, **R47**, **M22**, **D51**; R42, R43, M20 and Q22 updated. **No case geometry changes.**
+
 **Revision 17, 2026-09-28 (gravity rail lock — D48–D50; plan `docs/plans/2026-09-28-gravity-lock.md`;
 shipped in one PR with rev 16).** User decisions after the analysis of the external specialist's DP48
 plate: the rail lock is a **gravity lock only** — a rigid 0.7 mm bump on the rail's upper (rail-local
@@ -1235,6 +1245,8 @@ MCC_RAIL_LOCK_PLAY_MARGIN ≤ 2·MCC_RAIL_CLR_HORIZ`; T1-65 the exit face 75–9
 the bump inside the working length; T1-66 the sill wall behind the pocket ≥ `MCC_WALL/2` and the
 lead-in ≤ `MCC_WALL`). T1-67 … T1-69, reserved for rev 17, stay unused; T1-70 … T1-90 are assigned to
 plan D (rev 18). **The next free id is T1-91.**
+**Rev 18 adds T1-70 … T1-90** (plan D, issue #56: T1-70 … T1-85 the vertical bracket, T1-86 … T1-90 the
+arch's sandwich parts; listed in `layout-patch-wall.md` §9). **The next free id is T1-91.**
 Full table with sources: `layout-patch-wall.md` §9. Do not
 re-derive them in the model files; they are the acceptance criteria for `shell.scad`, `panel.scad`,
 `cradle.scad`, `mounts.scad`, `vents.scad`.
@@ -1822,44 +1834,35 @@ push against its weight lifts it off the upper flank. Acceptable (user decision)
 it is objectionable the lever is `MCC_RAIL_MATE_CLR` — a **user** decision (D44), not a developer
 tweak.
 
-**R42 — a sandwiched printed bracket puts ASA in the TV wall-mount's clamp path. NEW 2026-09-28 (rev 16,
-plan-D gate) — ACCEPTED by the user.** In sandwich mode (the vertical VESA-column bracket, and the arch
-bracket's planned sandwich mode) the bracket's pads are clamped between the TV and the TV's own wall
-mount by that mount's M8 screws, so the screws' preload passes through printed ASA, which creeps under
-sustained load (`knowledge/components/fasteners-and-hardware.md:140`, stated for snap arms; the creep is
-the material's). **User decision 2026-09-28, in chat: accept ASA** — no steel compression sleeves.
-What follows from it:
-- **Equal-height spacers go under every VESA hole the bracket does not occupy**, so the mount's rails
-  stay coplanar — the other column's two holes (vertical bracket), the bottom row's two holes (arch
-  sandwich mode). They should be **printed ASA too**, with the same height and bearing area as the
-  bracket's pads, so both sides creep alike and the rails stay parallel as the joints relax; a steel
-  spacer on one side and ASA on the other would relax unevenly.
-- Pads and spacers are flat clamp faces with an M8 clearance hole — no counterbore, no washer seat —
-  printed solid (100 % infill; the re-plan confirms the export can carry it), hole axis vertical.
-- **Recommended practice, not a gate:** re-check the M8 preload 24–48 h after installation and at every
-  rig-in; ASA relaxation shows up as lost preload, not as visible damage.
-- M8 length, the same on all four holes = the mount's thickness at the hole + the pad/spacer height +
-  the usable TV thread depth − ≥ 1 mm, rounded **down** (M20). Too long can crack the TV's back panel.
+**R42 — a sandwiched printed bracket puts ASA in the TV mount's clamp path. NEW 2026-09-28 (rev 16) —
+ACCEPTED by the user.** In sandwich mode (the vertical VESA-column bracket; the arch's sandwich parts) the
+bracket's pads are clamped between the TV and the TV's own mount — a TV lift in the user's installation —
+by that mount's M8 screws, so the preload passes through printed ASA, which creeps under sustained load
+(`knowledge/components/fasteners-and-hardware.md:140`, stated for snap arms; the creep is the material's).
+**User decision 2026-09-28, in chat: accept ASA** — no steel sleeves. What follows from it:
+- printed-ASA spacers under every VESA hole the bracket does not occupy, with the pad's clamp height and
+  bearing footprint (T1-85, T1-90), so both sides creep alike and the lift's rails stay coplanar;
+- pads and spacers are flat clamp faces with an M8 clearance hole — no counterbore, no washer seat —
+  printed solid;
+- recommended practice, not a gate: re-check the M8 preload 24–48 h after installation and at every
+  rig-in (M22's first check);
+- M8 length, the same on all four holes = the mount's thickness at the hole + the pad/spacer height + the
+  usable TV thread depth − ≥ 1 mm, rounded **down** (M20). Too long can crack the TV's back panel.
 
-**R43 — the vertical bracket's case must fit between the TV and the wall, and it slides on from one
-side only. NEW 2026-09-28 (rev 16, plan-D gate); layout decided by the user.** The case's groove is open
-at one end only (D34) and its patch wall hangs down, so a case always slides on from the bracket frame's
-+X side (right, seen from behind the TV), sweeping `L + slide_clear` ≈ 392 mm (Plus family) from its
-final −X edge. With the TV's wall mount on both 400 mm-pitch columns, a sweep that crosses a column
-hits that column's mount rail — and the bolt head on it — unless the case floor clears both in Z.
-**User decision 2026-09-28: the vertical bracket goes on the +X column (seen from behind the TV), case
-outboard, slid on from the TV's edge side** — the one layout whose sweep crosses no column. Open (M20):
-- the case stack (lid at `2·T + H` ≈ 73 mm off the TV back, T = 11, plus any pad height the sandwich
-  adds) must fit the TV-to-wall gap beside the column, clear of the mount's wall plate and arms;
-- the sweep's start position reaches ≈ 412 mm outboard of the column: the TV must be that wide there, or
-  the space beside the TV free, for the case to be offered up;
-- `REACH_KEEPOUT` must clear the mount's rail band at the column.
-**The arch bracket's sandwich mode** has exactly the problem the vertical layout avoids: its +X sweep
-(≈ 181 mm past its final position, to ≈ 287 mm from the arch centre) crosses the right-hand column at
-200 mm. It is feasible only if the case floor clears that column's mount rail and bolt head in Z (with
-flat pads at the arm top: `2T ≥ T + t_rail + k_head + ARCH_SWEEP_CLR`, where `t_rail` is the mount
-rail's thickness and `k_head` the bolt-head height, both from M20), and its ≈ 73 mm stack sits between
-the columns, where a wall plate usually is. Plan D's re-plan owns both.
+**R43 — the case must fit beside the TV's own mount, and it slides on from one side only. NEW 2026-09-28
+(rev 16); layout decided by the user; the arch's sandwich sweep resolved in rev 18.** The case's groove
+is open at one end only (D34) and the case always hangs patch-wall down (rev 17), so it always slides on
+from the bracket frame's +X side (right, seen from behind the TV), sweeping `L + slide_clear` ≈ 392 mm
+(Plus family) from its final −X edge. The TV's own mount — a TV lift in the user's installation — uses
+the same four VESA holes.
+- Vertical bracket: **+X column (seen from behind the TV), case outboard** (user decision 2026-09-28) —
+  the only layout whose sweep crosses no column. The space behind the TV (150–200 mm) and beside it is
+  not a constraint (user, 2026-09-28; `WALL_GAP` and `TV_SIDE_CLEAR` stay asserted). `REACH` keeps the
+  case clear of the lift's rail band (`W_LIFT_RAIL`, M20).
+- Arch bracket, sandwich parts: its sweep must cross the right-hand column, so `centre_sandwich` is
+  taller — `z_rail ≥ ARCH_PLATE_T + T_LIFT_RAIL + K_BOLT_HEAD + ARCH_SWEEP_CLR` (T1-87) — which moves its
+  case ≈ 5.6 mm further off the TV at the assumed lift figures (lid ≈ 79 mm ≤ `WALL_GAP`, T1-88).
+- Remaining: the lift figures (M20); until measured, each is an `assumed` parameter behind an assert.
 
 **R44 — the rail lock is gravity-engaged. NEW 2026-09-28 (rev 17, D48/D49).** While the case hangs
 patch-wall down its weight holds the bump in its pocket (≈ 0.6–1.15 × the weight, normal to the flank,
@@ -1877,6 +1880,12 @@ the 0.70 mm bump inside the dovetail's own 1.155 mm horizontal play (0.45 mm mar
 nothing is designed to flex. M15 measures the printed play and runs the e-ladder; if it binds, lower
 `MCC_RAIL_LOCK_ENGAGE` (0.5 is still self-locking). Never widen the rail or change `MCC_RAIL_MATE_CLR`
 (user decisions).
+
+**R47 — the vertical bracket's arm outgrows the bed if the TV lift's rail is wide. NEW 2026-09-28 (rev 18,
+plan D).** `REACH` grows with `W_LIFT_RAIL/2` (the case must clear the lift's rail band), and the arm with
+it: the arm's print length `ARM_LEN + LAP_L/2 + ARM_W/2` reaches the 244 mm cap at `W_LIFT_RAIL` ≈ 150 mm,
+where T1-70 fails loudly. Beyond that the arm must split into two printed parts — a design change for the
+architect, not a parameter edit. M20 measures `W_LIFT_RAIL`.
 
 ---
 
@@ -1964,14 +1973,12 @@ nothing is designed to flex. M15 measures the printed play and runs the e-ladder
     gravity-seated detent. User decision: **gravity lock only**, the D34 latch removed (D48); a mounted
     case always hangs patch-wall down (D49). The "tool-less, no thumbscrews" question is moot — the lock
     has no actuator. *(Also answered: the groove's closed −X end stays the axial end stop.)*
-22. **Plan D (vertical VESA-column bracket) — sandwich decisions. NEW 2026-09-28 (rev 16).** Answers
-    (user, 2026-09-28):
-    (a) R42: **accept ASA** in the wall mount's clamp path, no steel sleeves (in chat: "accept ASA");
-    printed-ASA spacers of equal height under the unoccupied holes.
+22. **Plan D (vertical VESA-column bracket) — sandwich decisions. NEW 2026-09-28 (rev 16) — answered.**
+    (a) R42: **accept ASA** in the TV mount's clamp path, no steel sleeves (user, in chat, 2026-09-28);
+    printed-ASA spacers of the pad's height and footprint under the unoccupied holes.
     (b) R43: **the +X column (seen from behind the TV), case outboard, slid on from the TV's edge side.**
-    (c) **The arch bracket gets a sandwich mode too** — in the plan-D re-plan's scope, not plan A; R43
-    records its slide-path and stack constraints.
-    (d) GitHub issue for plan D: **open — the user has been asked.**
+    (c) **The arch bracket gets sandwich parts** — done in rev 18 (D51).
+    (d) Tracked as **issue #56**.
 23. **Does the user's TV lift ever take the TV out of upright? NEW 2026-09-28 (rev 17, R44) — needs the
     user.** The gravity lock only holds while the case hangs patch-wall down. A lift that only raises
     and lowers an upright TV is fine; a ceiling flip-down, tilting or swivelling lift leaves the case
@@ -2001,8 +2008,9 @@ nothing is designed to flex. M15 measures the printed play and runs the e-ladder
 
 | **M17** | **Buy one panel switch of the chosen class and measure: actuator height proud of the panel, mounting-hole ⌀, nut across-flats (⇒ circumscribed ⌀), body depth behind the panel, and the panel-clamp thickness range** | **R29 — gates the pocket geometry for issue #32.** All five are `assumed` from a family-analogue datasheet, and all five are load-bearing: the actuator height sets `recess_t` (T1-44), the nut ⌀ sets `pad_d` and therefore whether the part fits the +X band at all (T1-43), and the clamp range decides whether a 2.0 mm residual panel is legal. The plus family's feasible `switch_y` window is 3.2 mm wide — this is not a figure to leave `assumed` through a print | User, after buying one (≈ €1–2) |
 | **M19** | **`neutrik-tile`, both classes (NAHDMI-W-B and NE8FDP-B), printed standing in ASA:** (a) seat-hole and window diameter measured **horizontally and vertically** (sag at the top of the arch, R39); (b) the real connector passes and its flange seats flush; (c) both ⌀2.5 fixing bores aligned with the flange holes, round, and their printed diameter; (d) once §12 Q20 is answered, the chosen thread survives **≥ 5 insert/remove cycles** (R28's acceptance idea, kept) | **R39 + Q20 — gates the first full-size print** (with the other "Coupons before cases" coupons). `MCC_HOLE_COMP` is written back from (a)/(b) as usual; `MCC_FIXING_BORE_D` and the hole shape are user decisions (D40/D41) — report, do not tune | User, calipers + a ⌀2.5 drill shank as a gauge |
-| **M20** | **The user's TV and its wall mount, for the sandwiched brackets (plan D: the vertical bracket and the arch's sandwich mode):** the TV model, its VESA pattern (400 × 300?) and usable M8 thread depth; the wall mount's model, its TV-side rail width and thickness at each hole, the bolt-head height, the TV-back-to-wall standoff, and the footprint and depth of its wall plate and any arms within 450 mm outboard of the +X column and between the columns | R42/R43 — decides whether the ≈ 73 mm case stack fits beside the +X column, `REACH_KEEPOUT` against the mount's rail, the arch sandwich mode's Z clearance over the right-hand column, and the pad/spacer height and M8 bolt length. Blocks plan D's re-plan, not A | User, with the TV and mount in hand — **open, the user has been asked** |
+| **M20** | **The user's TV and its TV lift, for the sandwiched brackets (plan D, issue #56):** the TV model, its VESA pattern (400 × 300?) and usable M8 thread depth; the lift's rail/plate width `W_LIFT_RAIL` and thickness `T_LIFT_RAIL` at each hole; the bolt-head height `K_BOLT_HEAD`; any lift hardware within 250 mm of either bracket's arms and pads. **Resolved (user, 2026-09-28): 150–200 mm behind the TV (`WALL_GAP` = 150 asserted) and the space beside it is not a constraint (`TV_SIDE_CLEAR` asserted, non-binding).** | R42/R43/R47 — `REACH`, the rib start, the arch sandwich rise and M3 length, the spacer and M8 lengths. Until measured each is an `assumed` parameter behind an assert (T1-70 … T1-90) | User, with the TV and lift in hand — **open** |
 | **M21** | **First bracket print (arch, direct mode), with a real case and device:** the lock's yaw release force for a −X pull on the case's top (far-wall) edge (≈ 3 × the weight expected), no release for pulls on the patch-wall edge and on the cables, and the one-hand lift-and-slide removal behind a mounted TV | R44 — the 60 mm coupon cannot reproduce the full case's yaw lever | User |
+| **M22** | **Sandwich tilt and clamp check, both brackets:** hang the heaviest Plus SKU for 24 h on the vertical bracket and on the arch's sandwich parts; static rail tilt ≤ 2° (the arch's M18d rule); re-check the M8 preload at 24–48 h (R42) | R42/R47, and the arch sandwich parts' larger COM offset (≈ 53 mm off the TV back vs ≈ 47.5). If the tilt fails, thicken the plates and re-derive every Z plane | User, after the first print |
 
 > **Numbering note (rev 8).** The fan-power ticket proposed these as "M7/M8/M9"; **M7 was already
 > taken** (Fishtail pitch). They are M8–M13 here. If a downstream doc says "M7 KSD9700", it means M8.
@@ -2012,6 +2020,7 @@ nothing is designed to flex. M15 measures the printed play and runs the e-ladder
 > (`docs/plans/2026-09-27-arch-tv-bracket.md` §9) and are not repeated here. **Rev 15** adds M19.
 > **Rev 16** retires M7 (D44) and adds M20 (plan-D gate).
 > **Rev 17** adds M21.
+> **Rev 18** adds M22 (plan D).
 
 ---
 
@@ -2071,6 +2080,7 @@ matters, and the resolution (fixed / accepted-and-rule-updated / escalated).
 | **D48** | 2026-09-28 | D34 (in-plane snap latch: arm, slot, plate window, nub, notch) and D44 ("the D34 latch stays the lock"); Q21 | **User decision 2026-09-28**, after analysing the specialist's DP48 plate (scratch F2): **gravity lock only**, the D34 latch removed; adopt the DP48's 1 × 45° entry lead-in | D34 released by pulling (≥ 30 N target, never measured; a beam estimate gave ≈ 10–19 N) and needed a window through every consumer plate; with D44's flush seat its nub also sat on the plate plane and left a zero-volume sliver that failed `check` on the arch centre and the coupon | **Done in rev 17 (plan F, `docs/plans/2026-09-28-gravity-lock.md`; shipped in one PR with rev 16).** A rigid bump on the rail's −Y flank (`MCC_RAIL_LOCK_ENGAGE` 0.70 horizontal, 30° entry, 90° exit, exit face `len/2 − 3.0`) drops into a pocket in the groove's −Y flank (the bump grown by `MCC_RAIL_CLR_HORIZ`, full groove depth); nothing flexes — the case rides over it inside the dovetail's own 1.155 mm play (T1-64); square exit face (T1-65); sill wall behind the pocket ≥ 1.5 mm (T1-66); release = lift ≈ 1 mm + slide. Lead-in `MCC_RAIL_LEADIN` = 1.0 at the case's +X face (`mcc_rail_female_cut(entry_x)`). Removed: `_mcc_rail_latch_geom()`, `_mcc_rail_nub_2d()`, `_mcc_rail_latch_cut_2d()`, `mcc_rail_male_window()`, `mcc_rail_male(plate_t)`, every `MCC_RAIL_LATCH_*`, `MCC_SNAP_STRAIN_MAX`. `rail_fit.py` proves the lift, the lock and the full-mate clearance; coupon `rail-latch` → `rail-lock` (snap-off strips 1 mm in from the edges, justified by the lock-only prototype). M15 rewritten, M21, R44, R45, Q23; Q21 closed |
 | **D49** | 2026-09-28 | Issue #26's orientation *convention* ("mount with +Y up so the patch wall hangs down"); the arch README: nothing keys the assembly against a 180° install | **User decision 2026-09-28: a mounted case ALWAYS hangs patch-wall down** — every bracket, the truss use (#27) included, no portrait TV | The gravity lock (D48) only engages when the case's weight rests on the rail's −Y flank | **Fixed decision, rev 17** (CLAUDE.md, brackets README, print-check). Every bracket keeps the `rotate([0,0,180])` rail placement. Take the case off before the TV is laid down, carried or tilted (R44, Q23). Still no physical key against a 180° install — the arch's UP arrow and shape remain cues |
 | **D50** | 2026-09-28 | §3 rail rules: brackets called `mcc_rail_male(plate_t)` + `mcc_rail_male_window()` and built keep-outs from `MCC_RAIL_LATCH_*` | Plan-D gate (F-R1/F-R2): a bracket must not know rail internals | Every rail change would ripple into every bracket file | **Done in rev 17 (plan F).** `mcc_rail_male_keepout(len)` (pure, `rail.scad`) returns the rail-local plate-side keep-out `[[x_min, x_max], [y_min, y_max]]`, bump included; a bracket unions `mcc_rail_male(len)` onto its plate (no cut), never passes `lock_e`, and reads only that accessor. The arch migrated (`RAIL_KEEPOUT_X/Y`); plan D (rev 18) uses only these two |
+| **D51** | 2026-09-28 | #47 / `models/brackets/README.md`: the arch bracket is a **direct** mount — its top VESA holes must not also carry another mount | **User decision 2026-09-28 (Q22(c)):** the TV's own mount (a TV lift) uses all four holes, so the arch must also work sandwiched | Without it the arch could not be used on the user's TVs | **Done in rev 18 (plan D, issue #56):** the arch ships `arm_sandwich`, `centre_sandwich` and `spacer` beside its direct parts — flat pads, ribs clear of the lift's rail band (T1-89), a taller centre so the slide-on sweep clears the lift rail and bolt head at the right-hand column (T1-87, R43), printed-ASA spacers under the bottom row (T1-90, R42). Direct-mode geometry and goldens unchanged |
 | **D11** | 2026-09-08 | §9 Tier 4 / the review gate: a geometry whose acceptance criterion is "what the user sees from outside" must be reviewed in that view | `exports/pro-convert-for-ndi-to-hdmi/` carries six ad-hoc previews and **no straight-on outside elevation of the assembled patch wall**; `scripts/build.py` renders no previews at all. The only patch-wall view showing the plate (`preview-rear.png`) is an oblique ISO | This is *why* D9 reached the user instead of being caught in review — the defect is only unambiguous in the head-on `−Y → +Y` view | **Open — process fix, teamlead's call.** Add a straight-on orthographic patch-wall elevation of base + `panel_placed` to the per-variant preview set and make it part of the `print-check` gate. Low cost, prevents a repeat |
 
 ---
