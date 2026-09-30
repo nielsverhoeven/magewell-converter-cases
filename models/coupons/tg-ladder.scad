@@ -57,7 +57,7 @@ for (i = [0 : 1 : n - 1]) {
         translate([x0 + PITCH / 2 - (T_W + 10) / 2, base_l - MARGIN - T_L, 0])
             cube([T_W + 10, T_L, T_H]);
         translate([x0 + PITCH / 2 - (T_W + 2 * clr) / 2, base_l - MARGIN - T_L - MCC_EPS, -MCC_EPS])
-            cube([T_W + 2 * clr, T_L + 2 * MCC_EPS, T_H + MCC_EPS]);
+            cube([T_W + 2 * clr, T_L + 2 * MCC_EPS, T_H + 2 * MCC_EPS]); // D88.3: overshoot the block top, no zero-thickness skin
     }
 }
 

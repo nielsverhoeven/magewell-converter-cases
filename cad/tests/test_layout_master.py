@@ -1,6 +1,6 @@
 """The numbers the case master (issue #81, P2-81 section 3.5) needs beyond mcc_case_layout(): the table look-ups
 (insert, fan grille, switch), the gusset-web tangent, the capacity of the master and its proof by a sweep, the capacity
-refusals with their rule ids, the parking rule, and the exact key set of the parameter sets (99 keys, 24 flags).
+refusals with their rule ids, the parking rule, and the exact key set of the parameter sets (96 keys, 24 flags).
 
 Offline and permanent, except test_fan_grille_matches_the_oracle_geometry (needs OpenSCAD while lib/mcc exists).
 """
@@ -279,14 +279,14 @@ def test_lid_vents_off_suppresses_both_lid_runs_but_keeps_their_values():
     assert v["V_N_VENT_LIDA"] == 11 and v["V_N_VENT_LIDB"] == 11
 
 
-# ---------------------------------------------------------------- the key set IS the contract (P2-81 3.5 after the verdict: 99 keys, 24 flags)
+# ---------------------------------------------------------------- the key set IS the contract (P2-81 3.5 after the verdict and D87.1: 96 keys, 24 flags)
 
 
 def contract_keys() -> tuple[set[str], set[str]]:
     keys = {"V_CASE_L", "V_CASE_W", "V_CASE_Z_TOP", "V_CONN_Z", "V_PLATE_L", "V_BOSS_D", "V_INSERT_HOLE_D", "V_INSERT_DEPTH",
             "V_FAST_PATCH_MID_X", "V_FAST_FAR_MID_X", "V_WEB_TAN_U", "V_WEB_TAN_V",
             "V_N_DECK_X", "V_DECK_X0", "V_DECK_PITCH_X", "V_N_DECK_Y", "V_DECK_Y0", "V_DECK_PITCH_Y",
-            "V_STRAP_POS_X", "V_STRAP_NEG_X", "V_STRAP_Y", "V_SIDEBOLT_X", "V_SIDEBOLT_Z",
+            "V_SIDEBOLT_X", "V_SIDEBOLT_Z",
             "V_VENT_FARLO_Z_LO", "V_VENT_FARLO_Z_HI", "V_VENT_FARUP_Z_LO", "V_VENT_FARUP_Z_HI",
             "V_VENT_NEGX_Z_LO", "V_VENT_NEGX_Z_HI", "V_VENT_NEGXA_Y0", "V_N_VENT_NEGXA", "V_VENT_LID_Y0", "V_N_VENT_LID_ROWS",
             "V_FAN_Y", "V_FAN_OPENING_D", "V_FAN_HOLE_D", "V_FAN_HOLE_PITCH", "V_FAN_RING3_ID",
@@ -305,9 +305,9 @@ def contract_keys() -> tuple[set[str], set[str]]:
     return keys, flags
 
 
-def test_the_key_set_is_exactly_99_keys_and_24_flags_of_the_master_contract():
+def test_the_key_set_is_exactly_96_keys_and_24_flags_of_the_master_contract():
     keys, flags = contract_keys()
-    assert (len(keys), len(flags)) == (99, 24)
+    assert (len(keys), len(flags)) == (96, 24)
     raw = LY.parameter_set(template())
     assert set(raw["parameters"]) == keys
     assert set(raw["flags"]) == flags
