@@ -14,6 +14,8 @@ One build implementation, two entry points, per `.claude/knowledge/architecture.
   part.step --mesh part.model.stl`.
 - `mesh_to_step.py` — STL → faceted STEP (`cadquery-ocp` or FreeCAD `freecadcmd` backend), now only
   the fallback for a part `csg_to_step.py` cannot convert (e.g. an engraved `text()` label).
+- `parity.py` — compares two model-frame parts (STL or STEP) and localises where they differ; see
+  "Parity tool" below. Its tests, like those of every `scripts/` module, live in `scripts/tests/`.
 - `release_version.py` — computes the next `vX.Y.Z` from Conventional Commits since the last
   `v*` tag. Used by `.github/workflows/release.yml`; see "Release tooling" below.
 - `package_release.py` — builds the per-device, coupon, and bracket release zips from `exports/`.
@@ -87,6 +89,39 @@ Run these as `.venv\Scripts\python scripts\build.py <command>` or `scripts\rende
 - `OPENSCADPATH` is set to `<repo>/lib` automatically for every OpenSCAD subprocess, so
   `include <BOSL2/std.scad>` and `include <mcc/mcc.scad>` resolve without any manual setup.
 - Every render always passes `--backend=Manifold` explicitly — never rely on a GUI preference.
+
+## Parity tool
+
+`parity.py` says whether two parts are the same solid and, if not, where they differ. It needs
+neither Fusion nor OpenSCAD (a STEP input needs `cadquery-ocp`, the PNG needs `matplotlib`).
+
+```powershell
+.venv\Scripts\python scripts\parity.py CANDIDATE ORACLE [--png] [--out DIR]   # same as `compare`
+.venv\Scripts\python scripts\parity.py compare CANDIDATE ORACLE --golden tests\golden\x.json
+.venv\Scripts\python scripts\parity.py noise-floor MESH.stl MESH.step         # tessellation calibration
+.venv\Scripts\python scripts\parity.py release-diff --exports exports --tag latest   # needs gh + network
+.venv\Scripts\python scripts\parity.py derive-masks --exports exports --out cad\fixtures\parity-masks.json [--check]
+```
+
+All four pass criteria must hold: **frame** (every bounding-box corner within 0.02 mm), **piece rule**
+(no residual piece both above 0.5 mm3 and thicker than 0.05 mm, thickness = 2 V / A), **total** (all
+residue together at most 0.2 % of the part volume) and, with `--golden`, the committed golden
+unchanged (0.1 mm, 0.5 %, 1 %). Failing pieces are merged into regions (bounding box, centroid,
+volume, bounding-box face) in the printed report and the JSON; `--png` also draws them. Label glyphs
+on coupons are excluded by mask boxes (`cad/fixtures/parity-masks.json`, derived from the OpenSCAD
+oracle by `derive-masks`, which needs OpenSCAD). Exit codes: `0` pass, `1` differences found, `2` an
+input is unusable.
+
+`noise-floor` measures how far a tessellated STL of a part sits from its own STEP;
+`release-diff` compares `exports/` with the parts of a release (`--tag`) or a directory
+(`--from-dir`) and lists what changed.
+
+## Tests of the scripts
+
+`python -m pytest scripts/tests -q`. `scripts/tests/conftest.py` puts `scripts/` and the repo root
+on `sys.path`; a test file never does. CI runs these tests together with `cad/tests` in the
+`cad-gates` workflow's `tests` job (`.github/workflows/cad-gates.yml`), where a skipped test fails
+the job.
 
 ## Release tooling
 

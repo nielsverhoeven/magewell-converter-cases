@@ -18,3 +18,8 @@
 # a Windows checkout (autocrlf) and Linux CI (issue #76, F76.10).
 cad/**/*.csv  text eol=lf
 cad/**/*.json text eol=lf
+cad/exports.ref text eol=lf
+cad/oracle.pin  text eol=lf
+
+# Workflows: machine-checked YAML, LF on every checkout (issue #80).
+.github/workflows/*.yml text eol=lf
