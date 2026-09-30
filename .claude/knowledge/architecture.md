@@ -2473,7 +2473,7 @@ Columns as in section 13: `# | Date | Intended rule | Violation | Why it matters
 | **D76.6** | 2026-09-30 | Brief F4 and E: S0, no `.scad` added to git | Values must be proven equal to OpenSCAD's without a committed harness | `echo` prints 6 significant digits | **Done by #76.** OpenSCAD evaluates; values travel as lossless strings; the harness and its encoder are Python text written to a temporary directory; the fixture `cad/fixtures/scad_values.json` is committed; CI re-derives it while OpenSCAD exists: one step of the `smoke` job in `render.yml` runs `MCC_REQUIRE_OPENSCAD=1 python -m pytest cad/tests -q` on Python 3.12 (gate amendment A3; #80 owns the step afterwards); the two tests that pin values (`test_hand_checked_anchor_values`, the harvested-literal value test) live in `test_scad_sync.py` and go with it, and before #86 a correction from the manual pass goes into the override tables of `cad/tools/scad_meta.py`, never into the CSV (A7); `cad/tools/`, the sync tests and the fixture are deleted by #86 |
 | **D76.7** | 2026-09-30 | Brief G: the input digest hashes build-input files | `.gitattributes` fixes line endings for `*.scad`, `*.py`, `*.md` only | Windows checkouts would hash differently from Linux CI | **Done by #76.** `cad/**/*.csv` and `cad/**/*.json` are `text eol=lf` |
 | **D76.8** | 2026-09-30 | Brief B: the registry contract is fixed before builders are written | Four consumers (#77, #78, #79, #81) need the same accessors | Parallel work collides on names | **Done by #76.** The interface of `cad/params.py` in section 3.6 (names, return shapes) is the contract; each dict `registry()` returns carries the key `expression` (the neutral text, `None` for a solver output) beside `fusion`, `environment()` evaluates from `expression` (from `Row`s or from those dicts), and `emit_fusion` is the only function that holds the `;` dialect, also with `minmax_in_fusion=False` (A1); `evaluate_number()` serves the kit, `registry()` and `fusion_parameter()` the runtime, `parameter_set()` reads the files of #77; `params.clear_cache()` forgets the two cached results and the runtime calls it first (A5); `test_layers.py` scans every `cad/**/*.py`, tools and tests included: no import of `adsk`, `scripts` or `cad.fusion`, no change to `sys.path` (A4); no name rule outside `check_registry()` |
-| **D76.9** | 2026-09-30 | Brief D lists `tripod_insert` in the closed option list; `architecture.md:932-933` and `CLAUDE.md` still offer the floor insert with the rail off (T1-63) | The case master has no floor insert boss (retired geometry, brief do-not 10) | An option that no builder can honour would be a silent no-op | **Done by #76, provisional: default of Q81.3, pending the user's answer.** `tripod_insert` leaves `params.CASE_OPTIONS` and the eight case files; the exporter drops a variant's `false` and refuses a `true`; `params.case_doc` refuses the key; the solver (#77) still refuses `Options(tripod_insert=True)` with T1-81.7. #76 does not edit `CLAUDE.md` or the floor-insert text of this file |
+| **D76.9** | 2026-09-30 | Brief D lists `tripod_insert` in the closed option list; `architecture.md:932-933` and `CLAUDE.md` still offer the floor insert with the rail off (T1-63) | The case master has no floor insert boss (retired geometry, brief do-not 10) | An option that no builder can honour would be a silent no-op | **Done by #76; the option is dropped (user decision 2026-09-30, Q81.3 answered).** `tripod_insert` leaves `params.CASE_OPTIONS` and the eight case files; the exporter drops a variant's `false` and refuses a `true`; `params.case_doc` refuses the key; the solver (#77) still refuses `Options(tripod_insert=True)` with T1-81.7. #76 does not edit `CLAUDE.md` or the floor-insert text of this file |
 | **D76.10** | 2026-09-30 | Brief B and gate A11: one OpenSCAD runner | The executable lookup of `scripts/build.py:362-385` would exist three times (build.py, the exporter, the generator's oracle) | A changed pin or search order would drift apart | **Done by #76.** `cad.tools.openscad_runner` (find, evaluate, render to any file format, decode) is the only runner under `cad/`; the generator's `oracle.py` calls it; `scripts/build.py` keeps its own copy until #80 decides; the runner is deleted with the oracle at #86 |
 | **D76.11** | 2026-09-30 | Gate B6: every option of the closed list switches at least once in the regression procedure | The nine exported configurations never switch `rail` off or `lid_vents` off | A feature set whose flag never changes is never proven to switch | **Done by #76 (data) and #77 (numbers).** Export status is data in the case definition: `configurations` holds the exported extras only (`base_fan`), the new key `test_configurations` the never-exported ones (`bare` = `{"rail": false, "lid_vents": false}` on the template); `params.case_doc` validates both against `CASE_OPTIONS`, a name is unique across both keys and never `default`; `params.exported_configurations(slug)` returns `default` plus the sorted `configurations` keys (nine over the eight files, `bare` never among them). OpenSCAD has no part for `bare`, so it is a policy entry of the tool (`scad_export.EXTRA_CONFIGURATIONS`, written to `test_configurations`) that the sync check validates; the layout oracle echoes its numbers, the set file carries it (`default`, `bare`, `base_fan`) |
 
@@ -2502,7 +2502,7 @@ Mitigation: the fresh-run comparison uses relative 1e-15, every other test 1e-9.
 ### 15.4 Open questions of issue #76
 
 None blocks the work. Each has a default that the implementation follows. **Q81.3** (the opt-in floor insert) belongs to the gate of the case
-master (issue #81): #76 applies its default (D76.9, provisional) and changes back in one place (`params.CASE_OPTIONS`) if the user answers otherwise.
+master (issue #81): #76 applies its default (D76.9); the user confirmed it on 2026-09-30.
 
 - **Q76.1 Constants that disagree with the geometry.** `MCC_SIDE_BOLT_HEAD_REC_D` (12.0 mm) and `MCC_INSERT_BORE_EXTRA` (0.5 mm)
   are documented design values that the geometry does not use (it cuts a 10.6 mm recess and a bore 1 mm deeper than the insert);
@@ -2514,7 +2514,61 @@ master (issue #81): #76 applies its default (D76.9, provisional) and changes bac
   `MCC_RAIL_LOCK_ENGAGE`, the last belongs to the top lock of D63.1). **Default:** leave them `assumed` (the measurement backlog
   keeps them visible, M15 measures the lock) and review the three lists of appendix A after the merge.
 
-### 15.5 Decisions of issue #80 (CI import path, parity tooling): first pull request
+### 15.5 Decisions of issue #77 (the case solver in Python)
+
+Columns as in section 13. Issue #77 adds `cad/layout.py` (a line-by-line Python port of the pure functions of `layout.scad`, `ports.scad`, the accessors of
+`constants.scad` and the list logic of `vents`, `cradle`, `fan`, `switch`, `fasteners` and `shell`), the eight generated parameter-set files
+`cad/parameters/variants/<slug>.json` (10 configurations, 99 `V_*` keys and 24 suppress flags each), the parity oracle `cad/tools/layout_oracle.py`
+with its fixture `cad/fixtures/scad_layout.json`, and the tests. Gate amendments B1 (one home per check), B2 (the two configuration keys), B3 (the id
+leads a solver error) and B5 (what S0 does not prove) are built in.
+
+| # | Date | Intended rule | Violation | Why it matters | Resolution |
+|---|---|---|---|---|---|
+| **D77.1** | 2026-09-30 | Brief B.4: a check has one home, a solver raises only when it cannot compute; a solver also refuses a solution that no total set can represent, and such a check lives only there (gate B1) | The OpenSCAD functions carry their Tier-1 asserts (22 in `layout.scad`), some of which are really capacity limits of the new master | The master has a fixed topology: a case beyond it has no total parameter set, but the rules of #78 must still see its numbers | **Done by #77.** `solve()` never refuses for capacity; `parameter_set()` raises `CapacityError`, whose message starts with the rule id. All eight ids (`T1-02`, `T1-39`, `T1-81.2` to `T1-81.7`) have their only implementation in `cad.layout.capacity_problems()`; `rules.py` (#78) lists these ids by calling that function and implements none of them again, and their negative tests are the 13 refusal tests of #77. `SolverError` only where the solver cannot compute; a `SolverError` that ports an oracle assert starts with its id (`T1-01`, `T1-02`) |
+| **D77.2** | 2026-09-30 | Brief D.2 and D.3: every list, sort, search, count and rounding is computed in Python; sets are total | Values depended on lists, sorts, searches and rounding inside geometry modules | A Fusion expression cannot sort, search or round | **Done by #77.** `cad/layout.py` ports `layout.scad`, `ports.scad`, the accessors and the list logic of `vents`, `cradle`, `fan`, `switch`, `fasteners` and `shell` operation for operation; equal to OpenSCAD on 31 cases and 48 edge probes within 1e-9, integers and order exact. `configurations(slug)` is `default` plus the sorted union of the case definition's `configurations` and `test_configurations` (gate B2); the exported ones are `params.exported_configurations` |
+| **D77.3** | 2026-09-30 | P2-81 3.5 (105 keys, 27 flags) and the gate's B1 and B2 | Capacity was a counting bound; ring 3's outer diameter and the opening were one quantity under two names | A dead capacity feature and a hairline slit that no parity threshold sees | **Done by #77.** The contract is **99 keys and 24 flags**: `Cradle_FarRib6`, `Vent_FarUpC`, `Vent_ExhB`, their five keys and `V_FAN_RING3_OD` are gone; the opening cut has the diameter `V_FAN_RING3_ID`; names, units and the parking rule otherwise as P2-81 3.5 |
+| **D77.4** | 2026-09-30 | D81.7: capacity is the largest count the solver can return for any side-bolt position on any device in scope | The counting bound (exclusions plus one) | A feature that no configuration can reach is never compared with an oracle | **Done by #77.** `CAPACITY = {slots 4, far_ribs 5, far_low 3, far_high 2, exhaust 1, negx 1, lid 2, fan_rings 3}`; `test_capacity_is_the_reachable_maximum` sweeps the bolt over the length of every device (0.1 mm; 0.01 mm gives the same) and fails in both directions |
+| **D77.5** | 2026-09-30 | Brief F4 and E: S0 for the solver without a committed `.scad` | The solver has no oracle file to compare with | Parity needs exact numbers from OpenSCAD | **Done by #77.** The layout oracle writes a temporary harness, echoes losslessly, and commits `cad/fixtures/scad_layout.json`; CI re-derives it while OpenSCAD exists. After the cutover the fixture stays as the regression net; a deliberate change regenerates it by a Python command that #86 adds, and its diff is reviewed like a golden. For the bodies of `mcc_vents()` and `mcc_cradle()` (modules whose list arithmetic cannot be called) S0 compares the solver against a transcription of that arithmetic in the harness; the proof against the real modules is S3 of #81 and #82 |
+| **D77.6** | 2026-09-30 | Gate B3: the owner of the set format derives the build set; builders hold no values | A `build_set.py` in the case package read parameter values and held positions as numbers | Brief B.7 and do-not 3 | **Done by #77.** `derive_document` / `write_derived` / `check_derived` and the command `python -m cad.layout derive SPEC --out OUT [--check]`; the spec (`build_overrides.json`, schema 1) holds a base set, `flags` clear or keep and overrides each with a reason; the result is a valid, total set |
+| **D77.7** | 2026-09-30 | Brief B.4: rules read solver output | The fan-switch band, per-group slot totals, deck counts and the plan of ribs and runs were locals inside OpenSCAD functions | #78 needs them without recomputing | **Done by #77.** `Layout.switch_y_lo/hi`, `VentPlan.n_far_low` ... `n_lid`, `CradlePlan`, `Solution.slots` and `.floor` are public and tested against the oracle's lists |
+| **D77.8** | 2026-09-30 | Generated text must be diff-friendly | OpenSCAD arithmetic gives `159.85000000000002` | Noise in git and in Fusion's parameter table | **Done by #77.** A length is text rounded to 12 decimals with trailing zeros stripped (error at most 5e-13 mm); a count is a bare integer |
+
+### 15.6 Risks of issue #77
+
+**R77.1 — A latent quirk is reproduced, not fixed.** `_mcc_lid_far_mid_x` (`vents.scad:189-194`) reads index 5 of `lid_fastener_pos`; with six
+fasteners and no patch mid the far mid sits at index 4 and is ignored. No real device triggers it (a synthetic one does; a test pins it). The
+oracle is frozen until #86; whether it is a bug is Q77.1.
+
+**R77.2 — The capacity rests on an `assumed` side-bolt position.** The position is `assumed` for all eight devices (`R81.7`); a measured value
+can change the vent runs and the rib count. The sweep covers every position on the device, so no measured value can exceed the capacity; it
+can only reach a count that no configuration uses today.
+
+**R77.3 — The web tangent has no oracle value.** The hull is computed by the geometry kernel. The closed form is tested algebraically (on the
+circle, tangent) and against the template numbers of P2-81 3.5; the geometry is proven by #81's stage B3.
+
+**R77.4 — The fixture is 162 KB.** It is the price of exact parity on 31 cases and 48 probes; it is written only by the tool and read only by tests.
+
+**R77.5 — Python 3.12 has not been run locally.** The same as R76.4: all files parse with the 3.12 grammar; CI's run (the `render.yml` step of #76) is the first.
+
+**R77.6 — The oracle harness mirrors two modules by hand.** `mcc_vents()` and `mcc_cradle()` cannot be called; the harness repeats their list
+arithmetic, so S0 compares the solver against a transcription for those two bodies and the proof against the real modules is S3 of #81 and #82. The
+oracle is frozen, so the transcription cannot drift; a recorded decision that changes those modules (brief E, exception path) must change the
+harness in the same PR, and `test_layout_fixture_equals_openscad` would fail if it did not.
+
+**R77.7 — Three copies of the capacity table would drift.** `cad.layout.CAPACITY`, `frame.CAPACITY` of the case master (#81) and the `MASTER_CAP` of the rules plan (#78,
+keys `far_up` and `rings`) name the same numbers. Mitigation: #81's test asserts `frame.CAPACITY == cad.layout.CAPACITY`, and `rules.py` imports `cad.layout.CAPACITY` (P2 may
+import P1, `test_layers.py` allows it) instead of keeping a copy; a changed capacity is then one edit plus the sweep test.
+
+### 15.7 Open questions of issue #77
+
+None blocks the work. One has a default that the implementation follows:
+
+- **Q77.1 The far mid fastener and the vents (`vents.scad:194`).** With six lid fasteners but no patch mid (a tight connector pitch; no real device),
+  the vents ignore the far mid fastener because they read index 5 of the list, although it sits at index 4, so a vent slot could cut into that
+  boss. Is that intended? **Default:** reproduce it (the oracle is frozen and no real case is affected), and decide with the other design changes
+  at the cutover (brief Q75.4).
+
+### 15.8 Decisions of issue #80 (CI import path, parity tooling): first pull request
 
 The records below belong to the first pull request of #80 (`scripts/parity.py` and the `cad-gates` workflow). The rest of the
 issue's records (D80.3 to D80.6, D80.8 to D80.14, D80.16) are added by the pull requests that introduce what they describe.
