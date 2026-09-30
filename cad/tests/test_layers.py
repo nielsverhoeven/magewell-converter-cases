@@ -77,7 +77,9 @@ def test_the_p_layer_modules_parse_as_python_3_12(path):
 
 
 def all_cad_files() -> list[Path]:
-    return sorted(p for p in CAD.rglob("*.py") if "__pycache__" not in p.parts)
+    """Every source under cad/ except cad/fusion/: that tree has its own scans (the kit's test_layering.py and the
+    runtime's test_runtime_layering.py), because it imports adsk and cad.fusion on purpose."""
+    return sorted(p for p in CAD.rglob("*.py") if "__pycache__" not in p.parts and "fusion" not in p.relative_to(CAD).parts[:1])
 
 
 def sys_path_uses(tree: ast.AST) -> list[int]:

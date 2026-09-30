@@ -1,0 +1,40 @@
+{
+ "schema": 1,
+ "document": "MCC-RuntimeTest",
+ "builder": {"module": "cad.fusion.runtime.testdoc.builder", "entry": "build", "options": {}},
+ "registry": {
+  "source": "inline",
+  "rows": [
+   {"name": "TST_PITCH", "unit": "mm", "kind": "expression", "fusion": "TST_PIN_D + TST_WALL", "comment": "pin pitch | src=runtime test | conf="},
+   {"name": "TST_PIN_D", "unit": "mm", "kind": "expression", "fusion": "TST_WALL * 1.5", "comment": "pin diameter | src=runtime test | conf="},
+   {"name": "TST_PIN_H", "unit": "mm", "kind": "expression", "fusion": "TST_WALL / 2", "comment": "pin height | src=runtime test | conf="},
+   {"name": "TST_WALL", "unit": "mm", "kind": "constant", "fusion": "4 mm", "comment": "base dimension | src=runtime test | conf=decided"},
+   {"name": "V_TEST_L", "unit": "mm", "kind": "solver", "fusion": null, "comment": "block length"},
+   {"name": "V_TEST_W", "unit": "mm", "kind": "solver", "fusion": null, "comment": "block width"},
+   {"name": "V_TEST_H", "unit": "mm", "kind": "solver", "fusion": null, "comment": "block height"},
+   {"name": "V_TEST_HOLE_D", "unit": "mm", "kind": "solver", "fusion": null, "comment": "hole diameter"},
+   {"name": "V_N_TEST_PINS", "unit": "", "kind": "solver", "fusion": null, "comment": "number of pins"}
+  ],
+  "sets": {
+   "a": {"values": {"V_TEST_L": 60, "V_TEST_W": 30, "V_TEST_H": 10, "V_TEST_HOLE_D": 12, "V_N_TEST_PINS": 3},
+         "suppress": {"Test_Hole": false}},
+   "b": {"values": {"V_TEST_L": 80, "V_TEST_W": 30, "V_TEST_H": 12, "V_TEST_HOLE_D": 12, "V_N_TEST_PINS": 1},
+         "suppress": {"Test_Hole": true}}
+  }
+ },
+ "build_configuration": "runtime-test/a",
+ "configurations": [
+  {"id": "runtime-test/a", "set": {"config": "a"},
+   "exports": [{"component": "TestBlock", "target": "runtime-test", "part": "block_a"}]},
+  {"id": "runtime-test/b", "set": {"config": "b"},
+   "exports": [{"component": "TestBlock", "target": "runtime-test", "part": "block_b"}]}
+ ],
+ "owners": ["Test", "Reserve"],
+ "required_components": ["Reserve_TestBay"],
+ "protected_prefixes": ["Reserve_"],
+ "never_export": ["Ghost_", "Reserve_"],
+ "inventory": "cad/fusion/runtime/testdoc/inventory.json",
+ "inputs": ["cad/__init__.py", "cad/fusion/__init__.py", "cad/fusion/runtime/testdoc/*.py"],
+ "export": {"formats": ["step", "stl"], "stl_refinement": "high", "archive": false, "captures": []},
+ "aba": true
+}
