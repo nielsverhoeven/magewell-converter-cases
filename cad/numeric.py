@@ -11,7 +11,7 @@ port stays line-by-line:
     (measured 2026-09-30 over -720..1080 deg: |sin|,|cos| error <= 1e-15, tan <= 2.7e-14 relative).  No
     comparison in this repository relies on trig bit-equality: parity tests use rel_tol 1e-9.
   * round() is sign(x) * floor(|x| + 0.5) (half away from zero, floor-based), Python's round() is
-    banker's rounding and C's round() differs at 0.49999999999999994.
+    banker's rounding and C's round() differs at 0.49999999999999994 (OpenSCAD's own result there depends on the platform build; no model value is within one ulp of a half).
   * `%` is fmod (the sign of the dividend), Python's `%` follows the divisor.
   * floor()/ceil() return floats (Python's return ints; the value is the same).
   * division by zero yields inf/nan in OpenSCAD and raises in Python: the port must guard it
