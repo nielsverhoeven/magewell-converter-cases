@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "name": "options",
+  "scad_name": "MCC_*_DEFAULT",
+  "provenance": ["selector defaults of lib/mcc/constants.scad; openscad_only entries are kept for round-trip completeness"],
+  "rows": {
+    "openscad_only": {
+      "MCC_SHOW_GHOST": false
+    },
+    "fan_default": "NF-A4x10",
+    "switch_default": "MTS-101",
+    "splitter_default": "DONGLE-75x40x20"
+  }
+}

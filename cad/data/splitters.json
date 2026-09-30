@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "name": "splitters",
+  "scad_name": "MCC_SPLITTERS",
+  "scad_source": "lib/mcc/constants.scad:901-911",
+  "provenance": ["Default splitter envelope: \"dongle-class\" 802.3af/at->5V USB splitter (e.g. UCTRONICS", "U6114/U6115, knowledge/components/poe-splitters.md rank-2 recommendation). Its own dimensions", "are explicitly unpublished (poe-splitters.md:129-136,211-215 \"physical dimensions ... not found", "on the manufacturer's product pages\") — R11 (architecture.md §11) blocks the GAT-USBC placeholder", "from fitting the patch-wall topology at all, so this smaller \"dongle class\" default (75x40x20,", "user decision 2026-09-07) is what shell.scad reserves by default until the depth-mockup /", "physical-measurement follow-up replaces it with a measured value.", "PoE Texas GAT-USBC kept as a named, non-default alternative (larger, dimensioned, but does not", "fit the patch-wall topology per R11 — architecture.md:529-542).", "size:         knowledge/components/poe-splitters.md:58 \"114 x 51 x 25\" (L x W x H, mm)", "weight_g:     knowledge/components/poe-splitters.md:58 \"85 g\"", "cable_allow:  knowledge/components/poe-splitters.md §\"Space envelope\" / the brief's own instruction", "\"plus 20 mm cable allowance on each RJ45 end\" — 20 mm, per-end, applied at both RJ45 ends.", "weight_g intentionally omitted — genuinely unknown, not just unmeasured (no weight figure", "exists anywhere in poe-splitters.md for a dongle-class part); struct_val() returns undef for", "a missing key, same as an explicit undef would, without implying a datum that doesn't exist.", "dongle-class 802.3af/at->5 V USB splitter, e.g. UCTRONICS U6114/U6115 —", "dimensions unpublished (knowledge/components/poe-splitters.md), measure before", "the shell is finalised", "does not fit the single-patch-wall layout (architecture.md §11 R11)"],
+  "rows": {
+    "DONGLE-75x40x20": {
+      "size": [75, 40, 20],
+      "cable_allow": 20,
+      "confidence": "assumed"
+    },
+    "GAT-USBC": {
+      "size": [114, 51, 25],
+      "weight_g": 85,
+      "cable_allow": 20
+    }
+  }
+}

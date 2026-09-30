@@ -30,3 +30,4 @@ Thumbs.db
 # extensions match the binary-artefact globs above (architecture.md: knowledge/ is sourced,
 # stable domain research, not build output). ---
 !knowledge/**/assets/**
+.pytest_cache/

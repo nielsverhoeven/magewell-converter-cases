@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "name": "plug_axial",
+  "scad_name": "MCC_PLUG_AXIAL",
+  "scad_source": "lib/mcc/constants.scad:447-457",
+  "provenance": ["assumed — cables.md:121 \"unknown — physically measure\" (M6)", "assumed — cables.md has no BNC plug-body length at all (M6)", "cables.md:119, verified (TIA-568.2-D max plug length)", "cables.md:125, verified", "assumed equal to usb_a — no USB-B-specific figure sourced", "defensive: DBA-BL-B (kind \"blank\") now carries a real hole (rev 8, D-14", "part 4), so mcc_plug_axial() can resolve \"DBA-BL-B\" -> \"blank\" via", "mcc_panel_kind() same as any other part; without this row that lookup", "would assert out. Nothing plugs into a blank, so 0."],
+  "rows": {
+    "hdmi_a": 25,
+    "bnc": 25,
+    "rj45": 21.5,
+    "usb_a": 12,
+    "usb_b": 12,
+    "blank": 0
+  }
+}

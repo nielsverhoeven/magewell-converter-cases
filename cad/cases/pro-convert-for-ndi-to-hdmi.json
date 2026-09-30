@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-for-ndi-to-hdmi",
+  "device": "pro-convert-for-ndi-to-hdmi",
+  "options": {
+    "fan": false,
+    "splitter": false,
+    "fan_switch": false,
+    "lid_vents": true
+  },
+  "configurations": {
+    "base_fan": {
+      "fan": true
+    }
+  },
+  "test_configurations": {
+    "bare": {
+      "rail": false,
+      "lid_vents": false
+    }
+  }
+}

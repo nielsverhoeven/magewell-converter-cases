@@ -1,0 +1,945 @@
+{
+  "schema": 1,
+  "generated_by": "python -m cad.tools.scad_export write",
+  "openscad": "OpenSCAD version 2026.09.23",
+  "oracle_files": {
+    "lib/mcc/constants.scad": "4d2a5e342116bb26e90ae81c41068c67bc2f1d24562d181fc38622bc4be4c7aa",
+    "lib/mcc/devices/pro-convert-for-ndi-to-aio.scad": "4290ae17e1b8bf03ebc252ca9f6e1b465ea1fc367c40718b14221b9b63b1c737",
+    "lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad": "f223adf426cfb71c85ae0ce7235adcd968bdd66651f7f711ca02a58028a5a259",
+    "lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad": "c3f9dd2e7d79b8dbe9f6cffd4528e5c0566fdc85e73d91a4b75c6d9118b90755",
+    "lib/mcc/devices/pro-convert-for-ndi-to-sdi.scad": "3f83be1ba819aaf561e0641b9278a2b2cd4eec4bdb125ee7c73c889ddb8b351b",
+    "lib/mcc/devices/pro-convert-hdmi-plus.scad": "4d259c6d8fb1644a32a05ade4aed322a4bfccdb1f5bb6b831f70bc4fe0b84161",
+    "lib/mcc/devices/pro-convert-hdmi-tx.scad": "f541f91be7b221c4d4f6ed3c976afd407b5fcf1eaf616cd7663aaea528d1d6ef",
+    "lib/mcc/devices/pro-convert-sdi-plus.scad": "2276df3c327e7d6c44f630d457452987a75a048a25721a3e871e5af04442ff5f",
+    "lib/mcc/devices/pro-convert-sdi-tx.scad": "8d15dda9c5b99deec609ac82faa841eec5df69b42dbdcf4847c9bd1cfc51ab39",
+    "models/pro-convert-for-ndi-to-aio/case.scad": "6d9c09076f80063a03ca26dc4c70e09eb548075901bdf2d7347677f935f8dbed",
+    "models/pro-convert-for-ndi-to-hdmi/case.scad": "c565a9a8795d4d57a2f1a5e4287042a214282fab56a84e12060eb60219b39bc1",
+    "models/pro-convert-for-ndi-to-hdmi-4k/case.scad": "2b29349c516ccc4ac4701a82eeee288359be0d01285192cc67f818bc4d94490d",
+    "models/pro-convert-for-ndi-to-sdi/case.scad": "6be060775344c3159481bd542a25d82cea91e4a0ea70ea2a85ec2e95309eb9db",
+    "models/pro-convert-hdmi-plus/case.scad": "aad25e347f0535cc75d3ca9e62172ddb95dae269aeab00fc38d6378ae55a610e",
+    "models/pro-convert-hdmi-tx/case.scad": "fc7993195113315fa7ba4ecda5ea5f36fe54123e6532f400740f6f507fd00942",
+    "models/pro-convert-sdi-plus/case.scad": "96bf1c611c099e8ee7ddd6c9aef290bb6808c7bb9a7a8dd51529a7cf5c3e2eba",
+    "models/pro-convert-sdi-tx/case.scad": "40e0bad751325b653df74c7d20924e5f17364b86cb553212e530427a237a03a6"
+  },
+  "constants": {
+    "MCC_WALL": 3,
+    "MCC_FLOOR_T": 3,
+    "MCC_LID_T": 3,
+    "MCC_BUILD": 256,
+    "MCC_BED_MARGIN": 6,
+    "MCC_EPS": 0.01,
+    "MCC_HOLE_COMP": 0.2,
+    "MCC_CLR_TG": 0.25,
+    "MCC_CLR_SLIDE": 0.3,
+    "MCC_CLR_PRESS": 0.1,
+    "MCC_D_FLANGE": [26, 31],
+    "MCC_D_FLANGE_R": 3.5,
+    "MCC_D_SCREW_PITCH": [19, 24],
+    "MCC_D_SCREW_D": 3.2,
+    "MCC_D_PITCH_H": 32,
+    "MCC_D_PITCH_V": 36,
+    "MCC_D_FLANGE_EDGE_MARGIN": 4,
+    "MCC_PANEL_SEAT_T": 2,
+    "MCC_INSERT_M3": {
+      "hole_d": 4,
+      "od": 4.6,
+      "len": 5.7
+    },
+    "MCC_INSERT_1_4_20": {
+      "hole_d": 8.8,
+      "od": 9.5,
+      "len": 12.7,
+      "confidence": "assumed"
+    },
+    "MCC_INSERT_M4": {
+      "hole_d": 5.5,
+      "od": 6.3,
+      "len": 8.1
+    },
+    "MCC_BOSS_MIN_RATIO": 1.8,
+    "MCC_TRIPOD_MAJOR_D": 6.35,
+    "MCC_TRIPOD_CLR_D": 6.6,
+    "MCC_M3_CLR_D": 3.4,
+    "MCC_M4_CLR_D": 4.5,
+    "MCC_M8_CLR_D": 9,
+    "MCC_M3_MAJOR_D": 3,
+    "MCC_SIDE_BOLT_HEAD_D": 10,
+    "MCC_SIDE_BOLT_HEAD_H": 4.5,
+    "MCC_SIDE_BOLT_HEAD_REC_D": 12,
+    "MCC_SIDE_BOLT_HEAD_REC_H": 6,
+    "MCC_SIDE_BOLT_WEB_T": 3,
+    "MCC_SIDE_BOLT_CLIP": {
+      "groove_d": 5,
+      "groove_w": 0.8,
+      "od": 11,
+      "t": 0.7
+    },
+    "MCC_SIDE_BOLT_POCKET_D": 13,
+    "MCC_SIDE_BOLT_POCKET_H": 8,
+    "MCC_SIDE_BOLT_ENGAGE": 6,
+    "MCC_SIDE_BOLT_BOSS_OD": 20,
+    "MCC_SIDE_BOLT_PAD_T": 2,
+    "MCC_SIDE_BOLT_PAD_OD": 18,
+    "MCC_SIDE_BOLT_PAD_ID": 8,
+    "MCC_SIDE_BOLT_AXIS_Z": 25.5,
+    "MCC_GAP_FAR_DUCT_MIN": 6,
+    "MCC_GAP_FAR": 16,
+    "MCC_SIDE_BOLT_PROUD": 0,
+    "MCC_SIDE_BOLT_SCREW_LEN": 19.05,
+    "MCC_SIDE_BOLT_GROOVE_POS": 10,
+    "MCC_SIDE_BOLT_KEEPOUT_D": 24,
+    "MCC_SIDE_BOLT_SUPPORT_WEB_T": 3,
+    "MCC_SIDE_BOLT_KEEPOUT_STRIP_W": 7,
+    "MCC_PANEL_BEZEL_T": 3,
+    "MCC_WALL_BORE_WEB_MIN": 1.2,
+    "MCC_APERTURE_LIP_WEB_MIN": 2,
+    "MCC_INSERT_BORE_EXTRA": 0.5,
+    "MCC_FIXING_BORE_D": 2.5,
+    "MCC_T_PATCH": 8,
+    "MCC_PANEL_BAND": 3,
+    "MCC_PLATE_H": 39,
+    "MCC_PANEL_FRAME_MIN": 10,
+    "MCC_PLATE_END_PAD": 8,
+    "MCC_SLOTS_MAX": 4,
+    "MCC_END_ZONE_MIN": 20,
+    "MCC_GAP_DEV": 2,
+    "MCC_LID_SPAN_MAX": 180,
+    "MCC_WEB_BORE_KEEP": 0.8,
+    "MCC_FASTENER_INSET": 10,
+    "MCC_LID_FASTENER_CLR_MIN": 6.14,
+    "MCC_DEV_SIDE_ALLOW": {
+      "bnc": 41,
+      "hdmi_a": 40,
+      "rj45": 27,
+      "usb_a": 17,
+      "usb_b": 17,
+      "minidin8": 0,
+      "rotary16": 0,
+      "button": 0,
+      "tripod_1_4_20": 0,
+      "blank": 0
+    },
+    "MCC_PLUG_AXIAL": {
+      "hdmi_a": 25,
+      "bnc": 25,
+      "rj45": 21.5,
+      "usb_a": 12,
+      "usb_b": 12,
+      "blank": 0
+    },
+    "MCC_CRADLE_RIB_T": 3,
+    "MCC_CRADLE_RIB_H": 9,
+    "MCC_CRADLE_DECK_GRID_PITCH": 22,
+    "MCC_CRADLE_DECK_GRID_PITCH_MIN": 16,
+    "MCC_CRADLE_DECK_GRID_PITCH_MAX": 32,
+    "MCC_TG_W": 1.6,
+    "MCC_TG_H": 2,
+    "MCC_TG_PATCH_INSET": 4.5,
+    "MCC_LID_CB_D": 8,
+    "MCC_LID_CB_WEB_MIN": 1.2,
+    "MCC_LID_CLEAR": 2,
+    "MCC_VENT_SLOT_W": 1.2,
+    "MCC_VENT_WEB_W": 1.6,
+    "MCC_VENT_INTAKE_BAND_H": 18,
+    "MCC_VENT_EXHAUST_Z": [32, 44],
+    "MCC_FAN_APERTURE_D": 38,
+    "MCC_STRAP_SLOT": [25, 5],
+    "MCC_FLOOR_FEATURE_MIN_SEP": 15,
+    "MCC_FLOOR_FEATURE_EDGE_MIN": 2,
+    "MCC_SHOW_GHOST": false,
+    "MCC_RAIL_DEPTH": 4,
+    "MCC_RAIL_SILL_H": 7,
+    "MCC_RAIL_FLANK_ANGLE": 60,
+    "MCC_RAIL_ROOT_W": 65,
+    "MCC_RAIL_MOUTH_W": 60.38119784648299,
+    "MCC_RAIL_SILL_SIDE_W": 3,
+    "MCC_RAIL_END_WALL": 3,
+    "MCC_RAIL_LEN": 136,
+    "MCC_RAIL_Y": -23.5,
+    "MCC_RAIL_LOCK_ENGAGE": 0.6,
+    "MCC_RAIL_LOCK_PLAY_MARGIN": 0.3,
+    "MCC_RAIL_LOCK_RAMP_IN": 45,
+    "MCC_RAIL_LOCK_STRIP_X": 2,
+    "MCC_RAIL_LOCK_STRIP_Y_IN": 10,
+    "MCC_RAIL_LOCK_STRIP_Y_OUT": 30,
+    "MCC_RAIL_LOCK_END_OFFSET": 3,
+    "MCC_RAIL_LEADIN": 1,
+    "MCC_RAIL_PASSAGE_ROOF_MIN": 1.2,
+    "MCC_RAIL_MATE_CLR": 0.5,
+    "MCC_RAIL_CLR_HORIZ": 0.5773502691896258,
+    "MCC_RAIL_ROOF_CLR": 0.5,
+    "MCC_RAIL_MALE_H": 3.5,
+    "MCC_RIB_HEIGHT_RATIO_MAX": 3,
+    "MCC_FANS": {
+      "NF-A4x10": {
+        "frame": [40, 40, 10],
+        "pitch": 32,
+        "hole_d": 4.3
+      },
+      "NF-A6x25": {
+        "frame": [60, 60, 25],
+        "pitch": 50,
+        "hole_d": 4.3
+      }
+    },
+    "MCC_FAN_DEFAULT": "NF-A4x10",
+    "MCC_FAN_INTAKE_CLR": 5,
+    "MCC_FAN_BAY_CLR": 2,
+    "MCC_VENT_AREA_RATIO": 1,
+    "MCC_LID_VENT_SLOT_W": 2,
+    "MCC_LID_VENT_SLOT_L": 20,
+    "MCC_LID_VENT_EDGE_MIN": 1,
+    "MCC_LID_VENT_WEB_MIN": 1.6,
+    "MCC_LID_VENT_WEB_W": 1.6,
+    "MCC_LID_VENT_ROW_GAP": 6,
+    "MCC_LID_VENT_ROWS": 2,
+    "MCC_LID_VENT_END_MARGIN": 5,
+    "MCC_LID_VENT_FASTENER_KEEPOUT_R": 10,
+    "MCC_LID_VENT_AREA_RATIO": 1,
+    "MCC_SWITCHES": {
+      "MTS-101": {
+        "hole_d": 6.4,
+        "nut_d": 9.237604307034013,
+        "keepout_d": 9.837604307034013,
+        "pad_d": 14,
+        "body_d": 10,
+        "depth": 13,
+        "actuator_proud_h": 10,
+        "panel_t_min": 0.8,
+        "panel_t_max": 3.2,
+        "clr": 1.5,
+        "confidence": "assumed"
+      }
+    },
+    "MCC_SWITCH_DEFAULT": "MTS-101",
+    "MCC_SWITCH_FLUSH_CLR": 1,
+    "MCC_SWITCH_WELL_DEPTH_MAX": 12,
+    "MCC_SPLITTERS": {
+      "DONGLE-75x40x20": {
+        "size": [75, 40, 20],
+        "cable_allow": 20,
+        "confidence": "assumed"
+      },
+      "GAT-USBC": {
+        "size": [114, 51, 25],
+        "weight_g": 85,
+        "cable_allow": 20
+      }
+    },
+    "MCC_SPLITTER_DEFAULT": "DONGLE-75x40x20",
+    "MCC_END_ZONE_NEG_EXTRA_SPLITTER": 20,
+    "MCC_PANEL_PARTS": {
+      "NE8FDP-B": {
+        "hole_d": 24,
+        "depth": 34.55,
+        "max_panel_t": 4,
+        "plug_len": 25,
+        "bend": 10,
+        "kind": "rj45",
+        "confidence": "drawing"
+      },
+      "NAHDMI-W-B": {
+        "hole_d": 23.6,
+        "depth": 40.65,
+        "max_panel_t": 2,
+        "plug_len": 35,
+        "bend": 15,
+        "kind": "hdmi_a",
+        "confidence": "drawing"
+      },
+      "NAUSB-W-B": {
+        "hole_d": 23.6,
+        "depth": 40.55,
+        "max_panel_t": 2,
+        "plug_len": 20,
+        "bend": 8,
+        "kind": "usb_b",
+        "confidence": "drawing"
+      },
+      "NBB75DFGB": {
+        "hole_d": 23.6,
+        "depth": 34,
+        "max_panel_t": 2,
+        "plug_len": 40.6,
+        "bend": 40.6,
+        "kind": "bnc",
+        "confidence": "drawing"
+      },
+      "DBA-BL-B": {
+        "hole_d": 24,
+        "depth": 3.2,
+        "max_panel_t": 4,
+        "plug_len": 0,
+        "bend": 0,
+        "kind": "blank",
+        "confidence": "drawing"
+      }
+    },
+    "MCC_CONFIDENCE_ORDER": ["assumed", "photo", "manual", "drawing", "measured"]
+  },
+  "devices": {
+    "pro-convert-for-ndi-to-aio": {
+      "slug": "pro-convert-for-ndi-to-aio",
+      "family": "compact",
+      "size": [100.9, 60.2, 23.3],
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-aio.md",
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "face": [1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "hdmi_a",
+          "dir": "out",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "sdi_out",
+          "face": [1, 0, 0],
+          "pos": [16, 0],
+          "kind": "bnc",
+          "dir": "out",
+          "panel": "NBB75DFGB",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "rotary",
+          "face": [0, 0, 1],
+          "pos": [20, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "menu",
+          "face": [0, 0, 1],
+          "pos": [30, 8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "select",
+          "face": [0, 0, 1],
+          "pos": [30, -8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-for-ndi-to-hdmi": {
+      "slug": "pro-convert-for-ndi-to-hdmi",
+      "family": "compact",
+      "size": [100.9, 60.2, 23.3],
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md",
+      "ports": [
+        {
+          "id": "hdmi_out",
+          "face": [1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "hdmi_a",
+          "dir": "out",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_host",
+          "face": [1, 0, 0],
+          "pos": [16, 0],
+          "kind": "usb_a",
+          "dir": "bidir",
+          "panel": "DBA-BL-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "rotary",
+          "face": [0, 0, 1],
+          "pos": [20, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "menu",
+          "face": [0, 0, 1],
+          "pos": [30, 8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "select",
+          "face": [0, 0, 1],
+          "pos": [30, -8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        }
+      ]
+    },
+    "pro-convert-for-ndi-to-hdmi-4k": {
+      "slug": "pro-convert-for-ndi-to-hdmi-4k",
+      "family": "plus",
+      "size": [117.5, 66.7, 23.4],
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi-4k.md",
+      "ports": [
+        {
+          "id": "usb_host",
+          "face": [1, 0, 0],
+          "pos": [-20, 0],
+          "kind": "usb_a",
+          "dir": "bidir",
+          "panel": "DBA-BL-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "menu",
+          "face": [1, 0, 0],
+          "pos": [0, 0],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "hdmi_out",
+          "face": [1, 0, 0],
+          "pos": [20, 0],
+          "kind": "hdmi_a",
+          "dir": "out",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rotary",
+          "face": [0, 0, 1],
+          "pos": [-15, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-for-ndi-to-sdi": {
+      "slug": "pro-convert-for-ndi-to-sdi",
+      "family": "compact",
+      "size": [100.9, 60.2, 23.3],
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-sdi.md",
+      "ports": [
+        {
+          "id": "sdi_out",
+          "face": [1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "bnc",
+          "dir": "out",
+          "panel": "NBB75DFGB",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_host",
+          "face": [1, 0, 0],
+          "pos": [16, 0],
+          "kind": "usb_a",
+          "dir": "bidir",
+          "panel": "DBA-BL-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "rotary",
+          "face": [0, 0, 1],
+          "pos": [20, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "menu",
+          "face": [0, 0, 1],
+          "pos": [30, 8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        },
+        {
+          "id": "select",
+          "face": [0, 0, 1],
+          "pos": [30, -8],
+          "kind": "button",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-hdmi-plus": {
+      "slug": "pro-convert-hdmi-plus",
+      "family": "plus",
+      "size": [117.5, 66.7, 23.4],
+      "source": "knowledge/magewell/models/pro-convert-hdmi-plus.md",
+      "ports": [
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "hdmi_in",
+          "face": [1, 0, 0],
+          "pos": [-22, -6],
+          "kind": "hdmi_a",
+          "dir": "in",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "ptz_tally",
+          "face": [1, 0, 0],
+          "pos": [0, -6],
+          "kind": "minidin8",
+          "dir": "bidir",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "hdmi_out",
+          "face": [1, 0, 0],
+          "pos": [22, -6],
+          "kind": "hdmi_a",
+          "dir": "out",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rotary",
+          "face": [1, 0, 0],
+          "pos": [0, 10],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-hdmi-tx": {
+      "slug": "pro-convert-hdmi-tx",
+      "family": "compact",
+      "size": [100.9, 60.2, 23.3],
+      "source": "knowledge/magewell/models/pro-convert-hdmi-tx.md",
+      "ports": [
+        {
+          "id": "hdmi_in",
+          "face": [1, 0, 0],
+          "pos": [-18, 0],
+          "kind": "hdmi_a",
+          "dir": "in",
+          "panel": "NAHDMI-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "ptz_tally",
+          "face": [1, 0, 0],
+          "pos": [14, 0],
+          "kind": "minidin8",
+          "dir": "bidir",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rotary",
+          "face": [0, -1, 0],
+          "pos": [30, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-sdi-plus": {
+      "slug": "pro-convert-sdi-plus",
+      "family": "plus",
+      "size": [117.5, 66.7, 23.4],
+      "source": "knowledge/magewell/models/pro-convert-sdi-plus.md",
+      "ports": [
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "sdi_in",
+          "face": [1, 0, 0],
+          "pos": [-22, -6],
+          "kind": "bnc",
+          "dir": "in",
+          "panel": "NBB75DFGB",
+          "confidence": "photo"
+        },
+        {
+          "id": "ptz_tally",
+          "face": [1, 0, 0],
+          "pos": [0, -6],
+          "kind": "minidin8",
+          "dir": "bidir",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "sdi_out",
+          "face": [1, 0, 0],
+          "pos": [22, -6],
+          "kind": "bnc",
+          "dir": "out",
+          "panel": "NBB75DFGB",
+          "confidence": "photo"
+        },
+        {
+          "id": "rotary",
+          "face": [1, 0, 0],
+          "pos": [0, 10],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    },
+    "pro-convert-sdi-tx": {
+      "slug": "pro-convert-sdi-tx",
+      "family": "compact",
+      "size": [100.9, 60.2, 23.3],
+      "source": "knowledge/magewell/models/pro-convert-sdi-tx.md",
+      "ports": [
+        {
+          "id": "sdi_in",
+          "face": [1, 0, 0],
+          "pos": [-18, 0],
+          "kind": "bnc",
+          "dir": "in",
+          "panel": "NBB75DFGB",
+          "confidence": "photo"
+        },
+        {
+          "id": "ptz_tally",
+          "face": [1, 0, 0],
+          "pos": [14, 0],
+          "kind": "minidin8",
+          "dir": "bidir",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "usb_b",
+          "face": [-1, 0, 0],
+          "pos": [-16, 0],
+          "kind": "usb_b",
+          "dir": "power",
+          "panel": "NAUSB-W-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rj45",
+          "face": [-1, 0, 0],
+          "pos": [15, 0],
+          "kind": "rj45",
+          "dir": "bidir",
+          "panel": "NE8FDP-B",
+          "confidence": "photo"
+        },
+        {
+          "id": "rotary",
+          "face": [0, -1, 0],
+          "pos": [30, 0],
+          "kind": "rotary16",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "photo"
+        },
+        {
+          "id": "side_bolt",
+          "face": [0, -1, 0],
+          "pos": [0, 0],
+          "kind": "tripod_1_4_20",
+          "dir": "none",
+          "panel": "none",
+          "confidence": "assumed"
+        }
+      ]
+    }
+  },
+  "cases": {
+    "pro-convert-for-ndi-to-aio": {
+      "variant": {
+        "fan": false,
+        "splitter": false,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-for-ndi-to-hdmi": {
+      "variant": {
+        "fan": false,
+        "splitter": false,
+        "fan_switch": false,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {
+        "base_fan": {
+          "fan": true,
+          "splitter": false,
+          "fan_switch": false,
+          "tripod_insert": false,
+          "lid_vents": true
+        }
+      }
+    },
+    "pro-convert-for-ndi-to-hdmi-4k": {
+      "variant": {
+        "fan": true,
+        "splitter": false,
+        "fan_switch": true,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-for-ndi-to-sdi": {
+      "variant": {
+        "fan": false,
+        "splitter": false,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-hdmi-plus": {
+      "variant": {
+        "fan": true,
+        "splitter": false,
+        "fan_switch": true,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-hdmi-tx": {
+      "variant": {
+        "fan": false,
+        "splitter": false,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-sdi-plus": {
+      "variant": {
+        "fan": true,
+        "splitter": false,
+        "fan_switch": true,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    },
+    "pro-convert-sdi-tx": {
+      "variant": {
+        "fan": false,
+        "splitter": false,
+        "tripod_insert": false,
+        "lid_vents": true
+      },
+      "extra": {}
+    }
+  }
+}

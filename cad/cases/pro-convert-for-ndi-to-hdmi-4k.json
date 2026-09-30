@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-for-ndi-to-hdmi-4k",
+  "device": "pro-convert-for-ndi-to-hdmi-4k",
+  "options": {
+    "fan": true,
+    "splitter": false,
+    "fan_switch": true,
+    "lid_vents": true
+  },
+  "configurations": {},
+  "test_configurations": {}
+}

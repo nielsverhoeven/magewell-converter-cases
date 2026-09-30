@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "name": "dev_side_allow",
+  "scad_name": "MCC_DEV_SIDE_ALLOW",
+  "scad_source": "lib/mcc/constants.scad:388-400",
+  "provenance": ["Per-kind device-side cable allowance table (layout-patch-wall.md §4). Struct-style, mirrors", "MCC_PANEL_PARTS' shape. Sourced per-kind in that section's own table; ports that are never cabled", "(internal switches/buttons, the side-bolt thread) get 0.", "Belden 4855R min bend radius, verified; layout-patch-wall.md §4.", "25 (assumed axial, straight plug — D-08 vetoed) + 15 (mcc_bend_envelope", "(\"NAHDMI-W-B\")). layout-patch-wall.md §4.", "21.5 mm max plug (TIA-568.2-D, verified) + 5 mm margin.", "12 mm verified + 5 mm margin.", "USB-B assumed equal to USB-A (source: unknown for USB-B specifically).", "internal, not cabled (D-01).", "not cabled.", "not cabled.", "the side bolt is on a long face, never an end face (D-09).", "nothing plugs into a blank."],
+  "rows": {
+    "bnc": 41,
+    "hdmi_a": 40,
+    "rj45": 27,
+    "usb_a": 17,
+    "usb_b": 17,
+    "minidin8": 0,
+    "rotary16": 0,
+    "button": 0,
+    "tripod_1_4_20": 0,
+    "blank": 0
+  }
+}

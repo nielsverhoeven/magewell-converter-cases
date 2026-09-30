@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-hdmi-tx",
+  "device": "pro-convert-hdmi-tx",
+  "options": {
+    "fan": false,
+    "splitter": false,
+    "lid_vents": true
+  },
+  "configurations": {},
+  "test_configurations": {}
+}

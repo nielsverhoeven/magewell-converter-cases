@@ -13,3 +13,8 @@
 # Vector/CAD text formats — keep them diffable text, not binary.
 *.stp  text
 *.dxf  text
+
+# cad/: the input digest of the Fusion pipeline hashes these, so they must not differ between
+# a Windows checkout (autocrlf) and Linux CI (issue #76, F76.10).
+cad/**/*.csv  text eol=lf
+cad/**/*.json text eol=lf
