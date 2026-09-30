@@ -3,8 +3,8 @@
 The facade does all the thinking once, in plain Python: it validates names and expressions, decides which
 dimensions and constraints a sketch gets (3.6), builds the feature spec (3.7) and hands both to its backend in
 timeline order.  A backend only executes a spec.  This module is milestone K2a: components, loops, ``extrude``
-with its phase rule and ``within``, ``shared_call`` and the reserved ``Kit.enhance``.  Loft, pattern and text are
-milestone K2b.
+with its phase rule and ``within``, ``shared_call`` and the reserved ``Kit.enhance``; milestone K2b adds ``loft``,
+``pattern`` and ``text`` (3.7, 3.14).
 
 Standard library only; ``cad.params`` is reached through ``expr.Env`` (which imports it inside its body).
 
@@ -15,18 +15,22 @@ Conventions of the specs this module writes (shared by every backend and by the 
   ``"O"`` itself when the datum is zero on both axes).
 * constraint kinds: ``parallel_u`` / ``parallel_v`` (a line along u or v), ``same_u`` / ``same_v`` (two points
   share that coordinate).  Dimension kinds: ``distance`` (between two points, measured along ``axis`` u or v) and
-  ``diameter`` (``a`` is the circle).
+  ``diameter`` (``a`` is the circle), ``text_height`` (``a`` is the sketch text; the last dimension of a text sketch).
+  A text sketch has ``rule == "text"`` and no profile count (``profiles == 0``): the glyph profiles are Fusion's.
 * ``direction`` of a feature is ``"positive"`` when plus ``axis`` points along the normal of the sketch plane
   (``PLANE_NORMAL``), else ``"negative"``.
 """
 from __future__ import annotations
 
 import contextlib
+import dataclasses
+import re
 
 from . import expr, names
 from .names import KitError
 from .record import RecordingBackend
-from .spec import (ComponentSpec, Constraint, Dim, ExtrudeSpec, Loop, SharedCall, SketchSpec)
+from .spec import (ComponentSpec, Constraint, Dim, ExtrudeSpec, LoftSpec, Loop, PatternSpec, PlaneSpec, SharedCall,
+                   SketchSpec, TextSpec)
 
 API = 1
 
@@ -39,6 +43,12 @@ PLANE_OF = {"X": "YZ", "Y": "XZ", "Z": "XY"}
 # index into the datum (dx, dy, dz) of the two in-plane axes u and v
 UV_INDEX = {"X": (1, 2), "Y": (0, 2), "Z": (0, 1)}
 OPS = ("new", "join", "cut", "rejoin")
+LOFT_OPS = ("new", "join", "cut")  # a loft has no `within`, so no re-join
+TEXT_OPS = ("cut", "join")
+HALIGN = ("left", "center", "right")
+VALIGN = ("bottom", "middle", "top")
+STYLES = ("regular", "bold")
+COUNT_NAME = re.compile(r"V_N_[A-Za-z0-9_]+")
 RANK = {"new": 0, "join": 1, "cut": 2, "rejoin": 3}
 ROLES = ("part", "reserve", "ghost")
 EPS = 1e-6
@@ -248,7 +258,7 @@ class Component:
     def __init__(self, kit: Kit, name: str, role: str, datum: tuple):
         self._kit, self.name, self.role, self.datum = kit, name, role, datum
         self._rank = -1  # RANK of the last feature of a part; -1 before the first
-        self._features: dict[str, str] = {}  # feature name -> op, for `within`
+        self._features: dict[str, str] = {}  # extrude and loft feature name -> op, for `within` and a pattern's seed
 
     # ---- loops: value objects, no side effect --------------------------------------------------------------------
 
@@ -303,7 +313,9 @@ class Component:
 
     # ---- features ------------------------------------------------------------------------------------------------
 
-    def _sketch(self, name: str, axis: str, loops, holes) -> SketchSpec:
+    def _sketch(self, name: str, axis: str, loops, holes, tag: str = "Sk", on: str | None = None) -> SketchSpec:
+        """The sketch spec of feature ``name`` (3.6); ``tag`` picks the derived name, ``on`` the plane
+        (default: the origin plane normal to ``axis``)."""
         kit = self._kit
         if not loops or not all(isinstance(loop, Loop) for loop in loops):
             raise KitError(f"{name}: loops is a list of rect/circle/polygon values")
@@ -330,10 +342,18 @@ class Component:
         for i, loop in enumerate(list(loops) + list(holes)):
             b.add(i, loop)
         return SketchSpec(
-            name=names.derived(name, "Sk"), component=self.name, on=f"origin:{PLANE_OF[axis]}", datum=(du, dv),
+            name=names.derived(name, tag), component=self.name, on=on or f"origin:{PLANE_OF[axis]}", datum=(du, dv),
             loops=tuple(loops), holes=holes, points=tuple(b.points), lines=tuple(b.lines), circles=tuple(b.circles),
             constraints=tuple(b.constraints), dims=tuple(b.dims),
             profiles=1 + len(holes) if holes else len(loops), rule="ring" if holes else "all")
+
+    @staticmethod
+    def _signed(axis: str, at):
+        """``(offset, direction)``: the signed offset of ``at`` along the normal of the origin plane of ``axis`` (None
+        stays None) and the direction of plus ``axis`` relative to that normal (3.7)."""
+        sign = PLANE_NORMAL[PLANE_OF[axis]]
+        offset = None if at is None else (at if sign == 1 else expr.neg(at))
+        return offset, "positive" if sign == 1 else "negative"
 
     def extrude(self, name, *, axis, loops, start, end, op, holes=None, within=None):
         """One sketch and one extrude feature (3.6, 3.7).  Returns the feature's name."""
@@ -353,15 +373,156 @@ class Component:
             raise KitError(f"{name}: start and end are both None")
         sketch = self._sketch(name, axis, loops, holes)
         kit._register(name, sketch.name)
-        plane = PLANE_OF[axis]
-        sign = PLANE_NORMAL[plane]
-        start_offset = None if start is None else (start if sign == 1 else expr.neg(start))
+        start_offset, direction = self._signed(axis, start)
         feature = ExtrudeSpec(name=name, component=self.name, sketch=sketch.name, start_offset=start_offset,
-                              distance=distance, direction="positive" if sign == 1 else "negative", op=op, within=within)
+                              distance=distance, direction=direction, op=op, within=within)
         kit._backend.execute(sketch)
         kit._backend.execute(feature)
         self._rank = max(self._rank, rank)
         self._features[name] = op
+        return name
+
+    def _check_axis(self, name: str, axis: str) -> None:
+        if axis not in AXES:
+            raise KitError(f"{name}: axis is one of {AXES}, got {axis!r}")
+
+    @staticmethod
+    def _check_option(name: str, label: str, value, allowed) -> None:
+        if value not in allowed:
+            raise KitError(f"{name}: {label} is one of {allowed}, got {value!r}")
+
+    def loft(self, name, *, axis, loop_a, at_a, loop_b, at_b, op):
+        """A ruled solid between two section loops on two planes normal to ``axis`` (3.7).  Records, in this order, the
+        planes (one per ``at`` that is not None), the two section sketches and the feature.  Returns the name."""
+        kit = self._kit
+        self._check_axis(name, axis)
+        if op not in LOFT_OPS:
+            raise KitError(f"{name}: a loft's op is one of {LOFT_OPS}, got {op!r}")
+        names.check(name, kit._owners, op)
+        rank = self._phase(name, op)
+        if not isinstance(loop_a, Loop) or not isinstance(loop_b, Loop):
+            raise KitError(f"{name}: loop_a and loop_b are one rect/circle/polygon value each")
+        if loop_a.kind != loop_b.kind or (loop_a.kind == "polygon" and len(loop_a.args) != len(loop_b.args)):
+            raise KitError(f"{name}: the two sections are of the same kind and vertex count "
+                           f"({loop_a.kind}/{len(loop_a.args)} against {loop_b.kind}/{len(loop_b.args)})")
+        for label, text in (("at_a", at_a), ("at_b", at_b)):
+            if text is not None:
+                expr.check(text, kit.env.names, f"{name}.{label}")
+        value_a = 0.0 if at_a is None else kit.env.value(at_a)
+        value_b = 0.0 if at_b is None else kit.env.value(at_b)
+        if expr.same(at_a, at_b) or abs(value_a - value_b) < EPS:
+            raise KitError(f"{name}: at_a and at_b are the same plane under the build values")
+        base = f"origin:{PLANE_OF[axis]}"
+        planes, plane_specs = [], []
+        for tag, at in (("A", at_a), ("B", at_b)):
+            if at is None:  # the origin plane itself is the section plane
+                planes.append(None)
+                continue
+            plane = names.derived(name, "Pl" + tag)
+            plane_specs.append(PlaneSpec(name=plane, component=self.name, base=base, offset=self._signed(axis, at)[0]))
+            planes.append(plane)
+        sketch_specs = [self._sketch(name, axis, [loop], None, tag="Sk" + tag, on=f"plane:{plane}" if plane else base)
+                        for tag, loop, plane in (("A", loop_a, planes[0]), ("B", loop_b, planes[1]))]
+        kit._register(name, *(p.name for p in plane_specs), *(s.name for s in sketch_specs))
+        feature = LoftSpec(name=name, component=self.name, sketches=tuple(s.name for s in sketch_specs),
+                           planes=tuple(p.name for p in plane_specs), op=op)
+        for item in (*plane_specs, *sketch_specs, feature):
+            kit._backend.execute(item)
+        self._rank = max(self._rank, rank)
+        self._features[name] = op
+        return name
+
+    def _count(self, name: str, label: str, text) -> None:
+        """A count is the bare name of a V_N_* parameter, a whole number of at least 1 under the build values (3.3, 3.7)."""
+        if not isinstance(text, str):
+            raise TypeError(f"{name}.{label} is the bare name of a V_N_* parameter, got {type(text).__name__}: {text!r}")
+        if not COUNT_NAME.fullmatch(text):
+            raise KitError(f"{name}.{label}: {text!r} is not the bare name of a V_N_* parameter")
+        expr.check(text, self._kit.env.names, f"{name}.{label}")
+        value = self._kit.env.value(text)
+        if value < 1 or value != int(value):
+            raise KitError(f"{name}.{label}: {text} is {value} under the build values, a count is a whole number of at least 1")
+
+    def pattern(self, name, *, seed, axis, count, pitch, axis2=None, count2=None, pitch2=None):
+        """``count`` instances of ``seed`` at ``k * pitch`` along plus ``axis``; with ``axis2`` the grid ``count`` by
+        ``count2`` (3.7).  ``count`` is the bare name of a ``V_N_*`` parameter.  Returns the name."""
+        kit = self._kit
+        self._check_axis(name, axis)
+        names.check(name, kit._owners, "pattern")
+        if seed not in self._features:
+            raise KitError(f"{name}: seed={seed!r} is not an earlier extrude or loft of component {self.name}")
+        if names.set_of(seed) != names.set_of(name):
+            raise KitError(f"{name}: a pattern and its seed share a set; {name!r} is in {names.set_of(name)}, "
+                           f"{seed!r} in {names.set_of(seed)}")
+        seed_op = self._features[seed]
+        if self.role != "part" or seed_op not in ("join", "cut"):
+            raise KitError(f"{name}: a pattern repeats a join or a cut of a part; {seed!r} is op={seed_op!r} "
+                           f"in the {self.role} {self.name}")
+        rank = RANK[seed_op]
+        if rank < self._rank:
+            raise PhaseError(f"{name}: a pattern of a {seed_op!r} after a later phase in {self.name}; "
+                             "the order is new, join, cut, rejoin")
+        second = (axis2, count2, pitch2)
+        if any(v is not None for v in second) and any(v is None for v in second):
+            raise KitError(f"{name}: axis2, count2 and pitch2 come together")
+        pairs = [("count", count, "pitch", pitch)]
+        if axis2 is not None:
+            self._check_axis(name, axis2)
+            if axis2 == axis:
+                raise KitError(f"{name}: axis2 is another axis than axis {axis!r}")
+            pairs.append(("count2", count2, "pitch2", pitch2))
+        for c_label, c, p_label, p in pairs:
+            self._count(name, c_label, c)
+            expr.check(p, kit.env.names, f"{name}.{p_label}")
+            if kit.env.value(p) <= 0:
+                raise KitError(f"{name}: {p_label} {p!r} is not positive under the build values")
+        kit._register(name)
+        kit._backend.execute(PatternSpec(name=name, component=self.name, seed=seed, axis=axis, count=count, pitch=pitch,
+                                         axis2=axis2, count2=count2, pitch2=pitch2))
+        self._rank = max(self._rank, rank)
+        return name
+
+    def text(self, name, *, axis, frame, start, end, string, height, halign, valign, font, style, op):
+        """The glyphs of ``string`` aligned in the rectangle ``frame``, extruded from ``start`` to ``end`` as a cut or
+        a join (3.7, 3.14).  One sketch (the frame plus the text) and one feature.  Returns the name."""
+        kit = self._kit
+        self._check_axis(name, axis)
+        self._check_option(name, "op", op, TEXT_OPS)
+        names.check(name, kit._owners, "text_" + op)
+        rank = self._phase(name, op)
+        if not isinstance(frame, Loop) or frame.kind != "rect":
+            raise KitError(f"{name}: frame is a rect(...) value")
+        if not isinstance(string, str) or not string:
+            raise KitError(f"{name}: string is a non-empty str, got {string!r}")
+        if "'" in string or "\n" in string or "\r" in string:
+            raise KitError(f"{name}: string holds no single quote and no line break (how Fusion escapes them is not "
+                           f"documented), got {string!r}")
+        self._check_option(name, "halign", halign, HALIGN)
+        self._check_option(name, "valign", valign, VALIGN)
+        self._check_option(name, "style", style, STYLES)
+        if not isinstance(font, str) or not font:
+            raise KitError(f"{name}: font is a non-empty font name, got {font!r}")
+        expr.check(height, kit.env.names, f"{name}.height")
+        if kit.env.value(height) <= 0:
+            raise KitError(f"{name}: height {height!r} is not positive under the build values")
+        for label, text in (("start", start), ("end", end)):
+            if text is not None:
+                expr.check(text, kit.env.names, f"{name}.{label}")
+        distance = expr.sub(end, start)
+        if distance is None:
+            raise KitError(f"{name}: start and end are both None")
+        plain = self._sketch(name, axis, [frame], None)
+        # the frame is the rectangle of the sketch, the text one more sketch object; its height is the last dimension
+        sketch = dataclasses.replace(plain, texts=(string,), profiles=0, rule="text",
+                                     dims=plain.dims + (Dim("text_height", "t0", "", "", height),))
+        kit._register(name, sketch.name)
+        start_offset, direction = self._signed(axis, start)
+        feature = TextSpec(name=name, component=self.name, sketch=sketch.name, frame=frame, string=string, height=height,
+                           halign=halign, valign=valign, font=font, style=style, start_offset=start_offset,
+                           distance=distance, direction=direction, op=op)
+        kit._backend.execute(sketch)
+        kit._backend.execute(feature)
+        self._rank = max(self._rank, rank)
         return name
 
     # ---- bookkeeping for shared builders ----------------------------------------------------------------------------
