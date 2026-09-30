@@ -38,16 +38,28 @@ class RecordingBackend:
             if s.texts:
                 item["texts"] = list(s.texts)
             return item
-        if isinstance(s, _spec.ExtrudeSpec):
+        if isinstance(s, _spec.PlaneSpec):
+            return {"kind": "plane", "name": s.name, "component": s.component, "on": s.base, "expressions": [s.offset]}
+        if isinstance(s, (_spec.ExtrudeSpec, _spec.TextSpec)):  # a text feature is an ExtrudeFeature (3.9)
             exprs = ([s.start_offset] if s.start_offset is not None else []) + [s.distance]
             item = {"kind": "feature", "name": s.name, "component": s.component, "type": "ExtrudeFeature",
                     "expressions": exprs}
-            if s.within is not None:
+            if getattr(s, "within", None) is not None:
                 item["within"] = s.within
+        elif isinstance(s, _spec.LoftSpec):
+            item = {"kind": "feature", "name": s.name, "component": s.component, "type": "LoftFeature",
+                    "expressions": []}
+        elif isinstance(s, _spec.PatternSpec):
+            exprs = [s.count, s.pitch] + ([s.count2, s.pitch2] if s.axis2 is not None else [])
+            item = {"kind": "feature", "name": s.name, "component": s.component, "type": "RectangularPatternFeature",
+                    "expressions": exprs}
+        else:
+            item = None
+        if item is not None:
             if s.phase != "build":
                 item["phase"] = s.phase
             return item
-        raise KitError(f"the recording backend has no inventory row for {type(s).__name__} yet (milestone K2b)")
+        raise KitError(f"the recording backend has no inventory row for {type(s).__name__}")
 
     def raw_inventory(self) -> dict:
         return {"schema": 1, "document": self.document, "items": [self._item(s) for s in self.timeline]}
