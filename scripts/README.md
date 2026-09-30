@@ -116,6 +116,30 @@ input is unusable.
 `release-diff` compares `exports/` with the parts of a release (`--tag`) or a directory
 (`--from-dir`) and lists what changed.
 
+## Showcase renders
+
+`showcase.py` draws PNG pictures of every case (`<slug>-iso.png`, `<slug>-patch-wall.png`,
+`<slug>-underside.png`) and bracket target (`brackets-<name>.png`) from the exported model-frame STLs,
+plus a `manifest.json` of input hashes (issue #74, architecture.md D74.1). It reads only the exports
+layout `exports/<target>/<part>.model.stl` (assembly frame, mm, Z up): a case needs `base` and `lid`
+(`ghost_device` is optional), bracket targets live in `exports/brackets/<name>/`. It does not import
+`build.py`.
+
+```powershell
+.venv\Scripts\python -m pip install -r requirements-render.txt     # pyvista, vtk, pillow (not in requirements.txt)
+.venv\Scripts\python scripts\showcase.py --exports exports --out dist\renders [--only <name>] [--size 1600x1000]
+.venv\Scripts\python scripts\showcase.py --out docs\renders --previous docs\renders\manifest.json   # only changed views
+```
+
+`showcase.py` is pure planning (discovery, cameras, hashes, budget of 250 KiB per image and 10 MiB in
+total, exit 1 on a breach); the drawing is `showcase_gl.py` (PyVista off-screen, imported only when an
+image must be drawn). On Linux without a display run it as `xvfb-run -a python scripts/showcase.py ...`
+with Mesa software GL (`xvfb libgl1 libgl1-mesa-dri libglx-mesa0`); Windows and macOS render off-screen
+without xvfb. An image is drawn again only when its manifest `inputs_sha256` changed (STL bytes, view,
+renderer version, parameters, `requirements-render.txt`), never by comparing pixels. CI: the
+informational `Showcase renders` job of `render.yml` and a step of `release.yml` (before packaging;
+the device zips carry `renders/`, the release the loose PNGs).
+
 ## Tests of the scripts
 
 `python -m pytest scripts/tests -q`. `scripts/tests/conftest.py` puts `scripts/` and the repo root

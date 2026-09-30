@@ -15,6 +15,9 @@ Writes:
                                   version, and the git SHA (and a PRE-RELEASE notice when any of
                                   that model's ports are below "measured" confidence — see
                                   `build.py confidence`).
+                                  Plus, when `dist/renders/` holds them (showcase.py, issue #74), the
+                                  case's showcase PNGs as `renders/<slug>-{iso,patch-wall,underside}.png`;
+                                  the brackets zip gets `renders/brackets-<name>.png` the same way.
     dist/coupons-<version>.zip   every discovered coupon's exports in one zip, one shared README.
     dist/brackets-<version>.zip  every discovered models/brackets/*.scad target's exports in one
                                   zip, one shared README (issue #26 — same flat, single-part,
@@ -50,9 +53,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import build  # sibling module: scripts/build.py — reuses discovery, device/confidence parsing, git helpers
+import showcase  # sibling module: scripts/showcase.py (pure) — names of the showcase PNGs (issue #74)
 
 DIST_DIR = build.REPO_ROOT / "dist"
 STEP_DIR = DIST_DIR / "step"
+RENDERS_DIR = DIST_DIR / "renders"   # `showcase.py --out dist/renders`, run before packaging
+BRACKET_RENDERS_GLOB = "brackets-*.png"
 ARTEFACT_EXTS = (".stl", ".3mf", ".step", ".manifest.json")
 
 
@@ -86,6 +92,14 @@ def _collect_part_files(export_dir: Path, part: str) -> list[Path]:
     return [p for ext in ARTEFACT_EXTS if (p := export_dir / f"{part}{ext}").is_file()]
 
 
+def _collect_case_renders(slug: str) -> list[Path]:
+    """The showcase PNGs of one case that exist under dist/renders/ — exact names, never a `<slug>-*`
+    glob (the slug `pro-convert-for-ndi-to-hdmi` is a prefix of `pro-convert-for-ndi-to-hdmi-4k`)."""
+
+    names = [v.filename.format(name=slug) for v in showcase.VIEWS if v.kind == "case"]
+    return [p for name in names if (p := RENDERS_DIR / name).is_file()]
+
+
 def _write_readme(
     zf: zipfile.ZipFile, *, title: str, version: str, sha: str, contents: list[str], prerelease: bool,
 ) -> None:
@@ -107,7 +121,8 @@ def _write_readme(
         "in the ASSEMBLY frame (parts mate when imported together) for other CAD tools: exact solids",
         "rebuilt from the OpenSCAD CSG tree, so holes and roundings are real cylinders and circles",
         "(a part's manifest says \"csg-exact\"; the rare faceted fallback says why). They are not",
-        "parametric feature trees. See README.md \"Open in Bambu Studio\".",
+        "parametric feature trees. See README.md \"Open in Bambu Studio\". The renders/ folder, when",
+        "present, holds PNG pictures of the design (showcase renders, not for printing).",
     ]
     if prerelease:
         lines += ["", "PRE-RELEASE: dimensions assumed, coupons not yet measured."]
@@ -126,6 +141,7 @@ def package_model(target: build.Target, version: str, sha: str) -> Path | None:
         all_files.append(project)
     for part in target.parts:
         all_files += _collect_part_files(export_dir, part)
+    renders = _collect_case_renders(target.name)
 
     if not all_files:
         print(f"  [SKIP] {target.name}: nothing rendered under "
@@ -137,23 +153,29 @@ def package_model(target: build.Target, version: str, sha: str) -> Path | None:
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in all_files:
             zf.write(f, arcname=f.name)
+        for f in renders:
+            zf.write(f, arcname=f"renders/{f.name}")
         _write_readme(
             zf, title=display_name, version=version, sha=sha,
-            contents=sorted(f.name for f in all_files), prerelease=prerelease,
+            contents=sorted([f.name for f in all_files] + [f"renders/{f.name}" for f in renders]),
+            prerelease=prerelease,
         )
     flag = ", PRE-RELEASE" if prerelease else ""
-    print(f"  [OK]   {target.name}: {zip_path.relative_to(build.REPO_ROOT)} ({len(all_files)} files{flag})")
+    print(f"  [OK]   {target.name}: {zip_path.relative_to(build.REPO_ROOT)} "
+          f"({len(all_files)} files, {len(renders)} renders{flag})")
     return zip_path
 
 
 def _package_flat_parts(
     targets: list[build.Target], version: str, sha: str, *, zip_stem: str, title: str, label: str,
+    renders_glob: str | None = None,
 ) -> Path | None:
     """Shared body for package_coupons()/package_brackets(): both discover a flat list of
     single-part targets (coupons, brackets — no base/lid split, no device record) and zip each
     target's already-rendered files under `<target-stem>/<file>` in one shared zip with one
     README. `zip_stem` names the zip (`dist/<zip_stem>-<version>.zip`); `label` is the noun used
-    in the skip/OK console lines (e.g. "coupons", "brackets")."""
+    in the skip/OK console lines (e.g. "coupons", "brackets"). `renders_glob`, when given, adds every
+    `dist/renders/<glob>` showcase PNG to the zip as `renders/<name>` (brackets only, issue #74)."""
 
     per_target: dict[str, list[Path]] = {}
     for target in targets:
@@ -166,6 +188,7 @@ def _package_flat_parts(
     if not per_target:
         print(f"  [SKIP] {label}: nothing rendered — run `build.py all` first")
         return None
+    renders = sorted(RENDERS_DIR.glob(renders_glob)) if renders_glob else []
 
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     zip_path = DIST_DIR / f"{zip_stem}-{version}.zip"
@@ -177,6 +200,9 @@ def _package_flat_parts(
                 arcname = f"{slug}/{f.name}"
                 zf.write(f, arcname=arcname)
                 contents.append(arcname)
+        for f in renders:
+            zf.write(f, arcname=f"renders/{f.name}")
+            contents.append(f"renders/{f.name}")
         # Coupons AND brackets are pre-release/unmeasured hardware (architecture.md §9 Tier 4 for
         # coupons; the brackets' rail retention force (M15) and TV measurements (M18) are likewise
         # unmeasured) — always flag.
@@ -184,7 +210,7 @@ def _package_flat_parts(
             zf, title=title, version=version, sha=sha,
             contents=sorted(contents), prerelease=True,
         )
-    n_files = sum(len(files) for files in per_target.values())
+    n_files = sum(len(files) for files in per_target.values()) + len(renders)
     print(f"  [OK]   {label}: {zip_path.relative_to(build.REPO_ROOT)} ({n_files} files)")
     return zip_path
 
@@ -198,6 +224,7 @@ def package_coupons(targets: list[build.Target], version: str, sha: str) -> Path
 def package_brackets(targets: list[build.Target], version: str, sha: str) -> Path | None:
     return _package_flat_parts(
         targets, version, sha, zip_stem="brackets", title="Mounting brackets", label="brackets",
+        renders_glob=BRACKET_RENDERS_GLOB,
     )
 
 
