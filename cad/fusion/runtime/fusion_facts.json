@@ -1,0 +1,12 @@
+{
+ "schema": 1,
+ "source": null,
+ "fusion_version": null,
+ "minmax_in_fusion": true,
+ "suppress_kinds": [
+  "plane",
+  "sketch",
+  "feature"
+ ],
+ "implicit_literals": []
+}
