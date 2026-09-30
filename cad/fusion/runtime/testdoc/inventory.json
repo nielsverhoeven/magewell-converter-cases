@@ -1,0 +1,18 @@
+{
+ "schema": 1,
+ "document": "MCC-RuntimeTest",
+ "items": [
+  {"kind":"component","name":"TestBlock","component":"."},
+  {"kind":"sketch","name":"Test_Block_Sketch","component":"TestBlock","on":"origin:XY","expressions":["V_TEST_L","V_TEST_W"]},
+  {"kind":"feature","name":"Test_Block_Extrude","component":"TestBlock","type":"ExtrudeFeature","expressions":["V_TEST_H"]},
+  {"kind":"sketch","name":"Test_Hole_Sketch","component":"TestBlock","on":"origin:XY","expressions":["V_TEST_HOLE_D","V_TEST_L / 2","V_TEST_W - TST_WALL - V_TEST_HOLE_D / 2"]},
+  {"kind":"feature","name":"Test_Hole_Cut","component":"TestBlock","type":"ExtrudeFeature","expressions":[]},
+  {"kind":"plane","name":"Test_Pin_Plane","component":"TestBlock","on":"origin:XY","expressions":["V_TEST_H"]},
+  {"kind":"sketch","name":"Test_Pin_Sketch","component":"TestBlock","on":"plane:Test_Pin_Plane","expressions":["TST_PIN_D","TST_WALL + TST_PIN_D / 2","TST_WALL + TST_PIN_D / 2"]},
+  {"kind":"feature","name":"Test_Pin_Extrude","component":"TestBlock","type":"ExtrudeFeature","expressions":["TST_PIN_H"]},
+  {"kind":"feature","name":"Test_Pin_Pattern","component":"TestBlock","type":"RectangularPatternFeature","expressions":["TST_PITCH","V_N_TEST_PINS"]},
+  {"kind":"component","name":"Reserve_TestBay","component":"."},
+  {"kind":"sketch","name":"Reserve_TestBay_Sketch","component":"Reserve_TestBay","on":"origin:XY","expressions":["TST_WALL","TST_WALL"]},
+  {"kind":"feature","name":"Reserve_TestBay_Extrude","component":"Reserve_TestBay","type":"ExtrudeFeature","expressions":["TST_WALL"]}
+ ]
+}
