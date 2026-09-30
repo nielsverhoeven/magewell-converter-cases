@@ -514,16 +514,19 @@ MCC_TG_PATCH_INSET = 4.5; // +Y patch wall only (D62.1): distance from the wall'
                            // tongue's inner edge, mm (tongue at [inset - MCC_TG_W, inset], groove
                            // +-MCC_CLR_TG); the other three walls keep the tongue flush with their inner
                            // face. Largest 0.5 mm step that keeps MCC_LID_CB_WEB_MIN at the fastener
-                           // ring: MCC_FASTENER_INSET 10 - counterbore rim 4.005 - MCC_CLR_TG 0.25 - 1.2
-                           // = 4.545; it also keeps the tongue (all but its outer 0.1 mm) on the
-                           // full-height wall behind the bezel-recess floor. T1-62.1, T1-62.2. Any change
-                           // is an architect re-gate (architecture.md R62.1), not a tweak.
-MCC_LID_CB_D = 8.0; // lid thumbscrew counterbore diameter, mm. assumed -- no sourced figure (was the
-                     // literal `head_d = 8` in fasteners.scad). User decision 2026-09-29: keep 8 for
-                     // a small knurled head, 7-8 mm (architecture.md D62.2); measure the bought screw
-                     // (M62.1). Modelled circum=true, $fn=64 (mcc_thumbscrew_hole_rim_r()). T1-62.1
-                     // caps it at ~8.09 while MCC_TG_PATCH_INSET = 4.5 (R62.1).
-MCC_LID_CB_WEB_MIN = 1.2; // minimum lid material between a counterbore rim and the groove, mm: three
+                           // ring: MCC_FASTENER_INSET 10 - countersink rim 3.664 - MCC_CLR_TG 0.25 - 1.2
+                           // = 4.886 (D100.1; was 4.545 for the 8 mm counterbore); it also keeps the
+                           // tongue (all but its outer 0.1 mm) on the full-height wall behind the
+                           // bezel-recess floor. T1-62.1, T1-62.2. Any change is an architect re-gate
+                           // (architecture.md R62.1), not a tweak.
+MCC_LID_CSK_D = 6.72 + 2 * MCC_CLR_SLIDE; // lid countersink diameter at the lid's outward face, mm
+                     // (D100.1): ISO 10642 M3 head dk max 6.72 + MCC_CLR_SLIDE per side. assumed --
+                     // the standard's maximum, not a sourced figure in knowledge/**; measure the
+                     // bought screw (M100.1). Modelled circum=true, $fn=64 (mcc_lid_screw_hole_rim_r()).
+MCC_LID_CSK_ANGLE = 90; // countersink included angle, degrees. ISO 10642 / DIN 7991 head. assumed -- M100.1.
+MCC_LID_CSK_LAND_MIN = 1.0; // minimum lid material left under the countersink cone, mm. assumed --
+                     // precedent: the 1.0 mm of lid T1-33 leaves above the groove. T1-100.1.
+MCC_LID_CB_WEB_MIN = 1.2; // minimum lid material between a countersink rim and the groove, mm: three
                            // 0.4 mm perimeters, same rule as MCC_WALL_BORE_WEB_MIN. assumed --
                            // knowledge/design/fdm-rugged-enclosure-guidelines.md:35. T1-62.1.
 
@@ -791,7 +794,7 @@ MCC_LID_VENT_ROWS       = 2;    // number of slot rows. assumed -- plan §2.1 PL
                                   // (ratified, layout-patch-wall.md §17.5).
 MCC_LID_VENT_END_MARGIN = 5.0;  // inset from x_dev_lo/x_dev_hi to the field's own X bounds, mm. assumed.
 MCC_LID_VENT_FASTENER_KEEPOUT_R = 10.0; // defensive keep-out radius around every lid_fastener_pos, mm.
-                                          // assumed -- counterbore radius 4.0 + >=2mm edge material
+                                          // assumed -- countersink radius 3.7 + >=2mm edge material
                                           // (fdm-rugged-enclosure-guidelines.md §8), rounded up.
 MCC_LID_VENT_AREA_RATIO = 1.0;  // minimum net lid-vent free area, as a multiple of the fan aperture's
                                   // own circular area (pi/4 * MCC_FAN_APERTURE_D^2) -- same heuristic

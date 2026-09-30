@@ -49,7 +49,7 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   wall; the other long wall and both end walls carry none. Not in line with the device (an in-line
   layout exceeds the 256 mm bed for the Plus family, see architecture.md §11 R1). Family envelopes
   (layout-patch-wall.md rev 3): compact 194.9 × 159.9 × 51 mm, Plus 211.5 × 166.4 × 51 mm — base
-  and lid print on separate plates; max 4 D-connectors per model; 6 lid thumbscrews on both.
+  and lid print on separate plates; max 4 D-connectors per model; 6 lid screws on both.
 - **Cooling**: passive-first on the compact family (`fan = false`, bay reserved); **Plus-family cases
   ship with the Noctua NF-A4x10 5V fitted by default** (`fan = true`, user decision 2026-09-08 per
   risk R5); parametric fan bay (Noctua NF-A4x10 5V default); reserved PoE-splitter
@@ -62,11 +62,11 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   stays convertible — architecture.md §5 rev 8), encoders from Mini-DIN-8 pin 8 VCC / pin 4 GND
   (port stays `panel:"none"`), each in series with a KSD9700 45 °C normally-open thermoswitch; no
   PoE splitter is fitted by default on any SKU (architecture.md §5 §6, §11 R21–R23).
-- **Closure**: tongue-and-groove lid, 6 **non-captive** M3 knurled thumbscrews into M3 heat-set
-  inserts — a **small head, Ø7–8 mm, recessed in a Ø8 counterbore** in the lid, not DIN 653's Ø12
-  (user decision 2026-09-29, D62.2); rule: 6 above 180 mm lid span, both families are above it. On the
+- **Closure**: tongue-and-groove lid, 6 M3 countersunk socket screws (ISO 10642, 90 degree) into M3
+  heat-set inserts, flush with the lid top (user decision 2026-09-30, D100.1; replaces the D62.2
+  knurled thumbscrews); rule: 6 above 180 mm lid span, both families are above it. On the
   patch wall the tongue-and-groove sits 4.5 mm from the outer face so the lid groove clears those
-  counterbores (architecture.md D62.1). **Retention: captive 1/4"-20
+  countersinks (architecture.md D62.1). **Retention: captive 1/4"-20
   SLOTTED bolt + DIN 6799 E-clip through the far (non-patch) long wall into the device's side
   thread** — the user verified the device's 1/4"-20 hole is on a long side face; the bolt must stay
   in the case when unscrewed; the boss is **flush** (far wall moved 10 mm outward, `MCC_GAP_FAR`
@@ -169,7 +169,7 @@ insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail
 which replaced the D48 flank lock), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
 instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47),
 the vertical VESA-column bracket and the arch's sandwich parts (D51), and the patch-wall
-tongue-and-groove moved clear of the lid's thumbscrew counterbores (D62.1) — are in architecture.md §13.
+tongue-and-groove moved clear of the lid's screw holes (D62.1), the lid's countersunk M3 screws (D100.1) — are in architecture.md §13.
 Slicer rules and the debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio`
 skill.
 
@@ -181,7 +181,7 @@ HDMI/SDI Plus, NDI to HDMI / HDMI 4K / SDI / AIO), built on the full library: L0
 is green locally and in CI; every merge to `main` publishes a pre-release with per-device zips
 (STL + 3MF + STEP + manifest). Plus-family cases ship with the fan. **Next milestone is physical
 (Tier 4)**: print and measure the six coupons on the X1C, measure the side 1/4"-20 hole per SKU, the
-dongle splitter, the E-clip and the lid thumbscrews (M62.1), write the measured values into `constants.scad` (confidence →
+dongle splitter, the E-clip and the lid countersunk screws (M100.1), write the measured values into `constants.scad` (confidence →
 `measured`), then the first full-size print. Later: the IP-decoder family (120 × 79.3 × 24.5). See
 `.claude/knowledge/session-resume.md` for the ordered plan (and the open material-saving options);
 `new-case-variant` explains the

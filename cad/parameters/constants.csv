@@ -85,8 +85,10 @@ MCC_CRADLE_DECK_GRID_PITCH_MAX,mm,32.0 mm,T1-39 assert upper bound on achieved g
 MCC_TG_W,mm,1.6 mm,tongue/groove nominal width | src=.claude/knowledge/layout-patch-wall.md §15 | conf=assumed
 MCC_TG_H,mm,2.0 mm,tongue/groove depth | src=lib/mcc/constants.scad:511 | conf=assumed
 MCC_TG_PATCH_INSET,mm,4.5 mm,+Y patch wall only (D62.1): distance from the wall's outer face to the tongue's inner edge | src=.claude/knowledge/architecture.md R62.1 | conf=assumed
-MCC_LID_CB_D,mm,8.0 mm,lid thumbscrew counterbore diameter | src=.claude/knowledge/architecture.md D62.2 | conf=assumed
-MCC_LID_CB_WEB_MIN,mm,1.2 mm,minimum lid material between a counterbore rim and the groove | src=knowledge/design/fdm-rugged-enclosure-guidelines.md:35 | conf=assumed
+MCC_LID_CSK_D,mm,6.72 mm + 2 * MCC_CLR_SLIDE,lid countersink diameter at the lid's outward face | src=lib/mcc/constants.scad:522
+MCC_LID_CSK_ANGLE,deg,90 deg,"countersink included angle, degrees | src=lib/mcc/constants.scad:526 | conf=assumed"
+MCC_LID_CSK_LAND_MIN,mm,1.0 mm,minimum lid material left under the countersink cone | src=lib/mcc/constants.scad:527 | conf=assumed
+MCC_LID_CB_WEB_MIN,mm,1.2 mm,minimum lid material between a countersink rim and the groove | src=knowledge/design/fdm-rugged-enclosure-guidelines.md:35 | conf=assumed
 MCC_LID_CLEAR,mm,2.0 mm,minimum plenum between the cradle deck top + device height and the lid underside | src=.claude/knowledge/layout-patch-wall.md §15 | conf=decided
 MCC_VENT_SLOT_W,mm,1.2 mm,vertical vent-slot width | src=.claude/knowledge/layout-patch-wall.md §5 | conf=assumed
 MCC_VENT_WEB_W,mm,1.6 mm,web between vent slots | src=.claude/knowledge/layout-patch-wall.md §5 | conf=assumed
@@ -94,44 +96,44 @@ MCC_VENT_INTAKE_BAND_H,mm,18.0 mm,intake vent band height (Z) | src=.claude/know
 MCC_VENT_EXHAUST_Z_LO,mm,32 mm,far-wall exhaust vent band Z range (case coords) - lower bound | src=.claude/knowledge/layout-patch-wall.md §5 | conf=assumed
 MCC_VENT_EXHAUST_Z_HI,mm,44 mm,far-wall exhaust vent band Z range (case coords) - upper bound | src=.claude/knowledge/layout-patch-wall.md §5 | conf=assumed
 MCC_FAN_APERTURE_D,mm,38.0 mm,+X end-wall fan aperture diameter | src=.claude/knowledge/layout-patch-wall.md §5 | conf=assumed
-MCC_STRAP_SLOT_X,mm,25 mm,"strap-slot [length, width] - X component | src=lib/mcc/constants.scad:552 | conf=assumed"
-MCC_STRAP_SLOT_Y,mm,5 mm,"strap-slot [length, width] - Y component | src=lib/mcc/constants.scad:552 | conf=assumed"
+MCC_STRAP_SLOT_X,mm,25 mm,"strap-slot [length, width] - X component | src=lib/mcc/constants.scad:555 | conf=assumed"
+MCC_STRAP_SLOT_Y,mm,5 mm,"strap-slot [length, width] - Y component | src=lib/mcc/constants.scad:555 | conf=assumed"
 MCC_FLOOR_FEATURE_MIN_SEP,mm,15.0 mm,minimum centre-to-centre separation between any two floor features | src=.claude/knowledge/layout-patch-wall.md §7.1 | conf=assumed
 MCC_FLOOR_FEATURE_EDGE_MIN,mm,2.0 mm,minimum edge-to-edge clearance between a floor feature and a non-concentric disc keep-out | src=.claude/knowledge/layout-patch-wall.md §17.2 | conf=assumed
-MCC_RAIL_DEPTH,mm,4.0 mm,dovetail groove depth (case-floor side) | src=lib/mcc/constants.scad:575 | conf=assumed
-MCC_RAIL_SILL_H,mm,MCC_RAIL_DEPTH + MCC_FLOOR_T,local floor thickening the dovetail groove is cut into (groove depth + residual floor) | src=lib/mcc/constants.scad:583
-MCC_RAIL_FLANK_ANGLE,deg,60 deg,dovetail flank angle from the floor/horizontal plane | src=lib/mcc/constants.scad:587 | conf=assumed
+MCC_RAIL_DEPTH,mm,4.0 mm,dovetail groove depth (case-floor side) | src=lib/mcc/constants.scad:578 | conf=assumed
+MCC_RAIL_SILL_H,mm,MCC_RAIL_DEPTH + MCC_FLOOR_T,local floor thickening the dovetail groove is cut into (groove depth + residual floor) | src=lib/mcc/constants.scad:586
+MCC_RAIL_FLANK_ANGLE,deg,60 deg,dovetail flank angle from the floor/horizontal plane | src=lib/mcc/constants.scad:590 | conf=assumed
 MCC_RAIL_ROOT_W,mm,65.0 mm,dovetail root width (wide end: deepest into the case floor / top of the bracket's male rail) | src=.claude/knowledge/architecture.md §13 D44 | conf=decided
-MCC_RAIL_MOUTH_W,mm,MCC_RAIL_ROOT_W - 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANGLE),dovetail mouth width (narrow end: the case's exterior floor face / the bracket plate top) | src=lib/mcc/constants.scad:595
+MCC_RAIL_MOUTH_W,mm,MCC_RAIL_ROOT_W - 2 * MCC_RAIL_DEPTH / tan(MCC_RAIL_FLANK_ANGLE),dovetail mouth width (narrow end: the case's exterior floor face / the bracket plate top) | src=lib/mcc/constants.scad:598
 MCC_RAIL_SILL_SIDE_W,mm,MCC_WALL,side wall of the floor sill beside the groove root | src=.claude/knowledge/architecture.md D30
-MCC_RAIL_END_WALL,mm,MCC_WALL,solid sill beyond each end of the groove's working length | src=lib/mcc/constants.scad:605
+MCC_RAIL_END_WALL,mm,MCC_WALL,solid sill beyond each end of the groove's working length | src=lib/mcc/constants.scad:608
 MCC_RAIL_LEN,mm,136.0 mm,rail/groove working length along its slide axis (case-local X) | src=.claude/knowledge/layout-patch-wall.md §17.2 R4 | conf=assumed
-MCC_RAIL_Y,mm,-23.5 mm,rail/groove centre line Y in case coordinates | src=lib/mcc/constants.scad:624 | conf=assumed
-MCC_RAIL_LOCK_ENGAGE,mm,0.60 mm,strip height above the groove roof line | src=lib/mcc/constants.scad:638 | conf=assumed
-MCC_RAIL_LOCK_PLAY_MARGIN,mm,0.30 mm,Z-play that must remain while the case rides the strips | src=lib/mcc/constants.scad:642 | conf=assumed
-MCC_RAIL_LOCK_RAMP_IN,deg,45 deg,"entry chamfer of each strip (its -X side, over the engaged height) to the slide axis | src=lib/mcc/constants.scad:644 | conf=assumed"
-MCC_RAIL_LOCK_STRIP_X,mm,2.0 mm,strip base length along the slide axis | src=lib/mcc/constants.scad:647 | conf=assumed
-MCC_RAIL_LOCK_STRIP_Y_IN,mm,10.0 mm,|y| of each strip's inner end | src=lib/mcc/constants.scad:648 | conf=assumed
-MCC_RAIL_LOCK_STRIP_Y_OUT,mm,30.0 mm,|y| of each strip's outer end | src=lib/mcc/constants.scad:649 | conf=assumed
-MCC_RAIL_LOCK_END_OFFSET,mm,3.0 mm,male's +X (trailing) end to the strips' exit face | src=lib/mcc/constants.scad:652 | conf=assumed
-MCC_RAIL_LEADIN,mm,1.0 mm,"45-degree lead-in where the groove leaves the +X wall (flanks, mouth and roof) | src=lib/mcc/constants.scad:655 | conf=assumed"
-MCC_RAIL_PASSAGE_ROOF_MIN,mm,1.2 mm,minimum roof over the groove where it runs out through the case's +X end zone (D34) | src=lib/mcc/constants.scad:659 | conf=assumed
-MCC_RAIL_MATE_CLR,mm,0.5 mm,minimum clearance on every non-bearing rail face | src=lib/mcc/constants.scad:676 | conf=decided
-MCC_RAIL_CLR_HORIZ,mm,MCC_RAIL_MATE_CLR / sin(MCC_RAIL_FLANK_ANGLE),per-side horizontal offset of the female groove from the male profile | src=lib/mcc/constants.scad:677
+MCC_RAIL_Y,mm,-23.5 mm,rail/groove centre line Y in case coordinates | src=lib/mcc/constants.scad:627 | conf=assumed
+MCC_RAIL_LOCK_ENGAGE,mm,0.60 mm,strip height above the groove roof line | src=lib/mcc/constants.scad:641 | conf=assumed
+MCC_RAIL_LOCK_PLAY_MARGIN,mm,0.30 mm,Z-play that must remain while the case rides the strips | src=lib/mcc/constants.scad:645 | conf=assumed
+MCC_RAIL_LOCK_RAMP_IN,deg,45 deg,"entry chamfer of each strip (its -X side, over the engaged height) to the slide axis | src=lib/mcc/constants.scad:647 | conf=assumed"
+MCC_RAIL_LOCK_STRIP_X,mm,2.0 mm,strip base length along the slide axis | src=lib/mcc/constants.scad:650 | conf=assumed
+MCC_RAIL_LOCK_STRIP_Y_IN,mm,10.0 mm,|y| of each strip's inner end | src=lib/mcc/constants.scad:651 | conf=assumed
+MCC_RAIL_LOCK_STRIP_Y_OUT,mm,30.0 mm,|y| of each strip's outer end | src=lib/mcc/constants.scad:652 | conf=assumed
+MCC_RAIL_LOCK_END_OFFSET,mm,3.0 mm,male's +X (trailing) end to the strips' exit face | src=lib/mcc/constants.scad:655 | conf=assumed
+MCC_RAIL_LEADIN,mm,1.0 mm,"45-degree lead-in where the groove leaves the +X wall (flanks, mouth and roof) | src=lib/mcc/constants.scad:658 | conf=assumed"
+MCC_RAIL_PASSAGE_ROOF_MIN,mm,1.2 mm,minimum roof over the groove where it runs out through the case's +X end zone (D34) | src=lib/mcc/constants.scad:662 | conf=assumed
+MCC_RAIL_MATE_CLR,mm,0.5 mm,minimum clearance on every non-bearing rail face | src=lib/mcc/constants.scad:679 | conf=decided
+MCC_RAIL_CLR_HORIZ,mm,MCC_RAIL_MATE_CLR / sin(MCC_RAIL_FLANK_ANGLE),per-side horizontal offset of the female groove from the male profile | src=lib/mcc/constants.scad:680
 MCC_RAIL_ROOF_CLR,mm,MCC_RAIL_MATE_CLR,gap between the male's flat top (and the lock strips) and the groove roof | src=.claude/knowledge/architecture.md R40
-MCC_RAIL_MALE_H,mm,MCC_RAIL_DEPTH - MCC_RAIL_ROOF_CLR,The male taper's built height above the bracket plate (no pedestal since D44) | src=lib/mcc/constants.scad:684
+MCC_RAIL_MALE_H,mm,MCC_RAIL_DEPTH - MCC_RAIL_ROOF_CLR,The male taper's built height above the bracket plate (no pedestal since D44) | src=lib/mcc/constants.scad:687
 MCC_RIB_HEIGHT_RATIO_MAX,none,3.0,"stiffening-rib height <= this x rib thickness, unitless | src=knowledge/design/fdm-rugged-enclosure-guidelines.md:65-70 | conf=assumed"
 MCC_FAN_INTAKE_CLR,mm,5.0 mm,Intake clearance beyond the fan's own frame depth | src=knowledge/components/fans.md | conf=assumed
 MCC_FAN_BAY_CLR,mm,2.0 mm,minimum clearance between the reserved fan bay and any other feature | src=.claude/knowledge/layout-patch-wall.md §9 | conf=assumed
 MCC_VENT_AREA_RATIO,none,1.0,minimum intake vent free area as a multiple of the fan aperture area | src=knowledge/design/thermal-guidelines.md:104-109 | conf=assumed
-MCC_LID_VENT_SLOT_W,mm,2.0 mm,lid vent slot width in X | src=lib/mcc/constants.scad:772 | conf=assumed
-MCC_LID_VENT_SLOT_L,mm,20.0 mm,lid vent slot length in Y | src=lib/mcc/constants.scad:773 | conf=assumed
+MCC_LID_VENT_SLOT_W,mm,2.0 mm,lid vent slot width in X | src=lib/mcc/constants.scad:775 | conf=assumed
+MCC_LID_VENT_SLOT_L,mm,20.0 mm,lid vent slot length in Y | src=lib/mcc/constants.scad:776 | conf=assumed
 MCC_LID_VENT_EDGE_MIN,mm,1.0 mm,minimum clearance from the lid vent field to the T&G groove band / patch-wall MCC_T_PATCH stack | src=.claude/knowledge/layout-patch-wall.md §9 | conf=assumed
 MCC_LID_VENT_WEB_MIN,mm,1.6 mm,minimum web between adjacent lid-vent slots | src=.claude/knowledge/layout-patch-wall.md §17.4 R10 | conf=assumed
-MCC_LID_VENT_WEB_W,mm,MCC_LID_VENT_WEB_MIN,actual web used between lid-vent slots | src=lib/mcc/constants.scad:784
-MCC_LID_VENT_ROW_GAP,mm,6.0 mm,solid Y gap between the 2 slot rows | src=lib/mcc/constants.scad:788 | conf=assumed
+MCC_LID_VENT_WEB_W,mm,MCC_LID_VENT_WEB_MIN,actual web used between lid-vent slots | src=lib/mcc/constants.scad:787
+MCC_LID_VENT_ROW_GAP,mm,6.0 mm,solid Y gap between the 2 slot rows | src=lib/mcc/constants.scad:791 | conf=assumed
 MCC_LID_VENT_ROWS,none,2,number of slot rows | src=.claude/knowledge/layout-patch-wall.md §17.5 | conf=assumed
-MCC_LID_VENT_END_MARGIN,mm,5.0 mm,inset from x_dev_lo/x_dev_hi to the field's own X bounds | src=lib/mcc/constants.scad:792 | conf=assumed
+MCC_LID_VENT_END_MARGIN,mm,5.0 mm,inset from x_dev_lo/x_dev_hi to the field's own X bounds | src=lib/mcc/constants.scad:795 | conf=assumed
 MCC_LID_VENT_FASTENER_KEEPOUT_R,mm,10.0 mm,defensive keep-out radius around every lid_fastener_pos | src=knowledge/design/fdm-rugged-enclosure-guidelines.md §8 | conf=assumed
 MCC_LID_VENT_AREA_RATIO,none,1.0,minimum lid-vent free area as a multiple of the fan aperture area | src=knowledge/design/thermal-guidelines.md:104-109 | conf=assumed
 MCC_SWITCH_FLUSH_CLR,mm,1.0 mm,Minimum flush clearance below the wall's outer face for the switch actuator's tip | src=.claude/knowledge/architecture.md R29 | conf=assumed
@@ -161,4 +163,4 @@ MCC_FAN_GRILLE_SPOKE_W,mm,2.0 mm,fan finger-guard spoke width | src=lib/mcc/fan.
 MCC_FAN_GRILLE_SPOKE_PITCH,deg,60 deg,angle between neighbouring grille spokes: 360 deg over the spoke count 6 | src=lib/mcc/fan.scad:73 | conf=assumed
 MCC_FAN_OPENING_MARGIN,mm,2 mm,round fan opening: the frame size less this margin | src=lib/mcc/fan.scad:151 | conf=assumed
 MCC_D_SEAT_POCKET_CLR,mm,1 mm,D-series seat pocket: clearance added to the flange outline | src=lib/mcc/neutrik.scad:90 | conf=assumed
-MCC_SIDE_BOLT_HEAD_CUT_D,mm,MCC_SIDE_BOLT_HEAD_D + 2 * MCC_CLR_SLIDE,side-bolt head recess diameter the cut really makes: head diameter plus a sliding clearance per side | src=lib/mcc/fasteners.scad:267
+MCC_SIDE_BOLT_HEAD_CUT_D,mm,MCC_SIDE_BOLT_HEAD_D + 2 * MCC_CLR_SLIDE,side-bolt head recess diameter the cut really makes: head diameter plus a sliding clearance per side | src=lib/mcc/fasteners.scad:271
