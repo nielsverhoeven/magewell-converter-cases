@@ -129,7 +129,7 @@ def make_env(designs=None):
     def new_design(name):
         design = AutoDesign()
         opened.append((name, design))
-        return design
+        return object(), design  # as the runtime's probe env: (document, design)
 
     return types.SimpleNamespace(app=types.SimpleNamespace(fontNames=["Arial", "Segoe UI"]), ui=Auto("ui"), new_design=new_design,
                                  out_dir=".", log=lambda text: None, cache={}, job={}, args={}, checkout=".")

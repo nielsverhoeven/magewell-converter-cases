@@ -168,8 +168,10 @@ BASE = {
 
 def _new(env, pid):
     """A scratch design (the runtime never exports a ``SCRATCH-`` document and closes it after the probe)."""
-    design = env.new_design(f"SCRATCH-{pid}")
-    return design if hasattr(design, "rootComponent") else design.design
+    made = env.new_design(f"SCRATCH-{pid}")
+    if isinstance(made, tuple):  # the runtime's probe env returns (document, design)
+        made = made[1]
+    return made if hasattr(made, "rootComponent") else made.design
 
 
 def _params(*names) -> dict:
