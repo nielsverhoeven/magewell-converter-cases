@@ -31,3 +31,6 @@ Thumbs.db
 # stable domain research, not build output). ---
 !knowledge/**/assets/**
 .pytest_cache/
+
+# Output of the Fusion modelling kit commands (cad/fusion/gen/core/plan.py writes only here).
+build/
