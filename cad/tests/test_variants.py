@@ -137,7 +137,8 @@ def test_sets_rebuild_every_openscad_position_the_generator_needs(case):
     same([v[f"V_FARRIB{i}_X"] for i in range(1, 6) if not flags[f"Cradle_FarRib{i}"]], cr["flank"])
     # floor
     fk = {row[4]: row for row in case["floor_keepout"]}
-    same([v["V_STRAP_POS_X"], v["V_STRAP_NEG_X"], v["V_STRAP_Y"]], [fk["strap_pos_y"][0], fk["strap_neg_y"][0], fk["strap_pos_y"][1]])
+    assert set(fk) == {"mount_rail", "side_bolt_web"}                 # D87.1: the floor holds the rail and the bolt web only
+    same(v["V_SIDEBOLT_X"], fk["side_bolt_web"][0])
 
 
 def test_options_drive_the_flags_and_the_reservations_stay_unflagged():
@@ -169,7 +170,7 @@ def test_the_registry_the_runtime_reads_is_consistent_with_the_real_sets():
     names = [r["name"] for r in rows]
     assert len(names) == len(set(names)) and {"constant", "expression", "solver"} == {r["kind"] for r in rows}
     solver = [r for r in rows if r["kind"] == "solver"]
-    assert len(solver) == 99 and all(r["fusion"] is None for r in solver)
+    assert len(solver) == 96 and all(r["fusion"] is None for r in solver)
     assert {r["unit"] for r in solver} == {"mm", ""}
 
 

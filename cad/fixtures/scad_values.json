@@ -3,7 +3,7 @@
   "generated_by": "python -m cad.tools.scad_export write",
   "openscad": "OpenSCAD version 2026.09.23",
   "oracle_files": {
-    "lib/mcc/constants.scad": "4d2a5e342116bb26e90ae81c41068c67bc2f1d24562d181fc38622bc4be4c7aa",
+    "lib/mcc/constants.scad": "daeb7db4d895eafd9efe14585df394bbc2bfc4fa28b288157593f8cbac243147",
     "lib/mcc/devices/pro-convert-for-ndi-to-aio.scad": "4290ae17e1b8bf03ebc252ca9f6e1b465ea1fc367c40718b14221b9b63b1c737",
     "lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad": "f223adf426cfb71c85ae0ce7235adcd968bdd66651f7f711ca02a58028a5a259",
     "lib/mcc/devices/pro-convert-for-ndi-to-hdmi-4k.scad": "c3f9dd2e7d79b8dbe9f6cffd4528e5c0566fdc85e73d91a4b75c6d9118b90755",
@@ -143,7 +143,6 @@
     "MCC_VENT_INTAKE_BAND_H": 18,
     "MCC_VENT_EXHAUST_Z": [32, 44],
     "MCC_FAN_APERTURE_D": 38,
-    "MCC_STRAP_SLOT": [25, 5],
     "MCC_FLOOR_FEATURE_MIN_SEP": 15,
     "MCC_FLOOR_FEATURE_EDGE_MIN": 2,
     "MCC_SHOW_GHOST": false,

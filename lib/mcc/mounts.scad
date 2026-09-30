@@ -3,9 +3,9 @@
 //   L2. Every case-floor feature except the case's own opt-in 1/4"-20 insert boss (cradle.scad, T1-32 —
 //   installed from the underside into the deck hollow; since D44 only with ["rail", false], T1-63).
 //   Owns: the tool-less dovetail mount rail (D-15, rev 9, issue #25 — replaces VESA; widened, flush and
-//   >= 0.5 mm-clearance since D44; closed -X end wall (D64.1), top lock and slot backing (D63.1)), strap
-//   slots (displaced off the reserved splitter bay per §7.1 correction 1), and a minimal
-//   stacking-profile recess. The splitter tie-down slots are gone (D65.1): the bay stays reserved and
+//   >= 0.5 mm-clearance since D44; closed -X end wall (D64.1), top lock and slot backing (D63.1)). The
+//   strap slots and the stacking-profile recesses are removed (D87.1) and the splitter tie-down slots
+//   are gone (D65.1): the floor feature is the mount-rail groove alone, the bay stays reserved and
 //   nothing is cut into the floor under it.
 //   Positions come from mcc_floor_keepout() (layout.scad) so this file never re-derives them; this
 //   file also owns the D16 pairwise non-overlap assert over that same list (architecture.md §6,
@@ -177,41 +177,6 @@ module mcc_assert_floor_keepout_no_overlap(dev, cfg) {
             assert(!_mcc_floor_feature_overlap(rows[i], rows[j]),
                 str("mcc: floor features \"", rows[i][4], "\" and \"", rows[j][4],
                     "\" overlap on \"", mcc_dev_slug(dev), "\" (D16)"));
-}
-
-// Module: mcc_floor_features_cut()
-// Usage:
-//   mcc_floor_features_cut(dev, cfg);
-// Description:
-//   SUBTRACTIVE floor features: the 2 (or, with the -X pair displaced clear of the splitter bay,
-//   still 2) strap-slot pairs and a minimal stacking-profile recess (a shallow counterbore at each
-//   corner lid-fastener position, so a stacked second case's feet have somewhere to seat). (The
-//   Magewell-Fishtail M4 reservation was dropped by D44; the splitter tie-down slots by D65.1.)
-// Arguments:
-//   dev = device record.
-//   cfg = variant-config assoc-list.
-module mcc_floor_features_cut(dev, cfg) {
-    l = mcc_case_layout(dev, cfg);
-    keepout = mcc_floor_keepout(dev, cfg);
-
-    // Strap slots: through-floor rectangular cuts, from mcc_floor_keepout()'s own positions so
-    // this file never re-derives the -X-pair displacement (§7.1 correction 1).
-    for (f = keepout) {
-        label = f[4];
-        if (label == "strap_pos_y" || label == "strap_pos_neg_y" || label == "strap_neg_y" || label == "strap_neg_neg_y") {
-            size = f[3];
-            translate([f[0], f[1], -MCC_EPS])
-                cube([size[0], size[1], MCC_FLOOR_T + 2 * MCC_EPS], center = true);
-        }
-    }
-
-    // Minimal stacking-profile recess: a shallow counterbore under each corner lid-fastener
-    // position, mirroring that fastener's boss so a stacked case's feet seat cleanly.
-    corner_r = MCC_BOSS_MIN_RATIO * struct_val(MCC_INSERT_M3, "od") / 2 + 1.5;
-    lid_pos = struct_val(l, "lid_fastener_pos");
-    for (i = [0:1:3]) // the 4 corners are always the first 4 entries (mcc_case_layout()'s own order)
-        translate([lid_pos[i][0], lid_pos[i][1], -MCC_EPS])
-            cyl(h = 1.0 + MCC_EPS, r = corner_r, circum = true, anchor = BOTTOM, $fn = 32);
 }
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
