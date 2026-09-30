@@ -560,6 +560,11 @@ module mcc_vert_tv_assert(g) {
     assert(z_rail + h_max <= wall_gap + MCC_EPS,
         str("mcc: vertical-tv-bracket T1-83 lid-top Z=", z_rail + h_max, " exceeds wall_gap=", wall_gap));
 
+    // T1-89.1 (issue #89, D89.1): the centre's local frame (bottom at Z=0, top at VTV_PLATE_T) and the
+    // assembly frame (z_rail) are tied together, so a cutter placed with z_rail cannot pass unnoticed.
+    assert(abs(z_rail - VTV_PLATE_T - VTV_PLATE_T) <= MCC_EPS,
+        str("mcc: vertical-tv-bracket T1-89.1 z_rail - VTV_PLATE_T=", z_rail - VTV_PLATE_T, " != VTV_PLATE_T=", VTV_PLATE_T));
+
     // T1-84 (B15, DB6): a rib, not a nub -- the run between where it may start and where it must
     // stop is at least two rib-thicknesses.
     assert(rib_end - rib_pad_gap >= 2 * RIB_T - MCC_EPS,
@@ -623,7 +628,6 @@ module mcc_vert_tv_arm(g) {
 //   (local Z=0).
 module mcc_vert_tv_centre(g) {
     centre_h = struct_val(g, "centre_h");
-    z_rail   = struct_val(g, "z_rail");
     m3_counterbore_d = M3_HEAD_D + 2 * MCC_CLR_SLIDE;
     arrow_y = (RAIL_KEEPOUT_Y[1] + centre_h / 2) / 2;
 
@@ -643,12 +647,12 @@ module mcc_vert_tv_centre(g) {
             p = _mcc_vert_tv_xform(h, side, g);
             translate([p[0], p[1], -MCC_EPS])
                 cyl(h = VTV_PLATE_T + 2 * MCC_EPS, d = MCC_M3_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
-            translate([p[0], p[1], z_rail + MCC_EPS])
+            translate([p[0], p[1], VTV_PLATE_T + MCC_EPS])
                 cyl(h = M3_COUNTERBORE_DEPTH + MCC_EPS, d = m3_counterbore_d, anchor = TOP, $fn = 64, circum = true);
         }
         // Cosmetic "UP" arrow deboss, top face, pointing +Y -- outside the rail keep-out and below
-        // the body edge (T1-82), never in contact with the mated case (it sits below z_rail).
-        translate([ARROW_X, arrow_y, z_rail - ARROW_DEPTH])
+        // the body edge (T1-82), never in contact with the mated case (it sits in the plate top, VTV_PLATE_T, D89.1).
+        translate([ARROW_X, arrow_y, VTV_PLATE_T - ARROW_DEPTH])
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }

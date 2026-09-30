@@ -189,10 +189,10 @@ function _mcc_nearest_zero(vals) =
 //   features = mcc_floor_keepout(dev, cfg);
 // Description:
 //   Pure function: every floor-plan feature `mounts.scad` places (the mount rail -- D-15, rev 9,
-//   replaces VESA; widened by D44 -- strap slots, the side-bolt support-web
-//   footprint), each `[cx, cy, "circle"|"rect", size_or_d, "label"]`. NOT nullary (rev-5 correction 2,
-//   layout-patch-wall.md §7.1) — strap slots, the splitter bay and the side-bolt web all depend on `L`,
-//   `W`, and `x_bolt`. `mounts.scad` draws the real geometry from this list and asserts pairwise
+//   replaces VESA; widened by D44 -- and the side-bolt support-web footprint; the strap slots and
+//   stacking recesses were removed by D87.1), each `[cx, cy, "circle"|"rect", size_or_d, "label"]`.
+//   NOT nullary (rev-5 correction 2, layout-patch-wall.md §7.1) — the rail and the side-bolt web
+//   depend on `L`, `W`, and `x_bolt`. `mounts.scad` draws the real geometry from this list and asserts pairwise
 //   non-overlap (MCC_FLOOR_FEATURE_MIN_SEP, or r1+r2+2.0 where larger — D16, rev 9) — this function
 //   only computes positions, per this file's "functions only" contract (ruling 1); it does not itself
 //   assert (the assert belongs to the L2 caller that owns the floor, architecture.md §6). The case
@@ -207,16 +207,6 @@ function mcc_floor_keepout(dev, cfg) =
     let(
         l = mcc_case_layout(dev, cfg),
         L = struct_val(l, "L"), W = struct_val(l, "W"),
-        bay_x = struct_val(l, "splitter_bay_x"),
-        strap_x_pos = L / 2 - 25, // nominal +X strap-slot X position, layout-patch-wall.md §7.1 table
-        // Rev-5 correction 1: the nominal -X strap-slot X position collides with the reserved
-        // splitter bay on every priority SKU — the reserved bay wins (architecture.md §6), so the
-        // -X pair slides inboard to clear it whenever the nominal position would intersect it.
-        strap_x_neg_nominal = -(L / 2 - 25),
-        strap_x_neg = (strap_x_neg_nominal - MCC_STRAP_SLOT[0] / 2 < bay_x[1])
-            ? bay_x[1] + MCC_STRAP_SLOT[0] / 2 + 2
-            : strap_x_neg_nominal,
-        strap_y = W / 2 - 12,
         side_bolt_x = struct_val(l, "side_bolt_x"),
         // Side-bolt support-web floor footprint (rev-5 correction J): 3 x 14 mm rectangle at
         // x=x_bolt, from the far wall's inner face inward (y in [-W/2+MCC_WALL, -W/2+MCC_WALL+
@@ -234,10 +224,6 @@ function mcc_floor_keepout(dev, cfg) =
         // with no cut of their own, so they need no floor keep-out.
         // D34: the groove runs from its closed end at -MCC_RAIL_LEN/2 out through the +X wall.
         [(L / 2 - MCC_RAIL_LEN / 2) / 2, MCC_RAIL_Y, "rect", [L / 2 + MCC_RAIL_LEN / 2, MCC_RAIL_ROOT_W], "mount_rail"],
-        [strap_x_pos, strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_y"],
-        [strap_x_pos, -strap_y, "rect", MCC_STRAP_SLOT, "strap_pos_neg_y"],
-        [strap_x_neg, strap_y, "rect", MCC_STRAP_SLOT, "strap_neg_y"],
-        [strap_x_neg, -strap_y, "rect", MCC_STRAP_SLOT, "strap_neg_neg_y"],
         [side_bolt_x, web_cy, "rect", [MCC_SIDE_BOLT_SUPPORT_WEB_T, web_len], "side_bolt_web"],
     ];
 

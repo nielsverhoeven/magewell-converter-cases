@@ -627,6 +627,11 @@ module mcc_arch_tv_assert(g) {
     assert(mode == "direct" || z_rail + h_max <= WALL_GAP + MCC_EPS,
         str("mcc: arch-tv-bracket T1-88 sandwich lid-top Z=", z_rail + h_max, " exceeds WALL_GAP=", WALL_GAP));
 
+    // T1-89.1 (issue #89, D89.1): the centre's local frame (bottom at Z=0, top at centre_t) and the
+    // assembly frame (z_rail) are tied together, so a cutter placed with z_rail cannot pass unnoticed.
+    assert(abs(z_rail - ARCH_PLATE_T - centre_t) <= MCC_EPS,
+        str("mcc: arch-tv-bracket T1-89.1 z_rail - ARCH_PLATE_T=", z_rail - ARCH_PLATE_T, " != centre_t=", centre_t));
+
     // T1-90 (DB9, new): the spacer's own clamp height/footprint match the arm's sandwich pad exactly
     // (ARCH_PLATE_T / ARM_W -- never centre_t, never a boss diameter). Mode-independent (the spacer
     // itself carries no mode), asserted unconditionally.
@@ -732,7 +737,6 @@ module mcc_arch_tv_arm(g) {
 //   direct mode centre_t==ARCH_PLATE_T, so this reproduces exactly the pre-#56 geometry.
 module mcc_arch_tv_centre(g) {
     centre_t = struct_val(g, "centre_t");
-    z_rail   = struct_val(g, "z_rail");
     m3_counterbore_d     = M3_HEAD_D + 2 * MCC_CLR_SLIDE;
     m3_counterbore_depth = M3_COUNTERBORE_DEPTH;
     arrow_y = (RAIL_KEEPOUT_Y[1] + CENTRE_W / 2) / 2;
@@ -756,12 +760,12 @@ module mcc_arch_tv_centre(g) {
             p = _mcc_arch_tv_xform(h, side, g);
             translate([p[0], p[1], -MCC_EPS])
                 cyl(h = centre_t + 2 * MCC_EPS, d = MCC_M3_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
-            translate([p[0], p[1], z_rail + MCC_EPS])
+            translate([p[0], p[1], centre_t + MCC_EPS])
                 cyl(h = m3_counterbore_depth + MCC_EPS, d = m3_counterbore_d, anchor = TOP, $fn = 64, circum = true);
         }
         // Cosmetic "UP" arrow deboss, top face, pointing +Y -- outside the rail keep-out and below
-        // the body edge (T1-60), never in contact with the mated case (it sits below Z_RAIL).
-        translate([-30, arrow_y, z_rail - ARROW_DEPTH])
+        // the body edge (T1-60), never in contact with the mated case (it sits in the plate top, centre_t, D89.1).
+        translate([-30, arrow_y, centre_t - ARROW_DEPTH])
             linear_extrude(height = ARROW_DEPTH + MCC_EPS)
                 polygon([[-ARROW_W / 2, -ARROW_L / 2], [ARROW_W / 2, -ARROW_L / 2], [0, ARROW_L / 2]]);
     }
