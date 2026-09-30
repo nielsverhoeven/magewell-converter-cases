@@ -77,7 +77,9 @@ def test_the_p_layer_modules_parse_as_python_3_12(path):
 
 
 def all_cad_files() -> list[Path]:
-    return sorted(p for p in CAD.rglob("*.py") if "__pycache__" not in p.parts)
+    """Every source under cad/ except cad/fusion/: that tree has its own scans (the kit's test_layering.py and the
+    runtime's test_runtime_layering.py), because it imports adsk and cad.fusion on purpose."""
+    return sorted(p for p in CAD.rglob("*.py") if "__pycache__" not in p.parts and "fusion" not in p.relative_to(CAD).parts[:1])
 
 
 def sys_path_uses(tree: ast.AST) -> list[int]:
@@ -90,11 +92,19 @@ def sys_path_uses(tree: ast.AST) -> list[int]:
     return lines
 
 
+# Where `adsk` may be imported (verdict A8 rule 1 of #81; the kit's own cad/fusion/gen/tests/test_layering.py enforces the
+# same list): the Fusion backend, the probes, the enhancement executor and the runtime.  Nothing else under cad/.
+ADSK_FILES = ("fusion/gen/core/fusion_backend.py", "fusion/gen/core/probes.py", "fusion/gen/core/enhance_fusion.py")
+ADSK_TREES = ("fusion/runtime/",)
+
+
 @pytest.mark.parametrize("path", all_cad_files(), ids=lambda p: p.relative_to(CAD).as_posix())
 def test_no_file_under_cad_imports_fusion_or_the_build_scripts_or_changes_sys_path(path):
     tree = ast.parse(path.read_text(encoding="utf-8"))
+    rel = path.relative_to(CAD).as_posix()
+    adsk_ok = rel in ADSK_FILES or rel.startswith(ADSK_TREES)
     for mod in imports(path):
         top = mod.split(".")[0]
-        assert top not in ("adsk", "scripts"), f"{path.name} imports {mod}"
+        assert top != "scripts" and not (top == "adsk" and not adsk_ok), f"{path.name} imports {mod}"
         assert mod != "cad.fusion" and not mod.startswith("cad.fusion."), f"{path.name} imports {mod}"
     assert not sys_path_uses(tree), f"{path.name} touches sys.path (line {sys_path_uses(tree)})"
