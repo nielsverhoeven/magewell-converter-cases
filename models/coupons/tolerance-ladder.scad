@@ -43,8 +43,9 @@ difference() {
 
     for (i = [0 : 1 : n - 1]) {
         clr = CLEARANCES[i];
-        translate([(i + 1) * PITCH, row_y, PEG_H / 2])
-            cyl(h = PEG_H + MCC_EPS, d = PEG_D + 2 * clr, circum = true, $fn = 64);
+        // D88.1: the hole cutter passes through the whole base plate (z from -BASE_T to 0).
+        translate([(i + 1) * PITCH, row_y, -BASE_T - MCC_EPS])
+            cyl(h = BASE_T + 2 * MCC_EPS, d = PEG_D + 2 * clr, circum = true, anchor = BOTTOM, $fn = 64);
     }
 }
 

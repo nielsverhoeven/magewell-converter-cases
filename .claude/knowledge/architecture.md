@@ -923,9 +923,9 @@ Three rules exist because these features will otherwise collide silently:
 
 - **The floor rule.** `mounts.scad` is the **single owner** of every feature in the case floor: the
   **mount-rail dovetail groove and its sill** (D-15, rev 9 — replaces VESA; widened by D44; 136 mm
-  with a closed −X end wall since D64.1), the strap slots and the stacking profile (the
-  Magewell-Fishtail M4 reservation was dropped by D44, the splitter tie-down slots by D65.1 — the bay
-  stays reserved and nothing is cut under it). It exposes `mcc_floor_keepout()` and asserts
+  with a closed −X end wall since D64.1) — and nothing else (the strap slots and the stacking recesses
+  were removed by D87.1, the Magewell-Fishtail M4 reservation was dropped by D44, the splitter tie-down
+  slots by D65.1 — the bay stays reserved and nothing is cut under it). It exposes `mcc_floor_keepout()` and asserts
   non-overlap between all of them.
   `cradle.scad` never cuts the floor; if it ever needs a penetration it requests one *through*
   `mounts.scad`. The two sanctioned exceptions stay in `cradle.scad` because they are installed from
@@ -2241,6 +2241,11 @@ the table.
 | **D64.1** | 2026-09-29 | D34: the groove's closed −X end is the axial end stop and the case stays closed; §6 reservation rule (a reserved bay clears every other feature — D45) | `lib/mcc/mounts.scad:63-66` (at `4e3a93f`) ended the sill at x = −`MCC_RAIL_LEN`/2 = −75, exactly where the groove ends; the groove (4.0 deep) is deeper than the floor (3.0), so at the −X end it opened into the case between z = 3 and 4 over its full 66 mm width. The sill also sat 0.55–1.05 mm inside the compact splitter bay (D45) | A 1 × 66 mm slit from outside into the case interior on every SKU, seen by no gate (#62's see-through check covers lids only) | **Fixed by #64 (user decision 2026-09-29: `MCC_RAIL_LEN` 150 → 136).** `MCC_RAIL_END_WALL` = `MCC_WALL`: the sill runs 3 mm past the groove at both ends and closes the −X end over the full groove depth (**T1-64.1**). At 136 mm the sill ends at x = −71, 2.95 mm clear of the bay on the tightest SKU (L = 193.9) — **T1-17** implemented in `mcc_floor_features_add()`; **D45 closed**. `scripts/rail_fit.py` checks it with rays from inside the groove |
 | **D65.1** | 2026-09-29 | §6 floor rule (the splitter tie-downs were a floor feature); D7 (`mcc_splitter_tiedown()` must follow the on-edge splitter) | — (a user decision; plan G's mesh check also found the −X slot straddling the −X wall's inner face) | Two 1.5 × 4 mm slots through the floor under the reserved bay, for a splitter no SKU fits (D-14) | **Done by #65 (user decision 2026-09-29).** The slots and `mcc_splitter_tiedown()` are removed; the bay stays reserved (§6) and its reservation in `layout.scad` is unchanged. **D7 closed:** its envelope half (`orient`, `cable_allow`) is implemented and stays; its tie-down half is moot. D24 (the envelope is an ungated cube) stays open |
 | **D66.1** | 2026-09-29 | §8 printability gate: `build.py check` approximates Bambu Studio's floating-cantilever test; the slicer is the ground truth | `scripts/printability.py` `_cantilevers()` measured reach at the raw vertices of a mesh section; a straight bridge edge that crosses triangulated faces carries collinear mid-edge vertices, which read as cantilever tips (6.3 / 7.2 mm on plan H's split roof) while Bambu passed the same parts | The result depended on how Manifold triangulated a face, not on the geometry | **Fixed by #66 (architect ruling on plan H's Q6).** Each overhang outline is simplified by `CONTOUR_SIMPLIFY` = 0.05 mm (Douglas–Peucker, a subset of the original vertices) before its reach is measured, so reach can only drop — no part that passes can start failing — and a real tip, a corner, stays. `smoke` runs `selftest_cantilever()`: a bridge with collinear edge vertices must pass, a 6 mm cantilever must fail. Unchanged: the check still reads outer contours only, and the slicer gate stays the ground truth |
+| **D87.1** | 2026-09-30 | §6 floor rule (`mounts.scad` owns every floor feature); `layout-patch-wall.md` §7.1 floor table (strap slots, stacking profile) | `lib/mcc/mounts.scad` (`mcc_floor_features_cut()`, called at `lib/mcc/shell.scad:345`) cut four 25 × 5 strap slots (`MCC_STRAP_SLOT`) and four stacking recesses under the lid-fastener corners; `lib/mcc/layout.scad` `mcc_floor_keepout()` carried four strap rows | The slots were 1.5 mm blind pockets that no strap could pass; since D62.2 the thumbscrew heads sit recessed, so nothing seats in the recesses. Every case paid ASA, print time and four keep-out rows for features that do nothing | **Done by #87 (user decision 2026-09-30).** `mcc_floor_features_cut()`, `MCC_STRAP_SLOT` and the four strap rows are removed; the floor feature is the mount-rail groove alone (plus the side-bolt web keep-out row). On the `cad/` side the strap and stacking rows leave the registry and the parameter sets drop `V_STRAP_POS_X`, `V_STRAP_NEG_X` and `V_STRAP_Y` (96 keys, 24 flags). The 8 case bases are re-baselined |
+| **D88.1** | 2026-09-30 | §8 coupons: a coupon measures what the case will do | `models/coupons/tolerance-ladder.scad:45-49` cut its holes from z = 0 upward, through nothing: the seven holes never entered the base plate | The coupon could not measure a peg-in-hole fit at all | **Fixed by #88.** The hole cutter runs through the base plate (z from −`BASE_T` to 0). |
+| **D88.2** | 2026-09-30 | as D88.1 | `models/coupons/side-bolt.scad:96-114` cut the bore out of the boss only, so the wall stayed solid in front of it | The coupon measured a bolt that could not pass the wall | **Fixed by #88.** The bore and head recess are cut from boss and wall together; the base plate stays outside the difference. |
+| **D88.3** | 2026-09-30 | as D88.1; §8 watertight mesh checks | `models/coupons/tg-ladder.scad:59-60`: the slot cutter ended exactly on the block top and left a zero-thickness membrane of 294 mm² | A cut that ends on a face is a degenerate mesh; it would surface as a parity residual | **Fixed by #88.** The cutter overshoots by `MCC_EPS`. Volume and bounding box do not change; the golden area drops by about 294 mm², so the CI import path needs no golden override. |
+| **D89.1** | 2026-09-30 | §3.5 (bracket centre: bottom at Z = 0, top at `centre_t`) | `models/brackets/arch-tv-bracket.scad:759,764` and `models/brackets/vertical-tv-bracket.scad:646,651` placed the M3 counterbores and the UP arrow with `z_rail`, the assembly-frame height of the rail seat, not the plate top | The cutters sat above the plate (centre_t = 11 mm, z_rail = 22 mm), so the counterbores and the arrow cut nothing; the counterbores the screw heads need were missing | **Fixed by #89.** The cutters are placed from `centre_t` (vertical bracket: `VTV_PLATE_T`, it has no `centre_t`). **T1-89.1** ties the two frames: `z_rail - ARCH_PLATE_T == centre_t` (arch), `z_rail - VTV_PLATE_T == VTV_PLATE_T` (vertical). |
 
 ---
 
@@ -2272,8 +2277,8 @@ runs horizontally through a boss in the far wall into that thread, held captive 
 in a pocket inside the boss. **Nothing protrudes:** `MCC_SIDE_BOLT_PROUD = 0` and the 17 mm captive
 stack lives inside `MCC_WALL + MCC_GAP_FAR = 19 mm`, with the boss a ⌀20 internal thickening from the
 wall's inner face to the pad face plus a 3 mm central support web down to the floor. The floor keeps
-only the wide mount-rail groove (D44), strap slots and the stacking profile — no insert, no VESA, no
-Fishtail reservation — and the stacking profile no longer has to dodge a lug.
+only the wide mount-rail groove (D44) — no insert, no VESA, no Fishtail reservation, and since D87.1
+no strap slots or stacking recesses.
 
 **Slot rule (`mcc_slot_for_port()`).** Partition the external ports by the sign of `face.x`; end-A
 ports take the leftmost slots, end-B ports the rightmost; inside each block order by
@@ -2302,8 +2307,9 @@ free area — not duct depth — is the flow bottleneck; size the intake slots a
 (R20, T1-30).
 
 **Floor.** The mount rail (D-15; 65 mm root at `y = −23.5`, flush seat, ≥ 0.5 mm clearance — D44;
-136 mm, closed −X end wall, top lock — D63.1, D64.1), strap slots and the stacking profile (no splitter
-tie-down since D65.1); `mcc_floor_keepout()` asserts non-overlap.
+136 mm, closed −X end wall, top lock — D63.1, D64.1) is the only floor feature (no strap slots or
+stacking recesses since D87.1, no splitter tie-down since D65.1); `mcc_floor_keepout()` asserts
+non-overlap.
 VESA 75 × 75 (D-15), the Fishtail M4 band and the case-insert reservation (D44) are gone. The
 device-retention through-bolt is **no longer a floor feature** (D-09).
 
@@ -2458,6 +2464,7 @@ records are the umbrella's; the D76.x, R76.x and Q76.x records belong to issue #
 - **D75.10 Hand-off and proof** (wording depends on Q75.1). Fusion exports reach CI as a draft candidate release named in `cad/exports.ref`. A manifest ties each export to an input digest, an inventory, the parameter values and the health of every configuration. CI validates and packages; it never builds a Fusion model.
 - **D75.11 Frame and export.** Z up, millimetres, the OpenSCAD model frame; exported components are modelled in the assembly frame. Fusion exports STEP and binary STL in the model frame. Print pose, the Bambu project and the slicer gate stay in `scripts/`.
 - **D75.12 Enhancements** (depends on Q75.3). Fillets and modelled threads are separate feature sets, off in every print configuration until a recorded decision turns one on. Before the cutover they appear only in the CAD-review STEP set.
+- **Oracle baseline.** The OpenSCAD oracle baseline moves from `8cee3e3` to the merge commit of the pull request that closes #87, #88 and #89 (D87.1, D88.1 to D88.3, D89.1); no `cad/oracle.pin` exists before it.
 
 ### 15.2 Decisions of issue #76 (parameters and device data)
 

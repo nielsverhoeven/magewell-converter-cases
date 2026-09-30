@@ -98,19 +98,29 @@ module _side_bolt_wall() {
 // boss axis (local Y=0) at global Z=AXIS_H -- so the support web, which reaches local
 // Y=web_to_floor_h below the axis, lands exactly on the base plate's top surface (global Z=0),
 // resting on it rather than floating.
-module _side_bolt_feature() {
+module _side_bolt_boss_placed() {
     translate([0, -proud, AXIS_H])
         rotate([-90, 0, 0])
-            difference() {
-                mcc_captive_side_bolt_boss(proud = proud, gap_far = gap_far);
-                mcc_captive_side_bolt_cut(proud = proud, gap_far = gap_far);
-            }
+            mcc_captive_side_bolt_boss(proud = proud, gap_far = gap_far);
 }
 
+module _side_bolt_cut_placed() {
+    translate([0, -proud, AXIS_H])
+        rotate([-90, 0, 0])
+            mcc_captive_side_bolt_cut(proud = proud, gap_far = gap_far);
+}
+
+// D88.2: the bore and head recess are cut from boss and wall together, so the bore passes through
+// the wall; the base plate stays outside the difference (the cut never reaches it).
 union() {
     _side_bolt_base();
-    _side_bolt_wall();
-    _side_bolt_feature();
+    difference() {
+        union() {
+            _side_bolt_wall();
+            _side_bolt_boss_placed();
+        }
+        _side_bolt_cut_placed();
+    }
 }
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
