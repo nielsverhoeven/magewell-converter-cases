@@ -2578,3 +2578,28 @@ issue's records (D80.3 to D80.6, D80.8 to D80.14, D80.16) are added by the pull 
 - **D80.7 STEP sanity.** One solid, one shell, closed manifold, STEP volume within 0.1 % and box within 0.05 mm of the STL, and per radius at least 95 % of the expected cylindrical area (fixture `cad/fixtures/step-cylinders.json`, radii within 0.05 mm); `valid` is a warning until a Fusion STEP has been read back (M80.3). The legacy STEP files are normalised by the replay, not loosened in the check. No area, shell count or mesh is taken from an oracle STEP before its zero-volume shells are dropped (D80.15). Implemented by a later pull request of #80; recorded here because `parity.py` already applies D80.15 to the STEP files it reads.
 - **D80.15 Nothing is taken from the void shells of an oracle STEP.** The nine case bases carry six zero-volume shells each (390.5 mm2 of planar faces, no cylinder). `parity.drop_void_shells` drops them before a STEP is meshed, before the cylinder census is taken and before the replay measures; no expectation is ever a shell count; `derive` refuses a file whose void shells carry cylinder area. Measured effect of not dropping them: +0.25 % of area on the oracle side. The void-shell rule and its threshold constant live only in `scripts/parity.py`.
 - **D80.17 One test home per layer, one tests job.** The tests of the `scripts/` modules (layer G) live in `scripts/tests/`, not in `cad/tests/`; one `scripts/tests/conftest.py` puts `<repo>/scripts` and `<repo>` on `sys.path`, no test file touches `sys.path`, and there is no `__init__.py` in that directory. Nothing under `cad/` edits `sys.path` (`cad/tests/test_layers.py` enforces it). All pytest suites run in one place, the job `tests` of `.github/workflows/cad-gates.yml` (called by `render.yml` as `cad-gates`, which the required check `render` needs): it installs `requirements.txt` and `requirements-step.txt` and OpenSCAD, sets `MCC_REQUIRE_OPENSCAD=1`, and runs `cad/tests`, `scripts/tests`, then every other `cad/**/tests` directory. A skipped test (a `<skipped type="pytest.skip">` element in the `--junitxml` output, not a grep of reason text) fails the job, and pytest exit code 5 (nothing collected) fails it for `cad/tests` and `scripts/tests`. The `smoke` job of `render.yml` no longer runs pytest. The workflows keep `contents: read`; no `permissions:` change.
+
+### 15.9 Decisions of issue #74 (showcase renders): first pull request
+
+The records below belong to the first pull request of #74 (`scripts/showcase.py`, `scripts/showcase_gl.py`, the `showcase` job of `render.yml`, the render step of `release.yml`
+and the `renders/` folders of the release zips). The repository-side records (how the images reach `main`, whether PNGs are committed, the Pages viewer) wait for user
+decisions and are added by the later pull requests of the issue.
+
+- **D74.1 Showcase images come from the exported model-frame STLs, three views per case.** The images are drawn from `exports/<target>/<part>.model.stl` with PyVista/VTK
+  off-screen under xvfb and Mesa software GL, never from OpenSCAD's PNG export, so they survive the move to Fusion. That file layout is the input contract and the interface
+  the Fusion pipeline must keep: `exports/<target>/<part>.model.stl`, assembly frame, millimetres, Z up; every `exports/<slug>/` except `coupons/` and `brackets/` that holds
+  any `*.model.stl` is a case and must hold `base.model.stl` and `lid.model.stl` (`ghost_device.model.stl` is an optional extra drawn as a faint box in the iso view when present; CI does not export it yet, so the iso view ships without a device ghost), and
+  `exports/brackets/<name>/*.model.stl` is a bracket target. There are three views per case (`<slug>-iso.png` with the lid semi-transparent, `<slug>-patch-wall.png`,
+  `<slug>-underside.png`) and one image per bracket target (`brackets-<name>.png`, its parts side by side along X, each shifted by its own bounding box plus 10 mm).
+  All cameras are perspective: a head-on orthographic view of a flat wall or floor showed no hole walls and no dovetail flanks in the first renders, so the patch wall is seen
+  slightly from the side and above and the underside obliquely from the +X end. `scripts/showcase.py` (planning, no GL) imports neither `build` nor `bambu_project` nor
+  anything from `cad/`; only `scripts/showcase_gl.py` needs OpenGL, and `requirements-render.txt` keeps pyvista and vtk out of the GL-free `tests` job.
+  Pixel identity across runner images is not assumed: an image is drawn again only when its `inputs_sha256` in `manifest.json` changed. That hash covers the STL bytes,
+  the view, and a fingerprint of the renderer version, the view table, all render parameters (size, colours, opacities, cameras) and the contents of
+  `requirements-render.txt`. Budget tripwire in the script: at most 250 KiB per image, 40 images and 10 MiB in total (exit 1).
+- **D74.2 The images are published as workflow artifacts, release assets and inside the device zips.** The `showcase` job of `render.yml` (informational, not in the
+  `render` aggregator's `needs`, so the required `render` check is unchanged) uploads them as the artifact `showcase-renders`. `release.yml` renders them after the
+  release build and before the tag and the packaging, and a renderer failure fails the release. The PNGs are attached to the release as loose files
+  (`dist/renders/*.png`), each device zip carries its own three under `renders/<slug>-{iso,patch-wall,underside}.png` (matched by exact name, because the slug of one case
+  can be a prefix of another's), the brackets zip carries `renders/brackets-<name>.png`, and the zip README lists the `renders/` entries. No permission, secret or repository
+  setting is added.
