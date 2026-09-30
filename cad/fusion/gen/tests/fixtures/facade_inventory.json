@@ -1,0 +1,19 @@
+{
+ "schema": 1,
+ "document": "Doc",
+ "items": [
+  {"kind": "component", "name": "Base", "component": "."},
+  {"kind": "sketch", "name": "Shell_Floor_BodySk", "component": "Base", "on": "origin:XY",
+   "expressions": ["V_L", "V_W"]},
+  {"kind": "feature", "name": "Shell_Floor_Body", "component": "Base", "type": "ExtrudeFeature",
+   "expressions": ["MCC_WALL"]},
+  {"kind": "sketch", "name": "Shell_Walls_AddSk", "component": "Base", "on": "origin:XY",
+   "expressions": ["V_L", "V_W", "MCC_WALL", "MCC_WALL", "V_L - MCC_WALL - MCC_WALL", "V_W - MCC_WALL - MCC_WALL"]},
+  {"kind": "feature", "name": "Shell_Walls_Add", "component": "Base", "type": "ExtrudeFeature",
+   "expressions": ["MCC_WALL", "V_H - MCC_WALL"]},
+  {"kind": "sketch", "name": "Patch_Hole_BoreCutSk", "component": "Base", "on": "origin:XY",
+   "expressions": ["V_X", "V_H", "V_D"]},
+  {"kind": "feature", "name": "Patch_Hole_BoreCut", "component": "Base", "type": "ExtrudeFeature",
+   "expressions": ["MCC_WALL"]}
+ ]
+}
