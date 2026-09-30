@@ -12,7 +12,7 @@
     lib/mcc/shell.scad       the top of the base walls, the boss diameter, the gusset web
 
 and the writer of the generated parameter sets cad/parameters/variants/<slug>.json, whose key set is the contract
-with the case master (P2-81 section 3.5: 99 V_ keys, 24 suppress flags).
+with the case master (P2-81 section 3.5: 96 V_ keys after D87.1, 24 suppress flags).
 
 Rules of this module
   * Pure functions over cad.params data; no adsk, no scripts/, no file writes except write_variants().
@@ -23,7 +23,7 @@ Rules of this module
     capacity_problems() (gate B1 of #77).
     solve() raises SolverError only where it cannot compute; a case the master cannot hold is solved anyway
     and parameter_set() refuses it with CapacityError (capacity_problems() lists every reason).
-  * Every literal that used to sit in the OpenSCAD functions is a registry row (MCC_STRAP_X_INSET, ...).
+  * Every literal that used to sit in the OpenSCAD functions is a registry row (MCC_PATCH_RECESS_ROOF_K, ...).
 """
 from __future__ import annotations
 
@@ -469,27 +469,16 @@ def case_dims(dev: Device, opts: Options) -> tuple[float, float, float]:
 
 
 def floor_keepout(dev: Device, opts: Options) -> list[FloorFeature]:
-    """mcc_floor_keepout() (layout.scad:206): mount rail, four strap slots, side-bolt support web."""
+    """mcc_floor_keepout() (layout.scad:206): mount rail and side-bolt support web (D87.1: only these two)."""
     c = _c()
     l = case_layout(dev, opts)
     L, W = l.L, l.W
-    bay_x = l.splitter_bay_x
-    strap_x_pos = L / 2 - c["MCC_STRAP_X_INSET"]
-    strap_x_neg_nominal = -(L / 2 - c["MCC_STRAP_X_INSET"])
-    strap_x_neg = (bay_x[1] + c["MCC_STRAP_SLOT_X"] / 2 + c["MCC_STRAP_BAY_CLR"]
-                   if strap_x_neg_nominal - c["MCC_STRAP_SLOT_X"] / 2 < bay_x[1] else strap_x_neg_nominal)
-    strap_y = W / 2 - c["MCC_STRAP_Y_INSET"]
     web_y0 = -W / 2 + c["MCC_WALL"]
     web_len = c["MCC_GAP_FAR"] - c["MCC_SIDE_BOLT_PAD_T"]
     web_cy = web_y0 + web_len / 2
-    slot = (c["MCC_STRAP_SLOT_X"], c["MCC_STRAP_SLOT_Y"])
     return [
         FloorFeature((L / 2 - c["MCC_RAIL_LEN"] / 2) / 2, c["MCC_RAIL_Y"], "rect",
                      (L / 2 + c["MCC_RAIL_LEN"] / 2, c["MCC_RAIL_ROOT_W"]), "mount_rail"),
-        FloorFeature(strap_x_pos, strap_y, "rect", slot, "strap_pos_y"),
-        FloorFeature(strap_x_pos, -strap_y, "rect", slot, "strap_pos_neg_y"),
-        FloorFeature(strap_x_neg, strap_y, "rect", slot, "strap_neg_y"),
-        FloorFeature(strap_x_neg, -strap_y, "rect", slot, "strap_neg_neg_y"),
         FloorFeature(l.side_bolt_x, web_cy, "rect", (c["MCC_SIDE_BOLT_SUPPORT_WEB_T"], web_len), "side_bolt_web"),
     ]
 
@@ -1010,10 +999,7 @@ def parameter_set(sol: Solution) -> dict:
         p[f"V_FARRIB{i}_X"] = mm(ribs[i - 1] if live else (ribs[-1] if ribs else l.x_dev_c))
         f[f"Cradle_FarRib{i}"] = not live
 
-    # floor strap pockets (the -X pair moves off the reserved splitter bay), side bolt
-    straps = {ff.label: ff for ff in sol.floor}
-    p.update(V_STRAP_POS_X=mm(straps["strap_pos_y"].cx), V_STRAP_NEG_X=mm(straps["strap_neg_y"].cx),
-             V_STRAP_Y=mm(straps["strap_pos_y"].cy))
+    # side bolt
     p.update(V_SIDEBOLT_X=mm(l.side_bolt_x), V_SIDEBOLT_Z=mm(l.side_bolt_z))
 
     # vents: sub-band heights (an empty sub-band takes the other one's pair), then the runs

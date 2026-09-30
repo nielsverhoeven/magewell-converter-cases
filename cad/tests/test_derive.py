@@ -70,7 +70,7 @@ def test_a_derived_set_is_total_with_the_variant_files_and_the_registry_accepts_
     files = sorted(params.VARIANTS_DIR.glob("*.json")) + [out]
     assert params.check_parameter_sets(files) == []
     rows = params.registry([params.CONSTANTS_CSV], files)
-    assert len([r for r in rows if r["kind"] == "solver"]) == 99
+    assert len([r for r in rows if r["kind"] == "solver"]) == 96
 
 
 BAD_SPECS = {

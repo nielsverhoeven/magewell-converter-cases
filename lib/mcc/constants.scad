@@ -552,7 +552,6 @@ MCC_FAN_APERTURE_D = 38.0; // +X end-wall fan aperture diameter, mm. DERIVED (in
                             // layout-patch-wall.md §5. assumed.
 
 // Floor keep-out geometry (layout-patch-wall.md §7.1 floor table, rev-5 corrections).
-MCC_STRAP_SLOT = [25, 5];         // strap-slot [length, width], mm. assumed.
 MCC_FLOOR_FEATURE_MIN_SEP = 15.0; // minimum centre-to-centre separation between any two floor
                                     // features, mm (or r1+r2+2.0 where larger) — layout-patch-wall.md
                                     // §7.1.

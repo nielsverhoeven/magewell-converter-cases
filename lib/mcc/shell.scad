@@ -341,8 +341,6 @@ module mcc_shell_base(dev, cfg) {
 
             mcc_vents(dev, cfg, [0, -1, 0]);
             mcc_vents(dev, cfg, [-1, 0, 0]);
-
-            mcc_floor_features_cut(dev, cfg);
         }
 
         // Fan bay reservation ghost (architecture.md §6 rev 12, §13 D23, issue #36). The
