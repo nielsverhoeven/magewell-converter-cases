@@ -71,8 +71,8 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   thread** — the user verified the device's 1/4"-20 hole is on a long side face; the bolt must stay
   in the case when unscrewed; the boss is **flush** (far wall moved 10 mm outward, `MCC_GAP_FAR`
   16, no external lug — D-13); the device lies flat in a ribbed cradle. No floor through-bolt. Floor
-  features (one owner, `mounts.scad`): the dovetail mount-rail groove (D-15/D34), strap slots,
-  stacking profile. **Wide, flush dovetail** (user decision 2026-09-28, D44): 65 mm root at
+  features (one owner, `mounts.scad`): the dovetail mount-rail groove (D-15/D34) alone (strap slots
+  and stacking recesses removed, D87.1). **Wide, flush dovetail** (user decision 2026-09-28, D44): 65 mm root at
   `MCC_RAIL_Y` = −23.5; the case's exterior floor sits flush on the bracket plate (no pedestal) and
   every non-bearing face of the joint keeps ≥ 0.5 mm clearance (flanks and roof). **The lock sits on
   top of the dovetail** (user decision 2026-09-29, D63.1 — replaces the D48 flank bump): two rigid
@@ -170,7 +170,9 @@ insert (D35), no floor-pad island (D37), boss-wide lid-boss webs (D38), the rail
 which replaced the D48 flank lock), perfectly round connector holes (D40), a plain Ø2.5 tap-drill bore
 instead of a printed thread (D41), the wide flush mount rail (D44), the retired `tv-bracket` (D47),
 the vertical VESA-column bracket and the arch's sandwich parts (D51), and the patch-wall
-tongue-and-groove moved clear of the lid's thumbscrew counterbores (D62.1) — are in architecture.md §13.
+tongue-and-groove moved clear of the lid's thumbscrew counterbores (D62.1), the strap slots and stacking
+recesses removed (D87.1), the coupon fixes (D88.1 to D88.3) and the bracket-centre counterbores and arrow
+cut from the plate top (D89.1) — are in architecture.md §13.
 Slicer rules and the debugging workflow: `.claude/knowledge/bambu-slicer.md` + the `bambu-studio`
 skill.
 

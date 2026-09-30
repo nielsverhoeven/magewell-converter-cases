@@ -76,11 +76,6 @@ translate([250, 250, 0]) mcc_cradle(dev = DEV, cfg = VARIANT);
 
 // --- mounts.scad standalone ---
 translate([500, 0, 0]) mcc_floor_features_add(dev = DEV, cfg = VARIANT);
-translate([500, 250, 0])
-    difference() {
-        cube([200, 170, 3], center = false);
-        translate([100, 85, 0]) mcc_floor_features_cut(dev = DEV, cfg = VARIANT);
-    }
 
 // --- vents.scad standalone, all 3 vented faces + area sanity ---
 l = mcc_case_layout(DEV, VARIANT);

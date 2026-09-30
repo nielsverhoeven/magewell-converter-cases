@@ -168,12 +168,9 @@ def test_hand_checked_anchor_values():
 
 HARVESTED = {   # name: (value, unit, src) -- every literal that sat outside constants.scad and is now a row
     "MCC_PATCH_RECESS_ROOF_K": (1.2, "none", "lib/mcc/shell.scad:164"),
-    "MCC_STRAP_X_INSET": (25.0, "mm", "lib/mcc/layout.scad:211"),
-    "MCC_STRAP_BAY_CLR": (2.0, "mm", "lib/mcc/layout.scad:217"),
-    "MCC_STRAP_Y_INSET": (12.0, "mm", "lib/mcc/layout.scad:219"),
-    "MCC_LID_N_FAST_LARGE": (6.0, "none", "lib/mcc/layout.scad:351"),
-    "MCC_LID_N_FAST_SMALL": (4.0, "none", "lib/mcc/layout.scad:351"),
-    "MCC_VENT_INTAKE_Z0": (5.0, "mm", "lib/mcc/layout.scad:404"),
+    "MCC_LID_N_FAST_LARGE": (6.0, "none", "lib/mcc/layout.scad:337"),
+    "MCC_LID_N_FAST_SMALL": (4.0, "none", "lib/mcc/layout.scad:337"),
+    "MCC_VENT_INTAKE_Z0": (5.0, "mm", "lib/mcc/layout.scad:390"),
     "MCC_VENT_MID_EXCL_MARGIN": (2.0, "mm", "lib/mcc/vents.scad:103"),
     "MCC_CRADLE_FLANK_RIB_CLR": (2.0, "mm", "lib/mcc/cradle.scad:133"),
     "MCC_CRADLE_FLANK_RIB_END_MARGIN": (8.0, "mm", "lib/mcc/cradle.scad:134"),
@@ -183,8 +180,6 @@ HARVESTED = {   # name: (value, unit, src) -- every literal that sat outside con
     "MCC_WEB_HULL_INSET": (0.2, "mm", "lib/mcc/shell.scad:94"),
     "MCC_INSERT_BORE_OVERDEPTH": (1.0, "mm", "lib/mcc/fasteners.scad:33"),
     "MCC_CRADLE_RIB_LEG": (3.0, "mm", "lib/mcc/cradle.scad:268"),
-    "MCC_STACK_RECESS_MARGIN": (1.5, "mm", "lib/mcc/mounts.scad:210"),
-    "MCC_STACK_RECESS_DEPTH": (1.0, "mm", "lib/mcc/mounts.scad:214"),
     "MCC_FAN_GRILLE_RING_W": (1.8, "mm", "lib/mcc/fan.scad:66"),
     "MCC_FAN_GRILLE_GAP_W": (3.0, "mm", "lib/mcc/fan.scad:67"),
     "MCC_FAN_GRILLE_SPOKE_W": (2.0, "mm", "lib/mcc/fan.scad:72"),
@@ -197,7 +192,7 @@ HARVESTED = {   # name: (value, unit, src) -- every literal that sat outside con
 def test_harvested_literals_exist_with_the_architects_provenance(rows):
     by = {r.name: r for r in rows}
     consts = P.constants()
-    assert len(HARVESTED) == 24
+    assert len(HARVESTED) == 19
     for name, (value, unit, src) in HARVESTED.items():
         assert consts[name] == value and by[name].src == src and by[name].conf == "assumed" and by[name].unit == unit, name
         assert by[name].is_literal
