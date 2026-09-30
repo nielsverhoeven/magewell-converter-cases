@@ -10,3 +10,4 @@ shapely>=2.0      # layer polygons for scripts/printability.py (floating-island 
 rtree>=1.2        # spatial index trimesh needs for mesh.section_multiplane() (printability gate)
 manifold3d>=3.0   # scripts/slicer_probe.py (slice_plane(cap=True) booleans) + printability.selftest_see_through() (build.py smoke)
 mapbox-earcut>=1.0  # scripts/slicer_probe.py: trimesh cap triangulation
+pytest>=8.0      # cad/tests (issue #76)

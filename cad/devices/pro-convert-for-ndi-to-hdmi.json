@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-for-ndi-to-hdmi",
+  "family": "compact",
+  "size": [100.9, 60.2, 23.3],
+  "source": {
+    "file": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md",
+    "size": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:17"
+  },
+  "provenance": {
+    "scad": "lib/mcc/devices/pro-convert-for-ndi-to-hdmi.scad",
+    "header": ["Device data: Pro Convert for NDI to HDMI", "DATA ONLY — no include/use, no modules, no BOSL2 calls (architecture.md:98-99).", "Source: knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md (fetched 2026-09-07)", "Written: 2026-09-07", "NDI decoder on the compact/TX chassis. Port positions estimated from the documented order;", "confidence \"photo\" for connectors/rotary/buttons, \"assumed\" for the tripod hole (position not", "independently confirmed for this model beyond the shared decoder-family pattern)."]
+  },
+  "ports": [
+    {
+      "id": "hdmi_out",
+      "face": [1, 0, 0],
+      "pos": [-16, 0],
+      "kind": "hdmi_a",
+      "dir": "out",
+      "panel": "NAHDMI-W-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:21",
+      "note": ["Face A (knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:21): HDMI OUT -> decoding LED -> USB HOST"]
+    },
+    {
+      "id": "usb_host",
+      "face": [1, 0, 0],
+      "pos": [16, 0],
+      "kind": "usb_a",
+      "dir": "bidir",
+      "panel": "DBA-BL-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:21",
+      "note": ["panel DBA-BL-B, not NAUSB-W-B (user decision 2026-09-09, D-14): host port never used by", "the build; slot stays built and reusable behind a blank (architecture.md §5 rev 8)."]
+    },
+    {
+      "id": "usb_b",
+      "face": [-1, 0, 0],
+      "pos": [-16, 0],
+      "kind": "usb_b",
+      "dir": "power",
+      "panel": "NAUSB-W-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:22",
+      "note": ["Face B (knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:22): USB-B +5V -> Power LED -> RJ45"]
+    },
+    {
+      "id": "rj45",
+      "face": [-1, 0, 0],
+      "pos": [15, 0],
+      "kind": "rj45",
+      "dir": "bidir",
+      "panel": "NE8FDP-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-for-ndi-to-hdmi.md:22"
+    },
+    {
+      "id": "side_bolt",
+      "face": [0, -1, 0],
+      "pos": [0, 0],
+      "kind": "tripod_1_4_20",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "assumed",
+      "source": null,
+      "note": ["1/4\"-20 thread is on a long side face (user-verified 2026-09-08); u/v position", "unmeasured — measure X from the nearest short end, Z from the bottom, and which side", "seen from the USB/RJ45 end; the case yaw puts this face at -Y (layout-patch-wall.md)."]
+    },
+    {
+      "id": "rotary",
+      "face": [0, 0, 1],
+      "pos": [20, 0],
+      "kind": "rotary16",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "photo",
+      "source": null,
+      "note": ["Top, near Face B: 16-position rotary switch, MENU button, SELECT button"]
+    },
+    {
+      "id": "menu",
+      "face": [0, 0, 1],
+      "pos": [30, 8],
+      "kind": "button",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "photo",
+      "source": null
+    },
+    {
+      "id": "select",
+      "face": [0, 0, 1],
+      "pos": [30, -8],
+      "kind": "button",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "photo",
+      "source": null
+    }
+  ]
+}

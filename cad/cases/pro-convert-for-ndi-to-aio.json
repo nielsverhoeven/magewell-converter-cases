@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-for-ndi-to-aio",
+  "device": "pro-convert-for-ndi-to-aio",
+  "options": {
+    "fan": false,
+    "splitter": false,
+    "lid_vents": true
+  },
+  "configurations": {},
+  "test_configurations": {}
+}

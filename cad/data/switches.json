@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "name": "switches",
+  "scad_name": "MCC_SWITCHES",
+  "scad_source": "lib/mcc/constants.scad:839-853",
+  "provenance": ["[name, [[\"hole_d\",d],[\"nut_d\",d],[\"keepout_d\",d],[\"pad_d\",d],[\"body_d\",d],[\"depth\",d],", "[\"actuator_proud_h\",h],[\"panel_t_min\",t],[\"panel_t_max\",t],[\"clr\",c],[\"confidence\",c]]]", "MTS-101 (SPST ON-OFF mini toggle -- the SPST sibling of the ticket's own researched MTS-102,", "same bushing/cutout/depth mechanical family; knowledge/components/switches.md).", "hole_d/depth/actuator_proud_h/panel_t_min/panel_t_max: assumed -- generic 1/4-40NS mini-toggle", "bushing convention (Finglai/LCSC MTS-102 datasheet family), no legible numeric callout reached", "this pass. BLOCKING measurement M17 (architecture.md §11 R29/§12) buys one and measures all", "five before the first full-size print.", "nut_d: assumed 8.0 mm across-flats (generic 1/4-40NS hex nut), circumscribed via the standard", "hex AF-to-circumscribed factor 1/cos(30 deg) -- architect verdict B5 (\"a 1/4-40 bushing nut is", "~8 mm across flats -> ~9.24 mm circumscribed\").", "keepout_d: nut_d + 2*MCC_CLR_SLIDE -- the single generic panel-mount keep-out figure", "mcc_switch_keepout() (switch.scad) exposes to callers outside the two-band solve below (e.g.", "vents.scad, B8) -- NOT the same figure as pad_d/body_d, which are two DIFFERENT depths' worth of", "footprint, both wider than keepout_d because they also carry the T1-44 lip margin.", "pad_d/body_d: architect-derived (layout-patch-wall.md §5/§18, D-18/T1-43) -- a recessed toggle", "needs a nut pocket of ~10 mm (nut_d rounded up), so body_d = 10.0 (the plain nut-pocket", "footprint, used against the deeper corner-boss obstruction) and pad_d = body_d +", "2*MCC_APERTURE_LIP_WEB_MIN = 10 + 4 = 14.0 (the wider near-wall footprint, carrying this repo's", "own 2.0 mm minimum-lip-material precedent, used against the fan reservation and the shallower", "gusset-strip obstruction).", "clr: 1.5 mm, NOT the plan's original 3.0 mm (which was \"chosen, mirroring MCC_GAP_DEV/", "MCC_SIDE_BOLT_PAD_T\", but made every SKU's T1-43 band infeasible under the corrected two-band", "formula). 1.5 is chosen instead so the T1-43 band solve reproduces the architect's own worked", "verdict figures exactly: plus family switch_y in [-62.535,-59.325] (pro-convert-hdmi-plus/", "pro-convert-for-ndi-to-hdmi-4k, a 3.21 mm window) and compact infeasible by 0.04 mm", "(layout-patch-wall.md §18.2) -- confirmed by hand against the raw band widths there", "(pad 17.60/20.85, body 14.96/18.21 mm, compact/plus)."],
+  "rows": {
+    "MTS-101": {
+      "hole_d": 6.4,
+      "nut_d": {
+        "expr": "8.0 mm / cos(30 deg)"
+      },
+      "keepout_d": {
+        "expr": "8.0 mm / cos(30 deg) + 2 * MCC_CLR_SLIDE"
+      },
+      "pad_d": 14,
+      "body_d": 10,
+      "depth": 13,
+      "actuator_proud_h": 10,
+      "panel_t_min": 0.8,
+      "panel_t_max": 3.2,
+      "clr": 1.5,
+      "confidence": "assumed"
+    }
+  }
+}

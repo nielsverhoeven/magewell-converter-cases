@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "slug": "pro-convert-sdi-tx",
+  "family": "compact",
+  "size": [100.9, 60.2, 23.3],
+  "source": {
+    "file": "knowledge/magewell/models/pro-convert-sdi-tx.md",
+    "size": "knowledge/magewell/models/pro-convert-sdi-tx.md:16"
+  },
+  "provenance": {
+    "scad": "lib/mcc/devices/pro-convert-sdi-tx.scad",
+    "header": ["Device data: Pro Convert SDI TX", "DATA ONLY — no include/use, no modules, no BOSL2 calls (architecture.md:98-99).", "Source: knowledge/magewell/models/pro-convert-sdi-tx.md (fetched 2026-09-07)", "Written: 2026-09-07", "Same chassis/port topology as pro-convert-hdmi-tx.scad, HDMI IN replaced by SDI IN BNC. Port", "positions estimated from the documented left-to-right order, confidence \"photo\" for the", "physical connectors and rotary switch, \"assumed\" for the tripod hole (position \"estimated from", "image\", knowledge/magewell/models/pro-convert-sdi-tx.md:25)."]
+  },
+  "ports": [
+    {
+      "id": "sdi_in",
+      "face": [1, 0, 0],
+      "pos": [-18, 0],
+      "kind": "bnc",
+      "dir": "in",
+      "panel": "NBB75DFGB",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-sdi-tx.md:21",
+      "note": ["Input end (knowledge/magewell/models/pro-convert-sdi-tx.md:21): SDI IN BNC -> Input LED -> Mini-DIN-8 PTZ+TALLY"]
+    },
+    {
+      "id": "ptz_tally",
+      "face": [1, 0, 0],
+      "pos": [14, 0],
+      "kind": "minidin8",
+      "dir": "bidir",
+      "panel": "none",
+      "confidence": "photo",
+      "source": null,
+      "note": ["internal — not brought out (user decision 2026-09-07)"]
+    },
+    {
+      "id": "usb_b",
+      "face": [-1, 0, 0],
+      "pos": [-16, 0],
+      "kind": "usb_b",
+      "dir": "power",
+      "panel": "NAUSB-W-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-sdi-tx.md:22",
+      "note": ["Power/data end (knowledge/magewell/models/pro-convert-sdi-tx.md:22): USB-B +5V -> Power LED -> RJ45"]
+    },
+    {
+      "id": "rj45",
+      "face": [-1, 0, 0],
+      "pos": [15, 0],
+      "kind": "rj45",
+      "dir": "bidir",
+      "panel": "NE8FDP-B",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-sdi-tx.md:22"
+    },
+    {
+      "id": "rotary",
+      "face": [0, -1, 0],
+      "pos": [30, 0],
+      "kind": "rotary16",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "photo",
+      "source": "knowledge/magewell/models/pro-convert-sdi-tx.md:23",
+      "note": ["Long-edge side face (knowledge/magewell/models/pro-convert-sdi-tx.md:23): 16-position rotary switch"]
+    },
+    {
+      "id": "side_bolt",
+      "face": [0, -1, 0],
+      "pos": [0, 0],
+      "kind": "tripod_1_4_20",
+      "dir": "none",
+      "panel": "none",
+      "confidence": "assumed",
+      "source": null,
+      "note": ["1/4\"-20 thread is on a long side face (user-verified 2026-09-08); u/v position", "unmeasured — measure X from the nearest short end, Z from the bottom, and which side", "seen from the USB/RJ45 end; the case yaw puts this face at -Y (layout-patch-wall.md)."]
+    }
+  ]
+}
