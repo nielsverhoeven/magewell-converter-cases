@@ -190,14 +190,17 @@ def test_the_plan_names_the_protected_components_and_the_build_inputs():
     assert document["required_components"] == ["Reserve_FanBay", "Reserve_SplitterBay"]
     assert document["protected_prefixes"] == ["Reserve_"] and document["never_export"] == ["Reserve_", "Ghost_"]
     assert "cad/fusion/gen/case/build_set.json" in document["inputs"] and "cad/fusion/gen/case/**/*.py" in document["inputs"]
-    assert document["aba"] is True and document["shared_exceptions"] == []
+    assert document["aba"] is True
+    # C5: the connector diameters differ per slot, and the shared builders have them as definition arguments, not placement
+    assert [(e["builder"], e["argument"]) for e in document["shared_exceptions"]] == [
+        ("panel.wall_cut", "seat_d"), ("panel.wall_cut", "win_d"), ("neutrik.d_wall_cut", "seat_d"), ("neutrik.d_wall_cut", "win_d")]
     # No inventory key until C9 (verdict B5): test_fresh asks the runtime in this process, whose inputs gate sees every cad module
     # a pytest session has loaded, so a plan that names an inventory cannot pass there.  C9 adds the key and the file together and removes this line.
     assert "inventory" not in document and not (REPO / "cad" / "fusion" / "inventory" / "mcc-case.json").exists()
 
 
 # The flags whose set has members since a case milestone landed; each milestone C2 to C8 adds its flags here.
-FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid"}   # C2
+FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid", "Patch_Slot1", "Patch_Slot2", "Patch_Slot3", "Patch_Slot4"}   # C2, C5
 
 
 def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
