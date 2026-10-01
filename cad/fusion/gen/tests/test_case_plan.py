@@ -191,49 +191,26 @@ def test_the_plan_names_the_protected_components_and_the_build_inputs():
     assert document["protected_prefixes"] == ["Reserve_"] and document["never_export"] == ["Reserve_", "Ghost_"]
     assert "cad/fusion/gen/case/build_set.json" in document["inputs"] and "cad/fusion/gen/case/**/*.py" in document["inputs"]
     assert document["aba"] is True and document["shared_exceptions"] == []
-    # No inventory key until C9 (verdict B5): test_fresh asks the runtime in this process, whose inputs gate sees every cad module
-    # a pytest session has loaded, so a plan that names an inventory cannot pass there.  C9 adds the key and the file together and removes this line.
-    assert "inventory" not in document and not (REPO / "cad" / "fusion" / "inventory" / "mcc-case.json").exists()
+    # The inventory is the one the runtime writes (verdict A7, B5): C9 committed it and added the key.
+    assert document["inventory"] == "cad/fusion/inventory/mcc-case.json"
+    assert (REPO / document["inventory"]).is_file()
 
 
-# The flags whose set has members since a case milestone landed; each milestone C2 to C8 adds its flags here.
-FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid", "Floor_RailSill", "Rail_Female"}   # C2, C4
-FLAGS_WITH_MEMBERS |= {f"Cradle_FarRib{i}" for i in frame.FAR_RIBS}   # C3
-FLAGS_WITH_MEMBERS |= {f"Patch_Slot{i}" for i in frame.SLOTS}   # C5
-FLAGS_WITH_MEMBERS |= {f"Vent_{run}" for runs in (frame.VENT_FAR_LOW, frame.VENT_FAR_HIGH, frame.VENT_EXH, frame.VENT_NEGX, frame.VENT_LID)
-                          for run in runs}   # C6
-FLAGS_WITH_MEMBERS |= {"Fan_Aperture", "Switch_Toggle"}   # C7
-
-
-def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
-    """A flag whose set has no member yet is CK4; every milestone C2 to C8 removes its flags from the findings."""
+def test_no_flag_lacks_members_and_the_kit_checks_find_nothing():
+    """Every milestone C2 to C8 has filled its flags: the kit's checks, CK4 (a flag without a member) included, are empty."""
     document = s1_support_plan()
     with s1_support.at_repo_root():
         record, rows, sets = kitplan.build(document)
     findings = checks.run(record, rows, sets, document.get("shared_exceptions", []), owners=document["owners"],
                           protected_prefixes=document["protected_prefixes"])
-    flags = set(_configurations(BUILD_SET)["_build"]["flags"])
-    assert [str(f) for f in findings if f.id != "CK4"] == []
-    assert {f.name for f in findings} <= flags - FLAGS_WITH_MEMBERS
+    assert [str(f) for f in findings] == []
+    assert not [f for f in findings if f.id == "CK4"]
 
 
-def flags_without_members() -> set:
-    """The flags of the build configuration that no milestone has filled yet."""
-    flags = set(_configurations(BUILD_SET)["_build"]["flags"])
-    return flags - FLAGS_WITH_MEMBERS
-
-
-def test_the_offline_run_reaches_the_gates_and_fails_only_on_flags_without_members():
+def test_the_offline_run_passes_the_gates_and_the_committed_inventory_is_fresh():
     # a fresh process: the runtime's inputs gate would see the modules this test process has loaded
     done = subprocess.run([sys.executable, str(REPO / "scripts" / "fusion_run.py"), "plan", PLAN], cwd=REPO, capture_output=True,
                           text=True)
     result = json.loads(done.stdout)
-    if result.get("ok"):   # every flag has a member (C5 filled the last one): the offline run passes the gates and records the build
-        assert result["result"] == "recorded" and all(not c["violations"] and c["gates_passed"] for c in result["configurations"])
-        assert flags_without_members() == set()
-        return
-    assert result["stage"].startswith("gates"), (result["stage"], result["violations"])
-    assert result["violations"], "the flags of C3 to C8 are members-less until those land; if this is empty a flag was lost"
-    assert not [v for v in result["violations"] if any(f"flag {flag} " in v for flag in FLAGS_WITH_MEMBERS)], result["violations"]
-    assert all(re.fullmatch(r"flags: flag [A-Za-z0-9]+_[A-Za-z0-9]+ has no member in the document", v) for v in result["violations"]), \
-        result["violations"]
+    assert result["ok"] is True and result["result"] == "recorded", (result.get("stage"), result.get("violations"))
+    assert all(not c["violations"] and c["gates_passed"] for c in result["configurations"])

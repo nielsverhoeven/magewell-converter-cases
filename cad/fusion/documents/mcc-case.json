@@ -43,6 +43,7 @@
  "required_components": ["Reserve_FanBay", "Reserve_SplitterBay"],
  "protected_prefixes": ["Reserve_"],
  "never_export": ["Reserve_", "Ghost_"],
+ "inventory": "cad/fusion/inventory/mcc-case.json",
  "inputs": [
   "cad/__init__.py",
   "cad/fusion/__init__.py",
