@@ -1,0 +1,11 @@
+{
+    "autodeskProduct": "Fusion",
+    "type": "script",
+    "author": "magewell-converter-cases",
+    "description": {
+        "": "Runs the queued runtime jobs of this repository checkout once, after one confirmation."
+    },
+    "version": "1.0.0",
+    "supportedOS": "windows",
+    "editEnabled": false
+}

@@ -8,7 +8,7 @@ negative tests run it on a small temporary tree.
 3. ``gen/core`` imports no shared or product module; shared imports no product; a product imports no other product.
 4. ``shared.neutrik`` only from ``shared/panel.py``; in ``gen/case`` only ``floor.py`` imports ``shared.rail`` and only
    ``patch.py`` imports ``shared.panel``.
-5. Nothing under ``cad/`` imports ``scripts`` or changes ``sys.path``.
+5. Nothing under ``cad/`` imports ``scripts`` or changes ``sys.path``; the one exception is ``fusion/runtime/hostlib.py``.
 6. ``cad.fusion.replay`` is imported only by files under a ``tests`` directory (and by the replay package itself).
 
 A product package is a directory under ``cad/fusion/gen/`` other than ``core``, ``shared`` and ``tests``.
@@ -29,6 +29,10 @@ ADSK_FILES = ("fusion/gen/core/fusion_backend.py", "fusion/gen/core/probes.py", 
 ADSK_TREES = ("fusion/runtime/",)
 NOT_PRODUCT = ("core", "shared", "tests")
 SYS_PATH_CALLS = ("append", "insert", "extend")
+# The one named exception to rule 5 (runtime verdict A1): the job executor puts the job's checkout first on
+# ``sys.path`` for the length of one job and restores the list, which is what makes a worktree job run the worktree's
+# code. The runtime's own test_runtime_layering proves that no other runtime file and no test changes ``sys.path``.
+SYS_PATH_EXEMPT = ("fusion/runtime/hostlib.py",)
 
 
 class Violation(NamedTuple):
@@ -152,7 +156,8 @@ def scan(root: Path) -> list[Violation]:
             if _within(m, "scripts"):
                 report(5, f"imports {m}; nothing under cad/ imports scripts/")
         for line in changes_sys_path(tree):
-            report(5, f"line {line} changes sys.path")
+            if rel not in SYS_PATH_EXEMPT:
+                report(5, f"line {line} changes sys.path")
         # 6
         if any(_within(m, "cad.fusion.replay") for m in mods) and "tests" not in parts[:-1] and not rel.startswith("fusion/replay/"):
             report(6, "imports cad.fusion.replay; only files under a tests directory do")
@@ -236,6 +241,13 @@ class NegativeTests(unittest.TestCase):
                  "tools/e.py": "import sys\nsys.path.append('x')\nsys.path[0] = 'y'\n", "tools/f.py": "import scripts.parity\n",
                  "tools/ok.py": "import sys\nprint(sys.path)\nprint(sys.path[0])\n"}
         self.assertEqual(self.reported(files, 5), ["tools/a.py", "tools/b.py", "tools/c.py", "tools/d.py", "tools/e.py", "tools/f.py"])
+
+    def test_rule_5_the_job_executor_is_the_one_file_that_may_change_sys_path(self):
+        change = "import sys\nsys.path.insert(0, '.')\n"
+        files = {"fusion/runtime/hostlib.py": change, "fusion/runtime/runner.py": change, "fusion/runtime/tests/t.py": change,
+                 "fusion/runtime/host/MccRun/hostlib.py": change}
+        self.assertEqual(self.reported(files, 5), ["fusion/runtime/host/MccRun/hostlib.py", "fusion/runtime/runner.py",
+                                                   "fusion/runtime/tests/t.py"])
 
     def test_rule_6_the_replay_is_imported_by_tests_only(self):
         files = {"fusion/gen/case/a.py": "from cad.fusion.replay import ocp_replay\n", "tools/b.py": "from cad.fusion import replay\n",
