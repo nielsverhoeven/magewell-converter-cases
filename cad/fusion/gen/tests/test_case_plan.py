@@ -217,11 +217,21 @@ def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
     assert {f.name for f in findings} <= flags - FLAGS_WITH_MEMBERS
 
 
+def flags_without_members() -> set:
+    """The flags of the build configuration that no milestone has filled yet."""
+    flags = set(_configurations(BUILD_SET)["_build"]["flags"])
+    return flags - FLAGS_WITH_MEMBERS
+
+
 def test_the_offline_run_reaches_the_gates_and_fails_only_on_flags_without_members():
     # a fresh process: the runtime's inputs gate would see the modules this test process has loaded
     done = subprocess.run([sys.executable, str(REPO / "scripts" / "fusion_run.py"), "plan", PLAN], cwd=REPO, capture_output=True,
                           text=True)
     result = json.loads(done.stdout)
+    if result.get("ok"):   # every flag has a member (C5 filled the last one): the offline run passes the gates and records the build
+        assert result["result"] == "recorded" and all(not c["violations"] and c["gates_passed"] for c in result["configurations"])
+        assert flags_without_members() == set()
+        return
     assert result["stage"].startswith("gates"), (result["stage"], result["violations"])
     assert result["violations"], "the flags of C3 to C8 are members-less until those land; if this is empty a flag was lost"
     assert not [v for v in result["violations"] if any(f"flag {flag} " in v for flag in FLAGS_WITH_MEMBERS)], result["violations"]
