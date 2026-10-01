@@ -87,15 +87,16 @@ def test_the_call_table_has_no_row_12_and_no_stage_9():
     assert [row for row, *_ in build.CALLS] == sorted(row for row, *_ in build.CALLS)
 
 
-def test_the_full_build_of_this_milestone_is_the_shell_of_stage_2():
-    """With no stage the document holds the five components and the four shell features (the features of the other owners are theirs)."""
+def test_the_full_build_holds_the_shell_of_stage_2():
+    """With no stage the document holds the five components and exactly the four shell features (the other owners add theirs)."""
     _, record, _, _ = _build(None)
     assert [(c["name"], c["role"]) for c in record["components"]] == [
         ("Base", "part"), ("Lid", "part"), ("Reserve_FanBay", "reserve"), ("Reserve_SplitterBay", "reserve"),
         ("Ghost_Device", "ghost")]
-    assert [n for n in _features(record, "Base") if n.startswith("Shell_")] == FEATURES[("Base", 2)]
-    assert [n for n in _features(record, "Lid") if n.startswith("Shell_")] == FEATURES[("Lid", 2)]
-    assert [c["builder_id"] for c in record["shared_calls"]] == ["tg.tongue", "tg.groove"]
+    shell_only = lambda component: [n for n in _features(record, component) if n.startswith("Shell_")]  # noqa: E731
+    assert shell_only("Base") == FEATURES[("Base", 2)]
+    assert shell_only("Lid") == FEATURES[("Lid", 2)]
+    assert [c["builder_id"] for c in record["shared_calls"] if c["builder_id"].startswith("tg.")] == ["tg.tongue", "tg.groove"]
 
 
 def test_the_tongue_and_the_groove_take_the_same_rectangle():

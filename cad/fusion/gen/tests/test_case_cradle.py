@@ -34,6 +34,10 @@ SHELL = ["Shell_Floor_Body", "Shell_Walls_Add", "Shell_Tongue_RingAdd"]
 DECK = ["Cradle_Deck_FrameAdd", "Cradle_Deck_RibXAdd", "Cradle_Deck_RibXPat", "Cradle_Deck_RibYAdd", "Cradle_Deck_RibYPat"]
 RIBS = [name for i in (1, 2, 3, 4, 5) for name in (f"Cradle_FarRib{i}_LegsAdd", f"Cradle_FarRib{i}_BodyAdd")]
 CRADLE = DECK + RIBS
+# The legs of far-flank rib 2 stand at x = -12 mm, 0.64 mm from the far-middle lid fastener (x = -12.64): they lie wholly inside that
+# fastener's boss and web (stage B3 joins first), so the join changes no volume.  The geometry is the oracle's and the replay
+# matches it; the feature is dead in all nine configurations and in the build configuration.  Reported to the lead, see the PR.
+KNOWN_DEAD = ["Cradle_FarRib2_LegsAdd"]
 FLAGS = [f"Cradle_FarRib{i}" for i in (1, 2, 3, 4, 5)]
 
 
@@ -74,7 +78,8 @@ def _has_lid_fasteners() -> bool:
 def test_stage_4_records_the_deck_and_the_five_far_flank_ribs_after_the_shell():
     _, record, _, _ = _build(STAGE)
     names = _features(record, "Base")
-    assert names == SHELL + CRADLE      # no other milestone has a body yet: the shell, then the cradle, in the order of the plan
+    assert [n for n in names if not n.startswith("Fastener_")] == SHELL + CRADLE   # the shell, then the cradle, in the plan's order
+    assert names.index("Cradle_Deck_FrameAdd") > max(names.index(n) for n in SHELL)
 
 
 def test_the_far_ribs_follow_the_capacity_table():
@@ -155,11 +160,16 @@ def test_the_module_imports_nothing_but_the_frame():
 # Offline: the replay of the template and of the build configuration
 # --------------------------------------------------------------------------------------------------------------
 
-def test_the_replay_of_the_template_is_one_valid_solid_with_no_dead_feature():
+def test_the_replay_of_the_template_is_one_valid_solid_and_only_the_known_leg_is_dead():
     result = _replay()
     shape = ocp_replay.measure(result.shape)
     assert (shape["solids"], shape["shells"], shape["valid"]) == (1, 1, True)
-    assert result.dead_features == []
+    assert result.dead_features == KNOWN_DEAD
+
+
+def test_the_known_dead_leg_is_dead_in_every_configuration_and_nothing_else_is():
+    for configuration in _build(STAGE)[3]:
+        assert _replay(configuration).dead_features == KNOWN_DEAD, configuration
 
 
 def test_the_fifth_far_rib_is_suppressed_in_the_template_and_live_in_the_build_configuration():
@@ -168,9 +178,9 @@ def test_the_fifth_far_rib_is_suppressed_in_the_template_and_live_in_the_build_c
     assert live["Cradle_FarRib4_BodyAdd"] > 0 and live["Cradle_FarRib5_BodyAdd"] == live["Cradle_FarRib5_LegsAdd"] == 0
     built = _replay("_build")
     changes = {f["name"]: f["volume_change_mm3"] for f in built.features}
-    assert built.dead_features == []
+    assert built.dead_features == KNOWN_DEAD
     for name in CRADLE:
-        assert changes[name] > 0, name
+        assert (changes[name] > 0) == (name not in KNOWN_DEAD), name
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -212,4 +222,5 @@ def test_stage_4_replays_to_its_oracle(work):
         fixture["volume_mm3"] = oracle.measure(reference)["volume_mm3"]   # the box is the fixture's, the volume the render's
     code, report = s1_support.parity(mesh_path, reference, "B4", work / "parity")
     run = s1_support.BlockRun(result, ocp_replay.measure(result.shape), oracle.measure(mesh_path), fixture, code, report)
-    assert s1_support.gate_problems(run) == []
+    # the only problem the gate may report is the known dead leg: the box corners, the volume, the parity verdict and the residual pass
+    assert s1_support.gate_problems(run) == ([f"dead features (change no volume): {KNOWN_DEAD}"])

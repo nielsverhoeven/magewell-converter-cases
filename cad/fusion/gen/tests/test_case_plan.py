@@ -196,8 +196,13 @@ def test_the_plan_names_the_protected_components_and_the_build_inputs():
     assert "inventory" not in document and not (REPO / "cad" / "fusion" / "inventory" / "mcc-case.json").exists()
 
 
+# The flags whose set has members since a case milestone landed; each milestone C2 to C8 adds its flags here.
+FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid"}   # C2
+FLAGS_WITH_MEMBERS |= {f"Cradle_FarRib{i}" for i in frame.FAR_RIBS}   # C3
+
+
 def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
-    """C1 builds the shell only.  A flag whose set has no member yet is CK4; every later milestone removes some of them."""
+    """A flag whose set has no member yet is CK4; every milestone C2 to C8 removes its flags from the findings."""
     document = s1_support_plan()
     with s1_support.at_repo_root():
         record, rows, sets = kitplan.build(document)
@@ -205,7 +210,7 @@ def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
                           protected_prefixes=document["protected_prefixes"])
     flags = set(_configurations(BUILD_SET)["_build"]["flags"])
     assert [str(f) for f in findings if f.id != "CK4"] == []
-    assert {f.name for f in findings} <= flags
+    assert {f.name for f in findings} <= flags - FLAGS_WITH_MEMBERS
 
 
 def test_the_offline_run_reaches_the_gates_and_fails_only_on_flags_without_members():
@@ -214,6 +219,7 @@ def test_the_offline_run_reaches_the_gates_and_fails_only_on_flags_without_membe
                           text=True)
     result = json.loads(done.stdout)
     assert result["stage"].startswith("gates"), (result["stage"], result["violations"])
-    assert result["violations"], "all 24 flags are members-less until C2 to C8 land; if this is empty a flag was lost"
+    assert result["violations"], "the flags of C3 to C8 are members-less until those land; if this is empty a flag was lost"
+    assert not [v for v in result["violations"] if any(f"flag {flag} " in v for flag in FLAGS_WITH_MEMBERS)], result["violations"]
     assert all(re.fullmatch(r"flags: flag [A-Za-z0-9]+_[A-Za-z0-9]+ has no member in the document", v) for v in result["violations"]), \
         result["violations"]

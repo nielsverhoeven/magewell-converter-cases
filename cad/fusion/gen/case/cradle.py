@@ -7,6 +7,11 @@ device does not use is switched off by its flag ``Cradle_FarRib<i>`` (the set of
 
 Everything here is a join.  The deck frame, the lattice ribs and the legs of a far-flank rib stand on the floor top (``MCC_FLOOR_T``)
 and the deck top is ``V_DEV_Z_LO``; the body of a rib stands on the legs, so every join shares a face with what it joins.
+
+Known dead feature: ``Cradle_FarRib2_LegsAdd``.  Rib 2 stands at x = -12 mm and the far-middle lid fastener at -12.64 mm in the template
+(the replay finds the same in all nine configurations), so its legs lie wholly inside that fastener's boss and web (stage B3 joins first) and the join changes no volume.  The
+geometry is the oracle's; the feature is kept as the plan has it (a Z-extrude per feature keeps the sketches independent of the sign
+of the rib's x, which the kit checks).
 """
 from __future__ import annotations
 
