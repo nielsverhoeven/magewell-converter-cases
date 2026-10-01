@@ -60,10 +60,5 @@
  ],
  "export": {"formats": ["step", "stl"], "stl_refinement": "high", "archive": false, "captures": ["iso", "iso_back", "bottom"]},
  "aba": true,
- "shared_exceptions": [
-  {"builder": "panel.wall_cut", "argument": "seat_d", "reason": "each slot has its own connector, so its own seat diameter (V_SLOT<i>_SEAT_D)"},
-  {"builder": "panel.wall_cut", "argument": "win_d", "reason": "each slot has its own connector, so its own window diameter (V_SLOT<i>_WIN_D)"},
-  {"builder": "neutrik.d_wall_cut", "argument": "seat_d", "reason": "the inner call of panel.wall_cut, same per-slot value"},
-  {"builder": "neutrik.d_wall_cut", "argument": "win_d", "reason": "the inner call of panel.wall_cut, same per-slot value"}
- ]
+ "shared_exceptions": []
 }

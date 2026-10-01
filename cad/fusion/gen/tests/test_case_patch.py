@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from cad import params
+from cad import layout, params
 from cad.fusion.gen.case import build, frame, patch, sidebolt
 from cad.fusion.gen.core import checks, expr
 from cad.fusion.gen.core import plan as kitplan
@@ -114,6 +114,7 @@ def test_the_shared_calls_take_the_plan_arguments():
                                 "shank_d": "MCC_TRIPOD_CLR_D", "pocket_d": "MCC_SIDE_BOLT_POCKET_D",
                                 "pocket_y0": "-V_CASE_W / 2 + MCC_SIDE_BOLT_HEAD_REC_H + MCC_SIDE_BOLT_WEB_T",
                                 "pocket_h": "MCC_SIDE_BOLT_POCKET_H"}
+    assert {tuple(c["placement"]) for c in calls[2:]} == {("axis", "a", "b", "face", "wall_side", "mirror", "turn", "seat_d", "win_d")}
     for i, call in zip(frame.SLOTS, calls[2:]):
         assert call["arguments"] == {
             "family": "D", "axis": "Y", "a": f"V_SLOT{i}_X", "b": frame.ZC, "face": frame.YSEAT,
@@ -183,6 +184,25 @@ def test_the_recess_profile_follows_the_plan():
         (-env.value("V_PLATE_L") / 2, env.value("V_PLATE_L")))
     # the roof corner leaves through the outer face, the wall top is not exceeded by the straight part (D36 assert of the oracle)
     assert zc + h / 2 + bezel <= env.value("V_CASE_Z_TOP") + 1e-9
+
+
+def test_the_slot_diameters_of_every_parameter_set_are_the_class_values_of_the_slots_connector():
+    """CK10 compares no per-slot diameter (they are placement of the wall cut), so the solver output is checked here: slot i of
+    every set carries the registry class value of its connector; an unused slot repeats the last live one (parking rule)."""
+    checked = 0
+    for path in sorted(params.VARIANTS_DIR.glob("*.json")):
+        for config in params.parameter_set_configurations(path):
+            pset = params.parameter_set(path, config)
+            parts = [slot["part"] for slot in pset["slots"]]
+            assert 1 <= len(parts) <= frame.CAPACITY["slots"], f"{path.stem}/{config}"
+            for i in frame.SLOTS:
+                part = parts[min(i, len(parts)) - 1]
+                where = f"{path.stem}/{config} slot {i} ({part})"
+                assert pset["values"][f"V_SLOT{i}_SEAT_D"] == pytest.approx(layout.cutout_d(part), abs=1e-9), where
+                assert pset["values"][f"V_SLOT{i}_WIN_D"] == pytest.approx(layout.aperture_window(part), abs=1e-9), where
+                assert pset["suppress"][f"Patch_Slot{i}"] == (i > len(parts)), where
+                checked += 1
+    assert checked >= 9 * frame.CAPACITY["slots"]
 
 
 def test_the_slot_positions_stay_inside_the_recess_and_the_wall():

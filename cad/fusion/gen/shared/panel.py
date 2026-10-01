@@ -15,6 +15,7 @@ from . import neutrik, shared
 
 FAMILIES = ("D",)
 PLACEMENT = neutrik.PLACEMENT
+WALL_PLACEMENT = neutrik.WALL_PLACEMENT
 
 
 def _family(family) -> None:
@@ -23,7 +24,7 @@ def _family(family) -> None:
                          "(Neutrik D parts and the DBA-BL-B blank; Mini-DIN-8 stays internal)")
 
 
-@shared("panel.wall_cut", placement=PLACEMENT)
+@shared("panel.wall_cut", placement=WALL_PLACEMENT)
 def wall_cut(comp, set_name, *, family, axis, a, b, face, wall_side, seat_t, wall_t, seat_d, win_d, mirror, turn):
     """A connector mounted straight into a wall ``wall_t`` thick: seat hole, body window and the two fixing bores
     (``Patch_<set>_SeatCut``, ``_WindowCut``, ``_BoreCut``).  The case's patch wall passes ``wall_side="lower"``,

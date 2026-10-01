@@ -34,6 +34,8 @@ from . import shared
 
 WALL_SIDES = ("lower", "upper")
 PLACEMENT = ("axis", "a", "b", "face", "wall_side", "mirror", "turn")
+# The wall cut also places its own connector class: the seat and window diameters are per-slot call data (the plate cut has neither).
+WALL_PLACEMENT = PLACEMENT + ("seat_d", "win_d")
 
 # (mirror, turn) -> the two screws as ((sign of u offset, pitch of u offset), (sign of v offset, pitch of v offset)).
 # "X" is MCC_D_SCREW_PITCH_X / 2, "Y" is MCC_D_SCREW_PITCH_Y / 2.
@@ -78,7 +80,7 @@ def _cut(comp, set_name, what, axis, loops, face, near, far, wall_side):
     return comp.extrude(f"Patch_{set_name}_{what}Cut", axis=axis, loops=loops, start=start, end=end, op="cut")
 
 
-@shared("neutrik.d_wall_cut", placement=PLACEMENT)
+@shared("neutrik.d_wall_cut", placement=WALL_PLACEMENT)
 def d_wall_cut(comp, set_name, *, axis, a, b, face, wall_side, seat_t, wall_t, seat_d, win_d, mirror, turn):
     """What a D connector needs from a wall it is mounted in directly (cuts along ``axis``): the seat hole ``seat_d`` through
     the first ``seat_t`` of the wall from the seat face, the body window ``win_d`` through the rest of the wall (``wall_t``

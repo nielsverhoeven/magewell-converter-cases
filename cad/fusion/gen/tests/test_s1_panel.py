@@ -47,7 +47,8 @@ def test_the_block_is_one_panel_call_with_one_neutrik_call_inside():
     dispatcher, provider = panel_calls()
     assert (dispatcher["builder_id"], provider["builder_id"]) == ("panel.wall_cut", "neutrik.d_wall_cut")
     assert dispatcher["parent"] is None and provider["parent"] == "panel.wall_cut"  # CK11
-    assert dispatcher["placement"] == provider["placement"] == ["axis", "a", "b", "face", "wall_side", "mirror", "turn"]
+    # the wall cut also places its connector class (seat and window diameter, per-slot call data); the plate cut does not
+    assert dispatcher["placement"] == provider["placement"] == ["axis", "a", "b", "face", "wall_side", "mirror", "turn", "seat_d", "win_d"]
     assert user_names(dispatcher) == []  # the dispatcher draws nothing itself
     assert user_names(provider) == ["Patch_D_SeatCut", "Patch_D_WindowCut", "Patch_D_BoreCut"]
     for call in (dispatcher, provider):  # the instance name is positional and never an argument (CK10 would compare it)
