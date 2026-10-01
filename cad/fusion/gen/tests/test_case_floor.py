@@ -83,7 +83,9 @@ def test_stage_5_records_the_planned_features_in_the_order_of_the_phases():
     assert _features(record) == BASE_FEATURES
     ops = {s["name"]: s["op"] for s in record["specs"] if s["spec"] in ("ExtrudeSpec", "LoftSpec") and s["component"] == "Base"}
     assert [ops[n] for n in FLOOR_FEATURES] == ["join"] * 3 + ["cut"] * 3
-    assert _features(_build(None)[1]) == BASE_FEATURES   # the other stubs add nothing to the floor
+    # the other milestones add nothing to the floor: compare the features of the shell, the lid fasteners and the floor (C5 added
+    # the side bolt and the patch wall to the full build)
+    assert [n for n in _features(_build(None)[1]) if n.split("_")[0] in ("Shell", "Fastener", "Floor", "Rail")] == BASE_FEATURES
 
 
 def test_there_is_no_floor_cut_and_no_stage_9():
