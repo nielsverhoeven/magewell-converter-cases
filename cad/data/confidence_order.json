@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "confidence_order",
   "scad_name": "MCC_CONFIDENCE_ORDER",
-  "scad_source": "lib/mcc/constants.scad:1023-1023",
+  "scad_source": "lib/mcc/constants.scad:1026-1026",
   "provenance": [],
   "rows": ["assumed", "photo", "manual", "drawing", "measured"]
 }

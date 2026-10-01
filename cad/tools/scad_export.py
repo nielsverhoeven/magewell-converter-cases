@@ -68,7 +68,7 @@ OPTIONS: dict[str, str] = {                       # selector strings -> cad/data
 OPENSCAD_ONLY: dict[str, str] = {"MCC_SHOW_GHOST": "render-visibility flag, consumed by no Python module"}
 UNITLESS = {"MCC_BOSS_MIN_RATIO", "MCC_SLOTS_MAX", "MCC_VENT_AREA_RATIO", "MCC_LID_VENT_ROWS",
             "MCC_LID_VENT_AREA_RATIO", "MCC_RIB_HEIGHT_RATIO_MAX"}
-ANGLES = {"MCC_RAIL_FLANK_ANGLE", "MCC_RAIL_LOCK_RAMP_IN"}
+ANGLES = {"MCC_RAIL_FLANK_ANGLE", "MCC_RAIL_LOCK_RAMP_IN", "MCC_LID_CSK_ANGLE"}
 TABLE_EXPR: dict[tuple[str, str, str], str] = {   # derived entries inside a table (file, row, field)
     ("switches", "MTS-101", "nut_d"): "8.0 mm / cos(30 deg)",
     ("switches", "MTS-101", "keepout_d"): "8.0 mm / cos(30 deg) + 2 * MCC_CLR_SLIDE",
@@ -133,7 +133,7 @@ HARVEST: list[Harvest] = [
     Harvest("MCC_D_SEAT_POCKET_CLR", "mm", "1", "lib/mcc/neutrik.scad", 90, r"MCC_D_FLANGE\[0\]\s*\+\s*1\b",
             "D-series seat pocket: clearance added to the flange outline"),
     # an expression in the source, so an expression row: no conf, its inputs carry theirs
-    Harvest("MCC_SIDE_BOLT_HEAD_CUT_D", "mm", "MCC_SIDE_BOLT_HEAD_D + 2 * MCC_CLR_SLIDE", "lib/mcc/fasteners.scad", 267,
+    Harvest("MCC_SIDE_BOLT_HEAD_CUT_D", "mm", "MCC_SIDE_BOLT_HEAD_D + 2 * MCC_CLR_SLIDE", "lib/mcc/fasteners.scad", 271,
             r"head_rec_d\s*=\s*head_d\s*\+\s*2\s*\*\s*MCC_CLR_SLIDE",
             "side-bolt head recess diameter the cut really makes: head diameter plus a sliding clearance per side"),
 ]

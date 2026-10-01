@@ -2,7 +2,7 @@
   "schema": 1,
   "name": "fans",
   "scad_name": "MCC_FANS",
-  "scad_source": "lib/mcc/constants.scad:712-715",
+  "scad_source": "lib/mcc/constants.scad:715-718",
   "provenance": ["[name, [[\"frame\",[w,h,d]], [\"pitch\",p], [\"hole_d\",d]]]", "NF-A4x10: knowledge/components/fans.md:15-18 \"Frame size: 40 x 40 x 10 mm\" / \"Mounting hole spacing", "(c-to-c): 32 x 32 mm\" / \"Mounting hole diameter: unknown\" -> hole_d assumed 4.3 mm.", "NF-A6x25: knowledge/components/fans.md:42-45 \"Frame size: 60 x 60 x 25 mm\" / \"Mounting hole spacing", "(c-to-c): 50 x 50 mm\" / \"Mounting hole diameter: unknown\" -> hole_d assumed 4.3 mm."],
   "rows": {
     "NF-A4x10": {

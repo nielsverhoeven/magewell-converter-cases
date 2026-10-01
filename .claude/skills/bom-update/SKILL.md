@@ -1,6 +1,6 @@
 ---
 name: bom-update
-description: Regenerate BOM.md from device records and variant configs — per-variant Neutrik parts, inserts, thumbscrews, retention hardware, and cables, with source citations and EU purchase hints; use after adding or changing a case variant, or whenever BOM.md looks stale against models/**.
+description: Regenerate BOM.md from device records and variant configs — per-variant Neutrik parts, inserts, lid screws, retention hardware, and cables, with source citations and EU purchase hints; use after adding or changing a case variant, or whenever BOM.md looks stale against models/**.
 ---
 
 # bom-update
@@ -25,8 +25,8 @@ One section per `models/<slug>/`, driven by that model's device data file
 | Neutrik NAUSB-W-B | 1 | usb_b port, power + config | knowledge/neutrik/connectors/usb.md |
 | Neutrik NAHDMI-W-B | 1 | hdmi_in port | knowledge/neutrik/connectors/hdmi.md |
 | Neutrik DBA-BL-B | 1 | blanks the unused <port id> position | knowledge/neutrik/connectors/blanking-and-caps.md |
-| M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | <n> | panel screw bosses + lid thumbscrew bosses | knowledge/components/fasteners-and-hardware.md:17 |
-| M3 knurled thumbscrew (small Ø7–8 mm head, ≤ 8 mm under the head) | <n> (4, or 6 on lids >~180 mm per architecture §11 R7) | lid fastening — non-captive (architecture D62.2) | knowledge/components/fasteners-and-hardware.md §2 |
+| M3×5.7 heat-set insert (Ruthex RX-M3x5.7 or equiv.) | <n> | panel screw bosses + lid screw bosses | knowledge/components/fasteners-and-hardware.md:17 |
+| M3×8 countersunk socket screw, ISO 10642 (90° head, flush in the lid; reach l − 2.7 = 5.3 mm into the 6.7 mm bore) | <n> (4, or 6 on lids >~180 mm per architecture §11 R7) | lid fastening — non-captive (architecture D100.1) | knowledge/components/fasteners-and-hardware.md §2 |
 | 1/4"-20 bolt, ~<length> mm | 1 | device retention through the floor | architecture.md §Decision 5/7 |
 | 1/4"-20 nylon-insert (nyloc) nut | 1 | vibration-resistant retention, per architecture §11 R8 | — |
 | M4×12 screw + M4 nut | 2 each, if VESA/Fishtail mount used | floor mounting pattern | knowledge/magewell/housing-families.md (Fishtail bracket hardware, e.g. MECO0067/68) |
@@ -46,7 +46,7 @@ Hardware shared across every variant regardless of device — list once at the t
 repeated per section:
 
 - M3 heat-set inserts (bulk pack) — `knowledge/components/fasteners-and-hardware.md` §1
-- M3 knurled thumbscrews — same file, §2
+- M3 countersunk screws (ISO 10642) — same file, §2
 - 1/4"-20 bolt + nylon-insert nut stock
 - ASA filament — `knowledge/design/fdm-rugged-enclosure-guidelines.md` §1 (material table)
 
@@ -74,7 +74,7 @@ retailer price list that goes stale):
 | Category | EU sourcing hint |
 |---|---|
 | Neutrik connectors | Thomann (stage/broadcast retailer, stocks Neutrik D-series incl. black variants) |
-| Fasteners (inserts, thumbscrews) | Reichelt, or a specialist 3D-printing-insert seller (e.g. Ruthex direct, ruthex.de — see `fasteners-and-hardware.md`) |
+| Fasteners (inserts, lid screws) | Reichelt, or a specialist 3D-printing-insert seller (e.g. Ruthex direct, ruthex.de — see `fasteners-and-hardware.md`) |
 | Noctua fans | Reichelt, Mouser |
 | PoE splitter (GAT-USBC placeholder) | US-based (poetexas.com) — no EU distributor found in this pass per `knowledge/components/poe-splitters.md`'s own open questions; re-check before committing to it for an EU build |
 | ASA filament | Any EU filament retailer stocking ASA (Prusament, Fillamentum, etc.) — not itself researched in `knowledge/**`, treat as `unknown` sourcing unless the user names a brand |
@@ -98,7 +98,7 @@ kept internal per the fixed decision; `rotary`/`tripod` not panel-mounted):
 | Neutrik NAUSB-W-B | 1 | usb_b port, power + USB-NET config | knowledge/neutrik/connectors/usb.md:10 |
 | Neutrik NE8FDP-B | 1 | rj45 port, PoE/network | knowledge/neutrik/connectors/ethercon.md:11 |
 | M3×5.7 heat-set insert | 6 | 2 per connector rear boss (3 connectors) | knowledge/components/fasteners-and-hardware.md:17 |
-| M3 knurled thumbscrew + M3×5.7 insert | 4 | lid fastening — non-captive (architecture D62.2) | knowledge/components/fasteners-and-hardware.md §2 |
+| M3×8 countersunk screw (ISO 10642) + M3×5.7 insert | 4 | lid fastening — non-captive (architecture D100.1) | knowledge/components/fasteners-and-hardware.md §2 |
 | 1/4"-20 bolt + nylon-insert nut | 1 each | device retention (housing-families.md:132, hole position `assumed`) | knowledge/magewell/housing-families.md:132 |
 | HDMI patch cable, short | 1 | length per `mcc_bay_depth("NAHDMI-W-B")` = 75.65 mm bay | knowledge/components/cables.md §3 |
 | USB 2.0 A-to-B cable, short | 1 | length per `mcc_bay_depth("NAUSB-W-B")` = 60.55 mm bay | knowledge/components/cables.md §5 |
