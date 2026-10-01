@@ -202,6 +202,7 @@ FLAGS_WITH_MEMBERS |= {f"Cradle_FarRib{i}" for i in frame.FAR_RIBS}   # C3
 FLAGS_WITH_MEMBERS |= {f"Patch_Slot{i}" for i in frame.SLOTS}   # C5
 FLAGS_WITH_MEMBERS |= {f"Vent_{run}" for runs in (frame.VENT_FAR_LOW, frame.VENT_FAR_HIGH, frame.VENT_EXH, frame.VENT_NEGX, frame.VENT_LID)
                           for run in runs}   # C6
+FLAGS_WITH_MEMBERS |= {"Fan_Aperture", "Switch_Toggle"}   # C7
 
 
 def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
