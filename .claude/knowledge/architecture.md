@@ -2631,3 +2631,28 @@ that implements it. Nothing of the runtime has run inside Fusion yet (R79.3).
 **Measurements of issue #79** (all open until the probe sitting): M79.1 the probe report as a whole (one line per probe id with status and Fusion version); M79.2 whether ticking "Run on startup" on a linked add-in changes `MccFusionBridge.manifest`; M79.3 seconds for the probe job and for one apply of the test document; M79.4 whether Fusion shows a hang dialog during a 90 s job (P79.12); M79.5 the delay between queuing a job and its start through the add-in (P79.13).
 
 **Open questions of issue #79.** **Q79.1** May agents queue jobs that run inside the user's Fusion session? Default until answered: base case only (`MccRun`, one click, the user sees the list and answers). **Q79.2** If the add-in is allowed: may a session run `build` and `probe` jobs without a question per job? Default: decided per session in Fusion's own dialog, nothing stored. **Q79.3** Issue #79 says loopback and authenticated; the runtime uses no network connection (D79.1). Default: accepted as meeting the intent.
+
+### 15.10 Decisions of issue #74 (showcase renders): first pull request
+
+The records below belong to the first pull request of #74 (`scripts/showcase.py`, `scripts/showcase_gl.py`, the `showcase` job of `render.yml`, the render step of `release.yml`
+and the `renders/` folders of the release zips). The repository-side records (how the images reach `main`, whether PNGs are committed, the Pages viewer) wait for user
+decisions and are added by the later pull requests of the issue.
+
+- **D74.1 Showcase images come from the exported model-frame STLs, three views per case.** The images are drawn from `exports/<target>/<part>.model.stl` with PyVista/VTK
+  off-screen under xvfb and Mesa software GL, never from OpenSCAD's PNG export, so they survive the move to Fusion. That file layout is the input contract and the interface
+  the Fusion pipeline must keep: `exports/<target>/<part>.model.stl`, assembly frame, millimetres, Z up; every `exports/<slug>/` except `coupons/` and `brackets/` that holds
+  any `*.model.stl` is a case and must hold `base.model.stl` and `lid.model.stl` (`ghost_device.model.stl` is an optional extra drawn as a faint box in the iso view when present; CI does not export it yet, so the iso view ships without a device ghost), and
+  `exports/brackets/<name>/*.model.stl` is a bracket target. There are three views per case (`<slug>-iso.png` with the lid semi-transparent, `<slug>-patch-wall.png`,
+  `<slug>-underside.png`) and one image per bracket target (`brackets-<name>.png`, its parts side by side along X, each shifted by its own bounding box plus 10 mm).
+  All cameras are perspective: a head-on orthographic view of a flat wall or floor showed no hole walls and no dovetail flanks in the first renders, so the patch wall is seen
+  slightly from the side and above and the underside obliquely from the +X end. `scripts/showcase.py` (planning, no GL) imports neither `build` nor `bambu_project` nor
+  anything from `cad/`; only `scripts/showcase_gl.py` needs OpenGL, and `requirements-render.txt` keeps pyvista and vtk out of the GL-free `tests` job.
+  Pixel identity across runner images is not assumed: an image is drawn again only when its `inputs_sha256` in `manifest.json` changed. That hash covers the STL bytes,
+  the view, and a fingerprint of the renderer version, the view table, all render parameters (size, colours, opacities, cameras) and the contents of
+  `requirements-render.txt`. Budget tripwire in the script: at most 250 KiB per image, 40 images and 10 MiB in total (exit 1).
+- **D74.2 The images are published as workflow artifacts, release assets and inside the device zips.** The `showcase` job of `render.yml` (informational, not in the
+  `render` aggregator's `needs`, so the required `render` check is unchanged) uploads them as the artifact `showcase-renders`. `release.yml` renders them after the
+  release build and before the tag and the packaging, and a renderer failure fails the release. The PNGs are attached to the release as loose files
+  (`dist/renders/*.png`), each device zip carries its own three under `renders/<slug>-{iso,patch-wall,underside}.png` (matched by exact name, because the slug of one case
+  can be a prefix of another's), the brackets zip carries `renders/brackets-<name>.png`, and the zip README lists the `renders/` entries. No permission, secret or repository
+  setting is added.
