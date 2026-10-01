@@ -1,0 +1,373 @@
+{
+ "schema": 1,
+ "stages": {
+  "pro-convert-for-ndi-to-hdmi.base.B1": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B1",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 229154.745,
+   "area_mm2": 126257.33,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    48.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B2": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B2",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 231352.825,
+   "area_mm2": 129004.93,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B3": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B3",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 249783.218,
+   "area_mm2": 132369.657,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B4": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B4",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 276011.883,
+   "area_mm2": 149138.317,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B5": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B5",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 271122.808,
+   "area_mm2": 148313.451,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B6": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B6",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 274321.952,
+   "area_mm2": 149944.802,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B7": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B7",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 244282.641,
+   "area_mm2": 148910.246,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B8": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B8",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 240187.863,
+   "area_mm2": 153832.139,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B10": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B10",
+   "options": {
+    "fan": true,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 238267.798,
+   "area_mm2": 153930.854,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.lid.L1": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "lid",
+   "stage": "L1",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 92984.745,
+   "area_mm2": 64112.33,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    48.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    51.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.lid.L2": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "lid",
+   "stage": "L2",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 90099.765,
+   "area_mm2": 66859.93,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    48.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    51.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.lid.L3": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "lid",
+   "stage": "L3",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 89765.66,
+   "area_mm2": 66899.689,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    48.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    51.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.lid.L4": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "lid",
+   "stage": "L4",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 84485.66,
+   "area_mm2": 69187.689,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    48.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    51.0
+   ]
+  },
+  "pro-convert-hdmi-plus.base.B10.fan_switch": {
+   "slug": "pro-convert-hdmi-plus",
+   "part": "base",
+   "stage": "B10",
+   "options": {
+    "fan": true,
+    "fan_switch": true,
+    "rail": true,
+    "lid_vents": true
+   },
+   "volume_mm3": 259673.727,
+   "area_mm2": 169493.917,
+   "bbox_min": [
+    -105.25,
+    -83.175,
+    0.0
+   ],
+   "bbox_max": [
+    105.25,
+    83.175,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.base.B8.bare": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "base",
+   "stage": "B8",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": false,
+    "lid_vents": false
+   },
+   "volume_mm3": 245076.937,
+   "area_mm2": 154657.005,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    0.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    50.0
+   ]
+  },
+  "pro-convert-for-ndi-to-hdmi.lid.L4.bare": {
+   "slug": "pro-convert-for-ndi-to-hdmi",
+   "part": "lid",
+   "stage": "L4",
+   "options": {
+    "fan": false,
+    "fan_switch": false,
+    "rail": false,
+    "lid_vents": false
+   },
+   "volume_mm3": 89765.66,
+   "area_mm2": 66899.689,
+   "bbox_min": [
+    -96.95,
+    -79.925,
+    48.0
+   ],
+   "bbox_max": [
+    96.95,
+    79.925,
+    51.0
+   ]
+  }
+ }
+}
