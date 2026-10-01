@@ -10,6 +10,10 @@ name: release
 #   3. scripts/build.py confidence --json reports every port below "measured" confidence and
 #      sets `prerelease=true` if any are found — this SOFTENS the old release gate (which used to
 #      fail the build on any WARNING: unmeasured) into a pre-release marker instead, per the issue.
+#   3b. scripts/showcase.py renders PNG pictures of every case and bracket from the exported
+#      model-frame STLs (PyVista under xvfb + Mesa, issue #74) into dist/renders/; they go into each
+#      device zip under renders/ and are attached to the release as loose files. A renderer failure
+#      fails the release.
 #   4. scripts/package_release.py builds one zip per device case plus a coupons zip and a brackets
 #      zip (issue #26 — models/brackets/*.scad, packaged the same way as coupons), copies every
 #      rendered STEP file into dist/step/<slug>-<part>.step (unique, self-describing names — the
@@ -20,7 +24,7 @@ name: release
 #      lightweight" — softprops/action-gh-release would create a lightweight tag on its own if
 #      given a tag_name that doesn't exist yet, so the tag is created explicitly first).
 #   6. softprops/action-gh-release publishes the GitHub Release with the per-model/coupon zips,
-#      the loose dist/step/*.step files, and dist/SHA256SUMS.txt attached.
+#      the loose dist/step/*.step and dist/renders/*.png files, and dist/SHA256SUMS.txt attached.
 #
 # See CONTRIBUTING.md's release section and .claude/knowledge/architecture.md §8 (export policy).
 
@@ -82,6 +86,19 @@ jobs:
         id: confidence
         run: python scripts/build.py confidence --json
 
+      - name: Install software OpenGL (Mesa), a virtual X server and the render dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb libgl1 libgl1-mesa-dri libglx-mesa0 libxrender1 libxcursor1
+          python -m pip install -r requirements-render.txt
+
+      - name: Render the showcase images (a renderer failure fails the release)
+        # From the model-frame STLs build.py just exported: dist/renders/<slug>-{iso,patch-wall,underside}.png
+        # and brackets-<name>.png. Runs before packaging (the zips carry them) and before the tag exists.
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a python scripts/showcase.py --exports exports --out dist/renders
+
       - name: Package release zips
         env:
           VERSION: ${{ steps.version.outputs.version }}
@@ -106,5 +123,6 @@ jobs:
           files: |
             dist/*.zip
             dist/review-*.3mf
+            dist/renders/*.png
             dist/step/*.step
             dist/SHA256SUMS.txt

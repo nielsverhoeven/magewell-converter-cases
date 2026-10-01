@@ -134,6 +134,7 @@ python scripts/build.py review        # exports/review.3mf: every design in one 
 python scripts/build.py slicer-check  # slice every part with Bambu Studio's CLI, fail on any warning (CI gate too)
 python scripts/build.py all           # smoke + render + check + golden + review
 python scripts/build.py ci            # the PR gate per part: render+check+golden+Bambu slicer+STEP (CI: --group k/6)
+python scripts/showcase.py            # PNG showcase renders from exports/**/*.model.stl into dist/renders (needs requirements-render.txt; xvfb-run on headless Linux)
 ```
 
 ## Which skill for what
