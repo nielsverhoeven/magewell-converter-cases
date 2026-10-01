@@ -3,15 +3,11 @@
 Oracle: ``mcc_cradle``, ``_mcc_cradle_deck_lattice`` and ``_mcc_far_flank_rib`` (``lib/mcc/cradle.scad:104-119,235-282``).  Every
 dimension is a parameter-name expression: the device box ``V_DEV_*``, the deck ladder ``V_N_DECK_*``, ``V_DECK_*0`` and
 ``V_DECK_PITCH_*``, and the far-flank rib position ``V_FARRIB<i>_X`` of each of the ribs of ``frame.FAR_RIBS``.  A rib that the
-device does not use is switched off by its flag ``Cradle_FarRib<i>`` (the set of its two features), never by a branch here.
+device does not use is switched off by its flag ``Cradle_FarRib<i>`` (the set of its feature), never by a branch here.
 
 Everything here is a join.  The deck frame, the lattice ribs and the legs of a far-flank rib stand on the floor top (``MCC_FLOOR_T``)
-and the deck top is ``V_DEV_Z_LO``; the body of a rib stands on the legs, so every join shares a face with what it joins.
-
-Known dead feature: ``Cradle_FarRib2_LegsAdd``.  Rib 2 stands at x = -12 mm and the far-middle lid fastener at -12.64 mm in the template
-(the replay finds the same in all nine configurations), so its legs lie wholly inside that fastener's boss and web (stage B3 joins first) and the join changes no volume.  The
-geometry is the oracle's; the feature is kept as the plan has it (a Z-extrude per feature keeps the sketches independent of the sign
-of the rib's x, which the kit checks).
+and the deck top is ``V_DEV_Z_LO``; a far-flank rib is one profile whose far end is the far wall's inner face and whose legs are on
+the floor, so every join shares a face or volume with what it joins.
 """
 from __future__ import annotations
 
@@ -40,15 +36,18 @@ def add_deck(base) -> None:
 
 
 def add_far_rib(base, i: int) -> None:
-    """Far-flank rib ``i``: two legs from the floor to the deck top at the two ends of the duct, and the body above the deck top
-    from the far wall's inner face to the device's far flank (it locates the device against the wall)."""
+    """Far-flank rib ``i``, one feature: a thin plate in the Y-Z plane whose profile is the two legs from the floor to the deck top at
+    the two ends of the duct and the body above the deck top from the far wall's inner face to the device's far flank (it locates the
+    device against the wall).  One feature, not a legs feature and a body feature: the legs of the rib that stands beside the
+    far-middle lid fastener lie inside that fastener's boss and web (stage B3 joins first), so a legs feature of their own would change
+    no volume and the replay would report it dead; the profile always has its body."""
     x = f"V_FARRIB{i}_X"
-    x0, x1 = f"{x} - {RIB_T} / 2", f"{x} + {RIB_T} / 2"
-    base.extrude(f"Cradle_FarRib{i}_LegsAdd", axis="Z",
-                 loops=[base.rect(x0, x1, F.YIL, f"{F.YIL} + {LEG}"), base.rect(x0, x1, f"V_DEV_Y_LO - {LEG}", "V_DEV_Y_LO")],
-                 start=F.FT, end=DECK_LO, op="join")
-    base.extrude(f"Cradle_FarRib{i}_BodyAdd", axis="Z", loops=[base.rect(x0, x1, F.YIL, "V_DEV_Y_LO")],
-                 start=DECK_LO, end=f"{DECK_LO} + MCC_CRADLE_RIB_H", op="join")
+    ya, yb = F.YIL, "V_DEV_Y_LO"
+    top = f"{DECK_LO} + MCC_CRADLE_RIB_H"
+    base.extrude(f"Cradle_FarRib{i}_ProfileAdd", axis="X",
+                 loops=[base.polygon([(ya, F.FT), (f"{ya} + {LEG}", F.FT), (f"{ya} + {LEG}", DECK_LO), (f"{yb} - {LEG}", DECK_LO),
+                                      (f"{yb} - {LEG}", F.FT), (yb, F.FT), (yb, top), (ya, top)])],
+                 start=f"{x} - {RIB_T} / 2", end=f"{x} + {RIB_T} / 2", op="join")
 
 
 def add(base) -> None:
