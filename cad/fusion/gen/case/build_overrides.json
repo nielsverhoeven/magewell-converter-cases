@@ -6,8 +6,8 @@
  "flags": "clear",
  "overrides": {
   "V_FARRIB5_X": {
-   "value": "-30 mm",
-   "reason": "far-flank rib 5 is live in no real configuration; its parked position repeats rib 4 (54.25 mm), so the rib would add nothing. -30 mm is a free place between the live ribs at -47.25 and -12 mm, so the feature computes at creation (P2-81 D81.9)."
+   "value": "36.625 mm",
+   "reason": "far-flank rib 5 is live in no real configuration (every real set has four ribs and parks rib 5 on rib 4), so rule (i), the rib-5 X of a real configuration, gives none; rule (ii) gives 36.625 mm, the midpoint of the widest free gap on the positive side of the build configuration, between its ribs at 19 and 54.25 mm (band -47.25 to 54.25 mm, side-bolt keep-out around 3.5 mm). Rule (iii): the rib spans 35.125 to 38.125 mm and the lid-fastener bosses and webs of the build configuration stand at x = -95.25, -12.64 (far middle, radius 4.14), 0 (patch middle) and 95.25 mm, so the rib is clear of every one and computes at creation as a live feature (P2-81 D81.9, verdict B3)."
   }
  }
 }
