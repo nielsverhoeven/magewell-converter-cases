@@ -200,7 +200,8 @@ def test_the_plan_names_the_protected_components_and_the_build_inputs():
 
 
 # The flags whose set has members since a case milestone landed; each milestone C2 to C8 adds its flags here.
-FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid", "Patch_Slot1", "Patch_Slot2", "Patch_Slot3", "Patch_Slot4"}   # C2, C5
+FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid", "Floor_RailSill", "Rail_Female",   # C2, C4
+                      "Patch_Slot1", "Patch_Slot2", "Patch_Slot3", "Patch_Slot4"}               # C5
 
 
 def test_the_kit_checks_find_nothing_but_flags_of_sets_that_are_not_built_yet():
