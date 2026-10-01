@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "document": "MCC-S1",
+ "builder": {"module": "cad.fusion.gen.tests.s1_document", "entry": "build", "options": {}},
+ "registry": {
+  "source": "cad.params",
+  "csv": ["cad/parameters/constants.csv", "cad/fusion/gen/tests/fixtures/s1_registry.csv"],
+  "sets": ["cad/fusion/gen/tests/fixtures/s1_set.json"]
+ },
+ "build_configuration": "default",
+ "configurations": [
+  {"id": "default", "set": {"file": "cad/fusion/gen/tests/fixtures/s1_set.json", "config": "default"},
+   "exports": [
+    {"component": "S1_Tongue", "target": "s1", "part": "tongue"},
+    {"component": "S1_Groove", "target": "s1", "part": "groove"},
+    {"component": "S1_HeatSetBoss", "target": "s1", "part": "heat_set_boss"},
+    {"component": "S1_LidScrewHole", "target": "s1", "part": "lid_screw_hole"},
+    {"component": "S1_SideBolt", "target": "s1", "part": "side_bolt"},
+    {"component": "S1_DWallCut", "target": "s1", "part": "d_wall_cut"},
+    {"component": "S1_RailMale", "target": "s1", "part": "rail_male"},
+    {"component": "S1_RailFemale", "target": "s1", "part": "rail_female"}
+   ]}
+ ],
+ "owners": ["Block", "Fastener", "SideBolt", "Patch", "Rail"],
+ "required_components": [],
+ "protected_prefixes": [],
+ "inputs": [
+  "cad/__init__.py",
+  "cad/fusion/__init__.py",
+  "cad/fusion/gen/__init__.py",
+  "cad/fusion/gen/tests/__init__.py",
+  "cad/numeric.py",
+  "cad/params.py",
+  "cad/parameters/constants.csv",
+  "cad/fusion/gen/core/**/*.py",
+  "cad/fusion/gen/shared/**/*.py",
+  "cad/fusion/gen/tests/s1_*.py",
+  "cad/fusion/gen/tests/fixtures/s1_registry.csv",
+  "cad/fusion/gen/tests/fixtures/s1_set.json",
+  "cad/fusion/runtime/**/*.py",
+  "cad/fusion/runtime/**/*.json"
+ ],
+ "export": {"formats": ["step", "stl"]}
+}
