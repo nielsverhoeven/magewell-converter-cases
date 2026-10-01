@@ -1,0 +1,16 @@
+name,unit,expression,comment
+T_TG_L,mm,60 mm,tongue-and-groove block length | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_TG_W,mm,40 mm,tongue-and-groove block width | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_TG_PLATE,mm,3 mm,tongue block plate thickness | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_BOSS_PLATE,mm,20 mm,heat-set boss block plate edge | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_BOSS_H,mm,10 mm,heat-set boss height above the plate | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_LID,mm,20 mm,lid screw hole tile edge | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_SB_W,mm,40 mm,side-bolt wall tile width | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_SB_H,mm,45 mm,side-bolt wall tile height | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_D_W,mm,40 mm,D connector wall tile width | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_D_H,mm,45 mm,D connector wall tile height | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_D_SEAT_D,mm,24.2 mm,D connector seat hole diameter of the test block | src=lib/mcc/constants.scad:1007-1013 | conf=decided
+T_D_WIN_D,mm,24.8 mm,D connector body window diameter of the test block | src=lib/mcc/constants.scad:1007-1013 | conf=decided
+T_RAIL_LEN,mm,60 mm,rail test block length | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_RAIL_PLATE_W,mm,80 mm,rail male test plate width | src=cad/fusion/gen/tests/s1_document.py | conf=decided
+T_RAIL_PLATE_T,mm,3 mm,rail male test plate thickness | src=cad/fusion/gen/tests/s1_document.py | conf=decided
