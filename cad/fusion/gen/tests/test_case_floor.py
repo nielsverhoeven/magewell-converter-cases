@@ -82,8 +82,8 @@ def test_stage_5_records_the_planned_features_in_the_order_of_the_phases():
     assert _features(record) == BASE_FEATURES
     ops = {s["name"]: s["op"] for s in record["specs"] if s["spec"] in ("ExtrudeSpec", "LoftSpec") and s["component"] == "Base"}
     assert [ops[n] for n in FLOOR_FEATURES] == ["join"] * 3 + ["cut"] * 3
-    # the other stubs add nothing to the floor (the fan and switch features of C7 are filtered out)
-    assert [n for n in _features(_build(None)[1]) if not n.startswith(("Fan_", "Switch_"))] == BASE_FEATURES
+    # the other stubs add nothing to the floor (the vent cuts of C6 and the fan and switch features of C7 are filtered out)
+    assert [n for n in _features(_build(None)[1]) if not n.startswith(("Vent_", "Fan_", "Switch_"))] == BASE_FEATURES
 
 
 def test_there_is_no_floor_cut_and_no_stage_9():
