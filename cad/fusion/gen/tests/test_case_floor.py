@@ -5,10 +5,8 @@ builder) run through the facade on the recording backend; the OpenCascade replay
 the template (``pro-convert-for-ndi-to-hdmi``, configuration ``default``) and the result is compared with a fresh oracle mesh,
 within the thresholds of the brief (``s1_support.gate_problems``).
 
-Stage B5 of the K4a fixture is cumulative and holds the cradle (B4), which milestone C3 builds and which is not on main when this
-file is written.  The comparison therefore uses a staged oracle render of the same harness text with the one line
-``if (stage >= 4) mcc_cradle(dev, cfg);`` removed: B1 to B3 and B5, which is exactly what this document builds up to stage 5 until
-C3 lands.  The committed fixture still pins the box corners.  Tests never skip: ``oracle.require_openscad()`` fails them under
+Stage B5 of the K4a fixture is cumulative and holds the cradle (B4), which milestone C3 builds; with C3 on main the comparison is
+the stock stage render and the stock fixture B5.  Tests never skip: ``oracle.require_openscad()`` fails them under
 ``MCC_REQUIRE_OPENSCAD=1``.
 """
 from __future__ import annotations
@@ -29,12 +27,13 @@ from cad.fusion.replay import ocp_replay
 
 PLAN_PATH = "cad/fusion/documents/mcc-case.json"
 TEMPLATE = oracle.TEMPLATE
-CRADLE_LINE = "if (stage >= 4) mcc_cradle(dev, cfg);"
+CRADLE = ["Cradle_Deck_FrameAdd", "Cradle_Deck_RibXAdd", "Cradle_Deck_RibXPat", "Cradle_Deck_RibYAdd", "Cradle_Deck_RibYPat",
+          *(f"Cradle_FarRib{i}_ProfileAdd" for i in (1, 2, 3, 4, 5))]
 FLOOR_FEATURES = ["Floor_RailSill_BlockAdd", "Floor_RailSill_PassageAdd", "Rail_Female_BackingAdd",
                   "Rail_Female_GrooveCut", "Rail_Female_LockSlotCut", "Rail_Female_LeadInCut"]
 BASE_FEATURES = ["Shell_Floor_Body", "Shell_Walls_Add", "Shell_Tongue_RingAdd",
                  "Fastener_Corners_BossAdd", "Fastener_PatchMid_BossAdd", "Fastener_FarMid_BossAdd",
-                 "Fastener_Corners_WebAdd", "Fastener_PatchMid_WebAdd", "Fastener_FarMid_WebAdd",
+                 "Fastener_Corners_WebAdd", "Fastener_PatchMid_WebAdd", "Fastener_FarMid_WebAdd", *CRADLE,
                  "Floor_RailSill_BlockAdd", "Floor_RailSill_PassageAdd", "Rail_Female_BackingAdd",
                  "Fastener_Corners_BoreCut", "Fastener_PatchMid_BoreCut", "Fastener_FarMid_BoreCut",
                  "Rail_Female_GrooveCut", "Rail_Female_LockSlotCut", "Rail_Female_LeadInCut"]
@@ -188,26 +187,18 @@ def test_suppressing_the_two_rail_flags_removes_every_floor_feature():
     off = _replay(suppress={**sets[TEMPLATE]["suppress"], "Floor_RailSill": True, "Rail_Female": True})
     on = _replay()
     assert off.dead_features == []
-    assert {f["name"] for f in off.features if f["suppressed"]} == set(FLOOR_FEATURES)
+    # the fifth far-flank rib is suppressed in the template as well (its flag is set in every real configuration)
+    assert {f["name"] for f in off.features if f["suppressed"]} == set(FLOOR_FEATURES) | {"Cradle_FarRib5_ProfileAdd"}
     assert ocp_replay.measure(off.shape)["volume_mm3"] != pytest.approx(ocp_replay.measure(on.shape)["volume_mm3"], rel=1e-3)
 
 
 # --------------------------------------------------------------------------------------------------------------
-# With OpenSCAD: replay against a staged oracle without the cradle, and the parity gate
+# With OpenSCAD: replay against the stage oracle, and the parity gate
 # --------------------------------------------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")
 def work(tmp_path_factory):
     return tmp_path_factory.mktemp("case_floor")
-
-
-def _oracle_without_cradle(out_dir: Path) -> Path:
-    """B5 of the stage oracle with the cradle line removed (the cradle is milestone C3), for the template with the rail on."""
-    assert CRADLE_LINE in oracle.HARNESS_S2
-    harness = oracle.HARNESS_S2.replace(CRADLE_LINE, "")
-    defines = {"slug": f'"{TEMPLATE}"', "part": '"base"', "stage": "5", "fan": "false", "fan_switch": "false", "rail": "true",
-               "lid_vents": "true"}
-    return oracle._export(harness, defines, Path(out_dir) / "s2_b5_without_cradle.stl", "B5 without the cradle")
 
 
 def test_stage_5_replays_to_its_oracle(work):
@@ -218,11 +209,7 @@ def test_stage_5_replays_to_its_oracle(work):
     (entry,) = ocp_replay.export({"Base": result}, {"configurations": [{"id": TEMPLATE, "exports": exports}]}, TEMPLATE,
                                  work / "replay-B5")
     mesh_path = work / "replay-B5" / entry["files"][1]
-    reference = _oracle_without_cradle(work / "oracle")
-    reference_measure = oracle.measure(reference)
+    reference = oracle.render_s2(TEMPLATE, "base", 5, work / "oracle")
     code, report = s1_support.parity(mesh_path, reference, "B5", work / "parity")
-    run = s1_support.BlockRun(result, ocp_replay.measure(result.shape), oracle.measure(mesh_path), reference_measure, code, report)
+    run = s1_support.BlockRun(result, ocp_replay.measure(result.shape), oracle.measure(mesh_path), _fixture("B5"), code, report)
     assert s1_support.gate_problems(run) == []
-    fixture = _fixture("B5")   # the same box as the cumulative fixture
-    for corner in ("bbox_min", "bbox_max"):
-        assert max(abs(a - b) for a, b in zip(run.shape[corner], fixture[corner])) <= s1_support.FRAME_TOL
