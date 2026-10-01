@@ -233,7 +233,8 @@ def test_suppressing_a_slot_flag_removes_exactly_the_three_cuts_of_that_slot():
     for i in frame.SLOTS:
         off = _replay(suppress={**sets[TEMPLATE]["suppress"], f"Patch_Slot{i}": True})
         assert off.dead_features == []
-        assert {f["name"] for f in off.features if f["suppressed"]} == {f"Patch_Slot{i}_{w}Cut" for w in ("Seat", "Window", "Bore")}
+        gone = {f["name"] for f in off.features if f["suppressed"]} - {f["name"] for f in on.features if f["suppressed"]}
+        assert gone == {f"Patch_Slot{i}_{w}Cut" for w in ("Seat", "Window", "Bore")}
         assert ocp_replay.measure(off.shape)["volume_mm3"] > ocp_replay.measure(on.shape)["volume_mm3"]
 
 
