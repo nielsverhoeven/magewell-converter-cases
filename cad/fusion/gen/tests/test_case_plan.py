@@ -197,7 +197,7 @@ def test_the_plan_names_the_protected_components_and_the_build_inputs():
 
 
 # The flags whose set has members since a case milestone landed; each milestone C2 to C8 adds its flags here.
-FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid"}   # C2
+FLAGS_WITH_MEMBERS = {"Fastener_PatchMid", "Fastener_FarMid", "Floor_RailSill", "Rail_Female"}   # C2, C4
 FLAGS_WITH_MEMBERS |= {f"Cradle_FarRib{i}" for i in frame.FAR_RIBS}   # C3
 
 
