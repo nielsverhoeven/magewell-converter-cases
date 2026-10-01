@@ -4,22 +4,38 @@ The kit writes no inventory: the only writer is ``scripts/fusion_run.py plan PLA
 This test asks the runtime, ``cad.fusion.runtime.planrun.inventory_status(checkout, plan_rel)``, whether the
 committed inventory of each kit plan is still the one its builder produces.
 
-``REQUIRED`` lists the documents whose inventory must exist; C9 of the case milestones adds ``"MCC-Case"``.
+``REQUIRED`` lists the documents whose inventory must exist: ``"MCC-Case"`` since C9 of the case milestones.
 ``mcc-s1`` names no inventory and is never listed.  A plan without an ``inventory`` key has nothing to compare and is
-left out; so is a plan whose inventory file does not exist, unless the document is required.  The runtime is imported only
-when a plan with an ``inventory`` key exists: the runtime of #79 must then be there (the test fails, it does not skip).
+left out; so is a plan whose inventory file does not exist, unless the document is required.
+
+The runtime is asked in a fresh interpreter (``runtime_status``), never in the process of pytest: the runtime's input-completeness
+gate flags every ``cad`` module that the interpreter has loaded and the document does not list among its inputs, and a test session
+loads many (the other tests of the kit, the replay, the oracle).  A fresh interpreter loads exactly the modules that
+``scripts/fusion_run.py plan`` loads, so the gate stays what it is: this test does not weaken it.  The runtime of #79 must be
+there when a plan with an ``inventory`` key exists (the test fails, it does not skip).
 """
 from __future__ import annotations
 
-import importlib
 import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
 DOCUMENTS = REPO / "cad" / "fusion" / "documents"
-REQUIRED = ()
+REQUIRED = ("MCC-Case",)
 KIT_PREFIX = "cad.fusion.gen."
+ASK = ("import json, sys; from cad.fusion.runtime import planrun; "
+       "print(json.dumps(planrun.inventory_status(sys.argv[1], sys.argv[2])))")
+
+
+def runtime_status(checkout: Path, plan_rel: str) -> dict:
+    """``planrun.inventory_status(checkout, plan_rel)`` computed in a fresh interpreter started in ``checkout``."""
+    done = subprocess.run([sys.executable, "-c", ASK, str(checkout), plan_rel], cwd=checkout, capture_output=True, text=True)
+    if done.returncode != 0:
+        raise AssertionError(f"the runtime could not answer for {plan_rel} (exit {done.returncode}):\n{done.stderr[-2000:]}")
+    return json.loads(done.stdout.strip().splitlines()[-1])
 
 
 def _field(result, key):
@@ -55,12 +71,15 @@ def problems(checkout: Path, plans, status, required=REQUIRED) -> list[str]:
 class FreshTests(unittest.TestCase):
     def test_every_committed_inventory_is_fresh(self):
         plans = kit_plans()
-        if not any("inventory" in plan for _, plan in plans):
-            self.assertEqual(problems(REPO, plans, status=None), [])  # nothing to ask yet
-            return
-        planrun = importlib.import_module("cad.fusion.runtime.planrun")  # an ImportError fails the test
-        found = problems(REPO, plans, planrun.inventory_status)
+        found = problems(REPO, plans, runtime_status)
         self.assertEqual(found, [], "\n".join(found))
+
+    def test_every_required_document_names_its_inventory_and_has_a_plan(self):
+        by_name = {plan.get("document", path.stem): plan for path, plan in kit_plans()}
+        for name in REQUIRED:
+            self.assertIn(name, by_name)
+            self.assertTrue(by_name[name].get("inventory"), f"{name} names no inventory")
+            self.assertTrue((REPO / by_name[name]["inventory"]).is_file(), f"{name}: the committed inventory is missing")
 
 
 class ProblemTests(unittest.TestCase):
