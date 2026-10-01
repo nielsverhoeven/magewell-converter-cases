@@ -123,7 +123,7 @@ echo("mcc test_shell: OK");
 //
 // Manual check (T1-62.1/T1-62.2, D62.1), OPENSCADPATH=lib: force the old patch-wall frame and confirm FAIL:
 //   openscad --backend=Manifold -D 'part="lid"' -D MCC_TG_PATCH_INSET=8 -o neg.csg models/pro-convert-hdmi-plus/case.scad
-//   -> ERROR "T1-62.1 lid fastener [95.25, 73.175] counterbore rim is -2.25482 mm from the groove ..."
+//   -> ERROR "T1-62.1 lid fastener [95.25, 73.175] countersink rim is -1.91441 mm from the groove ..."
 //   -D MCC_TG_PATCH_INSET=2 instead (part "lid" or "base") -> ERROR "T1-62.2 MCC_TG_PATCH_INSET=2 outside [...]"
 // -----------------------------------------------------------------------------------------
 

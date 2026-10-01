@@ -102,10 +102,11 @@ support-enabled by default).
 - Uniform wall thickness (3 mm) with ribs, not thickened sections — a locally-thick boss/wall cools
   unevenly and sinks/warps (§4 of the FDM guidelines file).
 - **Do not treat the first full-size print as the design validation.** Coupons first — see §6.
-- On a long lid (>~180 mm), 4 thumbscrews are not enough to stop mid-span bow + tongue-and-groove
+- On a long lid (>~180 mm), 4 screws are not enough to stop mid-span bow + tongue-and-groove
   joint opening under ASA warp — D-04 (accepted 2026-09-08) puts 6 on every lid over 180 mm, which is
-  every current SKU (architecture §11 R7). The thumbscrews are non-captive, with a small Ø7–8 mm head
-  in the lid's Ø8 counterbore (D62.2); check the bought screw against M62.1 before the first lid print.
+  every current SKU (architecture §11 R7). The screws are non-captive M3 countersunk socket screws
+  (ISO 10642, 90 degree) flush in the lid's countersinks (D100.1); check the bought screw against M100.1
+  before the first lid print.
 
 ## 6. Coupons before cases — non-negotiable, and first
 

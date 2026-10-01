@@ -105,7 +105,7 @@ module _mcc_gusset_web(x, y, L, W, z_lo, z_hi, boss_r) {
 //   _mcc_tg_frame()), shared by the base's tongue and the lid's groove so the two can never disagree.
 //   On the -Y and +-X sides it is the interior-cavity boundary (tongue flush with the wall's inner
 //   face, layout-patch-wall.md §15 ruling 4); on the +Y patch side its edge sits MCC_TG_PATCH_INSET
-//   from the wall's outer face, clear of the lid's thumbscrew counterbores (D62.1, T1-62.1). T1-62.2
+//   from the wall's outer face, clear of the lid's countersinks (D62.1, D100.1, T1-62.1). T1-62.2
 //   guards the constant here, where both halves consume it.
 function _mcc_tg_rect(L, W) =
     assert(MCC_TG_PATCH_INSET >= MCC_WALL - MCC_EPS && MCC_TG_PATCH_INSET <= MCC_T_PATCH + MCC_EPS,
@@ -367,9 +367,9 @@ module mcc_shell_base(dev, cfg) {
 // Description:
 //   The lid half: a flat MCC_LID_T slab spanning [H-MCC_LID_T, H], with the mating groove (D-07)
 //   cut into its underside (MCC_TG_W+2*MCC_CLR_TG wide, MCC_TG_H deep, leaving 1.0 mm of lid above
-//   it — rev-5 ruling 4 / T1-33; offset outward on the patch wall, D62.1), and 6 thumbscrew holes
-//   (mcc_thumbscrew_hole(), non-captive — D62.2) at the same `lid_fastener_pos` the base's bosses
-//   use, each counterbore >= MCC_LID_CB_WEB_MIN clear of the groove (T1-62.1). No cradle, no floor
+//   it — rev-5 ruling 4 / T1-33; offset outward on the patch wall, D62.1), and 6 countersunk-screw holes
+//   (mcc_lid_screw_hole(), M3 ISO 10642, non-captive — D100.1) at the same `lid_fastener_pos` the base's
+//   bosses use, each countersink rim >= MCC_LID_CB_WEB_MIN clear of the groove (T1-62.1). No cradle, no floor
 //   features, no side-bolt feature (all base-only).
 //   The existing far-wall/end-wall vent bands (intake z=[5,23], exhaust z=[32,44]) sit entirely
 //   below the lid's own Z range on every current SKU (verified below by assert rather than
@@ -392,17 +392,17 @@ module mcc_shell_lid(dev, cfg) {
         str("mcc: T1-33 MCC_TG_H+1.0=", MCC_TG_H + 1.0, " exceeds MCC_LID_T=", MCC_LID_T));
     assert(MCC_TG_W + 2 * MCC_CLR_TG <= MCC_WALL - 0.8,
         str("mcc: T1-33 tongue+clearance ", MCC_TG_W + 2 * MCC_CLR_TG, " does not fit MCC_WALL-0.8=", MCC_WALL - 0.8));
-    // T1-62.1: web = counterbore rim to the groove ring's inner edge (gi = [x0, y0, x1, y1]).
+    // T1-62.1: web = countersink rim to the groove ring's inner edge (gi = [x0, y0, x1, y1]).
     // T1-62.2 fires inside _mcc_tg_rect().
     tg = _mcc_tg_rect(L, W);
     gi = [tg[0] + MCC_CLR_TG, tg[1] + MCC_CLR_TG, tg[0] + tg[2] - MCC_CLR_TG, tg[1] + tg[3] - MCC_CLR_TG];
-    cb_r = mcc_thumbscrew_hole_rim_r(head_d = MCC_LID_CB_D);
+    cb_r = mcc_lid_screw_hole_rim_r(csk_d = MCC_LID_CSK_D);
     for (p = lid_pos) {
         web = min([p[0] - gi[0], gi[2] - p[0], p[1] - gi[1], gi[3] - p[1]]) - cb_r;
         assert(p[0] > gi[0] && p[0] < gi[2] && p[1] > gi[1] && p[1] < gi[3],
             str("mcc: T1-62.1 lid fastener ", p, " is not inside the groove ring on \"", mcc_dev_slug(dev), "\""));
         assert(web >= MCC_LID_CB_WEB_MIN - MCC_EPS,
-            str("mcc: T1-62.1 lid fastener ", p, " counterbore rim is ", web, " mm from the groove, below MCC_LID_CB_WEB_MIN=",
+            str("mcc: T1-62.1 lid fastener ", p, " countersink rim is ", web, " mm from the groove, below MCC_LID_CB_WEB_MIN=",
                 MCC_LID_CB_WEB_MIN, " on \"", mcc_dev_slug(dev), "\""));
     }
     // This SKU's vent bands never cross into the lid's own Z range -- confirmed, not assumed
@@ -424,8 +424,8 @@ module mcc_shell_lid(dev, cfg) {
                       z0 = z_top - MCC_EPS, height = MCC_TG_H + MCC_EPS);
 
         for (p = lid_pos)
-            translate([p[0], p[1], z_top - MCC_EPS])
-                mcc_thumbscrew_hole(head_d = MCC_LID_CB_D, lid_t = MCC_LID_T + 2 * MCC_EPS);
+            translate([p[0], p[1], z_top])
+                mcc_lid_screw_hole(lid_t = MCC_LID_T);
 
         // Lid vent field (issue #24) — gated in this ONE place; mcc_lid_vents_cut() does not
         // re-read cfg["lid_vents"] itself (layout-patch-wall.md §17.4: "gate the field in one

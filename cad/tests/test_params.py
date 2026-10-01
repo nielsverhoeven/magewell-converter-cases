@@ -130,11 +130,11 @@ def test_derived_constants_that_mirror_a_table_row_stay_consistent():
 
 
 def test_the_head_recess_the_cut_really_makes_is_a_named_expression_row(rows):
-    """fasteners.scad:267 cuts head_d + 2 * MCC_CLR_SLIDE = 10.6, not the 12.0 of MCC_SIDE_BOLT_HEAD_REC_D; the
+    """fasteners.scad:271 cuts head_d + 2 * MCC_CLR_SLIDE = 10.6, not the 12.0 of MCC_SIDE_BOLT_HEAD_REC_D; the
     bore is insert length + 1 (fasteners.scad:33), not MCC_INSERT_BORE_EXTRA (0.5)."""
     by = {r.name: r for r in rows}
     row = by["MCC_SIDE_BOLT_HEAD_CUT_D"]
-    assert not row.is_literal and row.conf is None and row.src == "lib/mcc/fasteners.scad:267"
+    assert not row.is_literal and row.conf is None and row.src == "lib/mcc/fasteners.scad:271"
     assert row.expression == "MCC_SIDE_BOLT_HEAD_D + 2 * MCC_CLR_SLIDE"
     assert P.constants()["MCC_SIDE_BOLT_HEAD_CUT_D"] == pytest.approx(10.6)
     assert P.constants()["MCC_SIDE_BOLT_HEAD_REC_D"] == 12.0 and "MCC_SIDE_BOLT_HEAD_CUT_D" in by["MCC_SIDE_BOLT_HEAD_REC_D"].description
@@ -364,7 +364,7 @@ def test_evaluate_number_takes_builder_expressions(tmp_path):
     assert P.evaluate_number("V_CASE_L / 2 - V_SWITCH_PAD_T", env) == pytest.approx(193.9 / 2 - 13)
     assert P.evaluate_number("V_FAN_Y + V_FAN_HOLE_PITCH / 2", env) == pytest.approx(-30.825 + 16)
     assert P.evaluate_number("V_FAN_OPENING_D / 2 * sin(2 * MCC_FAN_GRILLE_SPOKE_PITCH)", env) == pytest.approx(19 * math.sin(math.radians(120)))
-    assert P.evaluate_number("min(MCC_LID_CB_D, 100 mm)", env) == pytest.approx(8.0)
+    assert P.evaluate_number("min(MCC_LID_CSK_D, 100 mm)", env) == pytest.approx(7.32)
     with pytest.raises(P.ExpressionError, match="unknown name"):
         P.evaluate_number("V_NOPE + 1 mm", env)
     with pytest.raises(P.ExpressionError, match="units"):

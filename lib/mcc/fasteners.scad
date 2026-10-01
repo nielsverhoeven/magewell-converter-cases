@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////
 // LibFile: mcc/fasteners.scad
-//   L1. Heat-set insert bosses/bores, lid thumbscrew holes, the captive side bolt (D-09,
+//   L1. Heat-set insert bosses/bores, lid countersunk-screw holes, the captive side bolt (D-09,
 //   device retention through the far wall — .claude/knowledge/layout-patch-wall.md §7.1), the
 //   case's own 1/4"-20 floor mounting insert, and a generic M4 clearance hole.
 //   knowledge/components/fasteners-and-hardware.md §1-2. `use`d by lib/mcc/mcc.scad.
@@ -13,7 +13,7 @@ include <constants.scad>
 use <util.scad>
 
 // Z-axis convention: a boss stands with its base at Z=0 and grows to Z=h (anchor=BOTTOM); a
-// panel/lid feature (mcc_thumbscrew_hole) spans Z=[0, lid_t] with the outward face at
+// panel/lid feature (mcc_lid_screw_hole) spans Z=[0, lid_t] with the outward face at
 // Z=lid_t, matching lib/mcc/neutrik.scad's own convention.
 
 // Module: mcc_heat_set_bore()
@@ -67,49 +67,53 @@ module mcc_heat_set_boss(insert = MCC_INSERT_M3, h, od = undef) {
     }
 }
 
-// Function: mcc_thumbscrew_hole_rim_r()
+// Function: mcc_lid_screw_hole_rim_r()
 // Usage:
-//   r = mcc_thumbscrew_hole_rim_r([head_d=]);
+//   r = mcc_lid_screw_hole_rim_r([csk_d=]);
 // Description:
-//   Pure. The radius of the counterbore mcc_thumbscrew_hole() cuts, as cut: `head_d` is drawn
-//   circum=true at $fn = 64, so the polygon's vertices lie at head_d / 2 / cos(180 / 64). The one
-//   source for any clearance check against that counterbore (T1-62.1 in shell.scad's
-//   mcc_shell_lid()). If the counterbore's $fn or circum below changes, change this in the same edit.
+//   Pure. The radius of the countersink mcc_lid_screw_hole() cuts in the lid's outward face, as cut:
+//   `csk_d` is drawn circum=true at $fn = 64, so the polygon's vertices lie at csk_d / 2 / cos(180 / 64).
+//   The one source for any clearance check against that countersink (T1-62.1 in shell.scad's
+//   mcc_shell_lid()). If the cone's $fn or circum below changes, change this in the same edit.
 // Arguments:
-//   head_d = counterbore diameter, mm. Default: MCC_LID_CB_D.
-function mcc_thumbscrew_hole_rim_r(head_d = MCC_LID_CB_D) = head_d / 2 / cos(180 / 64);
+//   csk_d = countersink diameter at the outward face, mm. Default: MCC_LID_CSK_D.
+function mcc_lid_screw_hole_rim_r(csk_d = MCC_LID_CSK_D) = csk_d / 2 / cos(180 / 64);
 
-// Module: mcc_thumbscrew_hole()
+// Module: mcc_lid_screw_hole()
 // Usage:
-//   mcc_thumbscrew_hole([d=], [head_d=], lid_t);
+//   mcc_lid_screw_hole([d=], [csk_d=], [angle=], lid_t);
 // Description:
-//   Negative: a full-depth shaft clearance hole plus an outward-face counterbore that seats the head
-//   of a small knurled M3 thumbscrew (Ø7-8 mm, user decision 2026-09-29) recessed in the lid. The
-//   screw is NOT captive (architecture.md §13 D62.2): nothing here retains it once it is out of the
-//   base's heat-set insert — the counterbore only seats the head.
-//   knowledge/components/fasteners-and-hardware.md:115 "M3 knurled thumb screw ... tool-less panel
-//   access"; counterbore depth is assumed at half the lid thickness (no sourced figure for this
-//   specific geometry) — smallest reasonable choice, confidence assumed.
-//   TODO(teamlead): confirm the counterbore diameter and depth against the purchased thumbscrew's
-//   head (architecture.md §12 M62.1, §11 R62.1) before the first full-size print.
+//   Negative: a full-depth shaft clearance hole plus a countersink cut from the lid's outward face
+//   (Z = lid_t) that seats the head of an M3 countersunk socket screw (ISO 10642, 90 degree head)
+//   flush with the lid top (architecture.md §13 D100.1). The screw is NOT captive: nothing here
+//   retains it once it is out of the base's heat-set insert. The cone runs from `csk_d` at the outward
+//   face down to the clearance diameter `d` at 45 degrees (half of `angle`); depth is derived from the
+//   nominal radii, so its bottom meets the clearance hole with no step (both drawn circum=true,
+//   $fn = 64). Above the outward face a `csk_d`-wide cap extends MCC_EPS so no cutter face coincides
+//   with the lid's face; the clearance hole extends MCC_EPS past both faces.
+//   Asserts T1-100.1: at least MCC_LID_CSK_LAND_MIN of lid material stays under the cone.
+//   The countersink diameter is assumed (ISO 10642 maximum head, M100.1), not a sourced figure.
 // Arguments:
 //   d      = shaft clearance diameter, mm. Default: MCC_M3_CLR_D.
-//   head_d = counterbore (head seat) diameter, mm. Default: MCC_LID_CB_D (constants.scad; assumed,
-//            no sourced figure in knowledge/components/fasteners-and-hardware.md). Its radius as
-//            cut is mcc_thumbscrew_hole_rim_r(head_d).
-//   lid_t  = lid thickness at this location, mm (required).
-module mcc_thumbscrew_hole(d = MCC_M3_CLR_D, head_d = MCC_LID_CB_D, lid_t) {
-    assert(head_d > d, str("mcc: head_d=", head_d, " must exceed shaft clearance d=", d));
-    counterbore_depth = lid_t / 2; // assumed — see TODO above.
-    assert(counterbore_depth < lid_t,
-        str("mcc: counterbore_depth=", counterbore_depth, " must be less than lid_t=", lid_t));
+//   csk_d  = countersink diameter at the outward face, mm. Default: MCC_LID_CSK_D. Its radius as cut is
+//            mcc_lid_screw_hole_rim_r(csk_d).
+//   angle  = countersink included angle, degrees. Default: MCC_LID_CSK_ANGLE.
+//   lid_t  = lid thickness at this location, mm (required). Local frame: inner face Z=0, outward face Z=lid_t.
+module mcc_lid_screw_hole(d = MCC_M3_CLR_D, csk_d = MCC_LID_CSK_D, angle = MCC_LID_CSK_ANGLE, lid_t) {
+    assert(csk_d > d, str("mcc: csk_d=", csk_d, " must exceed shaft clearance d=", d));
+    csk_depth = (csk_d - d) / 2 / tan(angle / 2); // from the nominal radii
+    assert(lid_t - csk_depth >= MCC_LID_CSK_LAND_MIN - MCC_EPS,
+        str("mcc: T1-100.1 countersink depth ", csk_depth, " leaves ", lid_t - csk_depth,
+            " mm of lid (lid_t=", lid_t, "), below MCC_LID_CSK_LAND_MIN=", MCC_LID_CSK_LAND_MIN));
 
     union() {
         translate([0, 0, -MCC_EPS])
             cyl(h = lid_t + 2 * MCC_EPS, d = d, circum = true, anchor = BOTTOM, $fn = 64);
-        // $fn = 64 and circum = true must match mcc_thumbscrew_hole_rim_r() above.
-        translate([0, 0, lid_t - counterbore_depth])
-            cyl(h = counterbore_depth + MCC_EPS, d = head_d, circum = true, anchor = BOTTOM, $fn = 64);
+        // $fn = 64 and circum = true must match mcc_lid_screw_hole_rim_r() above.
+        translate([0, 0, lid_t - csk_depth])
+            cyl(h = csk_depth, d1 = d, d2 = csk_d, circum = true, anchor = BOTTOM, $fn = 64);
+        translate([0, 0, lid_t])
+            cyl(h = MCC_EPS, d = csk_d, circum = true, anchor = BOTTOM, $fn = 64);
     }
 }
 

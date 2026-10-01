@@ -196,9 +196,10 @@ def non_prismatic_see_through(mesh) -> list[SeeThrough]:
 
 
 def selftest_see_through() -> list[str]:
-    """[] when non_prismatic_see_through() flags a synthetic lid whose groove crosses the counterbore and
-    passes one whose groove does not, else the problems. Print pose: 3 mm slab on z = 0, through-hole
-    d 3.4, counterbore d 8 x 1.5 from the bed, groove 2.1 wide x 2 deep from the top."""
+    """[] when non_prismatic_see_through() flags a synthetic lid whose groove crosses the counterbore (or,
+    D100.1, the conical countersink) and passes one whose groove does not, else the problems. Print pose:
+    3 mm slab on z = 0, through-hole d 3.4, counterbore d 8 x 1.5 (or 90 degree countersink d 7.32 x 1.96)
+    from the bed, groove 2.1 wide x 2 deep from the top."""
 
     import trimesh
 
@@ -213,6 +214,22 @@ def selftest_see_through() -> list[str]:
         groove.apply_translation((0.0, groove_y, 2.5))
         return trimesh.boolean.difference([slab, hole, cbore, groove], engine="manifold")
 
+    def lid_csk(groove_y: float):
+        # D100.1: 90 degree countersink opening on the bed (outward face at z = 0), d 7.32 at the bed
+        # narrowing 1:1 to the d 3.4 hole at z = 1.96, then the same groove.
+        slab = trimesh.creation.box(extents=(40.0, 30.0, 3.0))
+        slab.apply_translation((0.0, 0.0, 1.5))
+        hole = trimesh.creation.cylinder(radius=1.7, height=6.0, sections=64)
+        hole.apply_translation((0.0, 0.0, 1.5))
+        ang = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
+        ring = np.column_stack([np.cos(ang), np.sin(ang)])
+        pts = np.vstack([np.column_stack([ring * 3.66, np.zeros(64)]),       # top radius at the bed
+                         np.column_stack([ring * 1.7, np.full(64, 1.96)])])  # bottom radius at the hole
+        cone = trimesh.convex.convex_hull(pts)
+        groove = trimesh.creation.box(extents=(50.0, 2.1, 3.0))
+        groove.apply_translation((0.0, groove_y, 2.5))
+        return trimesh.boolean.difference([slab, hole, cone, groove], engine="manifold")
+
     problems = []
     broken = non_prismatic_see_through(lid(2.8))
     if len(broken) != 1:
@@ -220,6 +237,12 @@ def selftest_see_through() -> list[str]:
     fine = non_prismatic_see_through(lid(6.0))
     if fine:
         problems.append(f"groove clear of the counterbore: expected none, found {len(fine)}")
+    csk_broken = non_prismatic_see_through(lid_csk(2.8))
+    if len(csk_broken) != 1:
+        problems.append(f"groove crossing the countersink: expected 1 opening, found {len(csk_broken)}")
+    csk_fine = non_prismatic_see_through(lid_csk(6.0))
+    if csk_fine:
+        problems.append(f"countersunk through-hole, groove clear of it: expected none, found {len(csk_fine)}")
     return problems
 
 

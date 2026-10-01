@@ -14,12 +14,12 @@ $fa = 1; $fs = 0.4;
 
 include <mcc/mcc.scad>
 
-// --- Heat-set insert boss/bore (M3), lid thumbscrew hole -- pre-existing coverage sanity ---
+// --- Heat-set insert boss/bore (M3), lid countersunk-screw hole -- pre-existing coverage sanity ---
 mcc_heat_set_boss(h = 8);
 translate([20, 0, 0]) mcc_heat_set_bore();
-translate([40, 0, 0]) mcc_thumbscrew_hole(lid_t = 3.0);
-assert(mcc_thumbscrew_hole_rim_r() > MCC_LID_CB_D / 2,
-    "mcc test_fasteners: mcc_thumbscrew_hole_rim_r() must return the circumscribed (as-cut) radius");
+translate([40, 0, 0]) mcc_lid_screw_hole(lid_t = 3.0);
+assert(mcc_lid_screw_hole_rim_r() > MCC_LID_CSK_D / 2,
+    "mcc test_fasteners: mcc_lid_screw_hole_rim_r() must return the circumscribed (as-cut) radius");
 
 // --- Captive side bolt (D-09) -- FLUSH default parameters (D-13) -------------------------------
 // boss(od=20) + cut() at every constants.scad default: proud=0, wall_t=3, gap_far=16, pad_t=2, so
@@ -103,6 +103,10 @@ echo("mcc test_fasteners: OK");
 // 3. T1-29 (flush rule): shrink gap_far below the boundary at the flush default (proud=0):
 //      mcc_captive_side_bolt_boss(gap_far = 10);
 //    -> "T1-29 flush rule: head_rec_h+web_t+pocket_h+pad_t=19 must be <= wall_t+gap_far=13"
+//
+// 4. T1-100.1 (countersink land): a lid too thin to leave MCC_LID_CSK_LAND_MIN under the cone:
+//      mcc_lid_screw_hole(lid_t = 2.5);
+//    -> "T1-100.1 countersink depth 1.96 leaves 0.54 mm of lid"
 // -----------------------------------------------------------------------------------------
 
 // vim: expandtab tabstop=4 shiftwidth=4 softtabstop=4 nowrap
