@@ -28,13 +28,13 @@ Not part of this directory yet.
 ## `arch-tv-bracket.scad` (issue #47; sandwich mode issue #56, D51)
 
 This bracket carries **no VESA plate** — it mounts on a TV's top two VESA 400 (M8) screw positions
-with a raised, arched centre section carrying the rail, so the case hangs clear of the TV's own
-bezel/stand. Five printed parts from one `.scad` file (`// build.py: parts = arm, centre,
+as a straight bracket: both arms lie along the top VESA 400 row and the rail centre sits on the
+screw line, so the case hangs about 107 mm below and 60 mm above the row (derived, widest SKU). Five printed parts from one `.scad` file (`// build.py: parts = arm, centre,
 arm_sandwich, centre_sandwich, spacer`, `// build.py: print_count = arm:2, arm_sandwich:2,
 spacer:2`):
 
-- **Direct mode** (`arm` printed twice, plus one `centre`) — the original #47 shape, unchanged since
-  #56: screws go straight into the TV, no VESA plate.
+- **Direct mode** (`arm` printed twice, plus one `centre`): screws go straight into the TV, no VESA
+  plate. The arms are straight since #120 (rise 0).
 - **Sandwich mode** (`arm_sandwich` printed twice, one `centre_sandwich`, `spacer` printed twice) —
   for a TV whose own mount (a TV lift, in the user's installation) already uses all four VESA holes.
   The exported part NAME fixes the mode — there is no `-D` switch that changes what a real export
@@ -50,24 +50,23 @@ spacer:2`):
   - `spacer`: a flat disc for the bracket's OWN unused (bottom) row of VESA holes, matching the
     arm's sandwich pad exactly (clamp height and footprint) so the TV lift's rail stays coplanar
     across both rows (T1-90).
-  - Direct-mode geometry and goldens (`arm`, `centre`) are **byte-identical** to before sandwich
-    mode existed — confirmed with `git diff`.
 
-- **Orientation**: patch wall down (see "Orientation" below); the **arch points up** (see
-  the "UP" arrow debossed on the centre's top face) — nothing else keys the assembly against a
-  180°-rotated (upside-down, patch-wall-up) install; the arch shape and the arrow are cues, not a
-  physical key (risk R-B, proposed R31).
+- **Orientation**: patch wall down (see "Orientation" below); the UP arrow debossed on the centre's
+  top face marks the orientation. The straight outline gives no shape cue, and nothing else keys
+  the assembly against a 180°-rotated (upside-down, patch-wall-up) install (R120.1).
 - The case slides on **from the right** (viewed from behind the TV, i.e. from the installer's own
-  side) and needs `slide_clear` (≈ 181 mm at the current parameters, echoed by the render — the
+  side) and needs `slide_clear` (≈ 174 mm at the current parameters, echoed by the render — the
   case's own leading end wall must clear the rail's open end before the rail can begin engaging)
   of free space to the right of its final position, from 22 to 73 mm off the TV back (D44: 11 mm plates, the case floor flush on the centre).
 - Print table: `arm` — **TV face on the bed**, ribs/pad boss/insert bores up, no supports;
   `centre` — **flat (TV-side) face on the bed**, rail up (same convention as the `rail-lock`
   coupon), no supports.
-- Render: `python scripts/build.py render brackets/arch-tv-bracket --format both`. The released STL
-  is rendered for the **placeholder** `TV_TOP_CLEAR = 150` (`unknown` → `assumed`, measurement
-  M18a); for a measured TV, re-render with
-  `-D TV_TOP_CLEAR=<mm>` and re-golden before printing for use.
+- Render: `python scripts/build.py render brackets/arch-tv-bracket --format both`.
+  `TV_TOP_CLEAR` no longer changes any part; it only has to satisfy T1-48 (≥ 69.7 mm, M18a).
+- **Free space needed** (derived, widest SKU; M120.1): about 107 mm below the top VESA row and
+  60 mm above it, x ±106 mm for the case, plus the slide-on path to the right. In sandwich mode
+  the centre fills z 11–27.6 mm (centre_t 16.6) over x ±110, y ±46, and the arms fill z 0–20 mm
+  along the whole row out to x ±200 (Q120.2).
 - Assembly order: heat-set inserts into both arms → bolt both arms to the centre (M3×12, from the
   top, on a table) → offer the assembled bracket to the TV → two M8 screws through the pads (length
   MEASURE, see `BOM.md`) → hang the case on and slide it until the lock clicks (see "Installing and removing a case").
@@ -77,7 +76,8 @@ spacer:2`):
   §7.1 Z-clearance caveat above (T1-87).
 - **Do not print for use** before M15 (the rail-lock coupon — see
   `models/coupons/rail-lock.scad`), M18/M20 (the TV/TV-lift measurements: top-screw-to-edge
-  clearance, VESA insert thread depth, sweep-band obstacles, the lift's own rail/plate dimensions)
+  clearance, now only the T1-48 floor, VESA insert thread depth, sweep-band obstacles, the lift's
+  own rail/plate dimensions), M120.1 (free space around the straight bracket)
   and M22 (the sandwich tilt/preload check, sandwich mode only) are closed. See
   `docs/plans/2026-09-27-arch-tv-bracket.md` §9/§12.3 (direct mode) and
   `docs/plans/2026-09-28-vesa-column-bracket.md` (sandwich mode) for the full risk list and
@@ -122,8 +122,8 @@ file (`// build.py: parts = arm, centre, spacer`, `// build.py: print_count = ar
 ## Orientation (issue #26's acceptance criterion, kept for every bracket)
 
 Every bracket places the rail with `rotate([0,0,180])`, so a case slid onto it hangs with its patch
-(cable) wall facing **down** when the bracket is mounted as its own section above documents (the arch:
-arch up, UP arrow). Verify it with the bracket file's `part == "assembly"` preview (a ghost case mated
+(cable) wall facing **down** when the bracket is mounted as its own section above documents (the arch
+bracket: UP arrow up). Verify it with the bracket file's `part == "assembly"` preview (a ghost case mated
 onto the rail) rather than trusting the transform algebra alone; `.claude/skills/print-check/SKILL.md`
 carries the one-line go/no-go version.
 

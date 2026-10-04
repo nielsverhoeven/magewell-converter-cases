@@ -1,5 +1,7 @@
 # Plan: arch TV bracket — mount rail on the top two VESA 400 screws only, 3-part print (issue #47)
 
+Shape superseded by issue #120 (straight, rise 0): sections 0, 1.3-1.5, 3.2, 5 (A2-A4) and the angled-arm figures are historic.
+
 Status: **researcher plan, not yet architect-validated.** Route through `solution-architect` before
 any developer starts (Team Charter step 2 — this is structural: the first multi-part bracket, a
 `scripts/build.py` discovery change, a test that `use`s a `models/**` file, and new BOM hardware).

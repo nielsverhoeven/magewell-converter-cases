@@ -87,7 +87,7 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
   `assumed` until measured (X from the short end, Z from the bottom, which side).
   Case height stays **51 mm** (4 mm Z web; 49 mm proposal vetoed); **no right-angle HDMI adapter in
   the default BOM** — end zones are sized for straight plugs, measured with the `depth-mockup` coupon.
-- **Mount brackets** (user decisions 2026-09-28): the **arch bracket** is the horizontal option (top
+- **Mount brackets** (user decisions 2026-09-28): the **arch bracket** (straight since #120, rise 0) is the horizontal option (top
   VESA row; direct parts, and sandwich parts for a TV whose own mount uses all four holes), and the
   **vertical VESA-column bracket** (`vertical-tv-bracket.scad`; Samsung 400 × 300, one column; the case
   sits outboard of the right-hand column seen from behind the TV) is sandwich-only. A sandwiched

@@ -152,7 +152,8 @@ lift in the user's installation — already uses all four VESA holes: this brack
 TV and the lift on longer M8 bolts). Printed once per mounting point, not per case. **Do not print
 for use before M15 (the rail-lock coupon), M18/M20 (the TV/TV-lift
 measurements) and M22 (the sandwich tilt/preload check) are closed** — see
-`models/brackets/README.md`.
+`models/brackets/README.md`. Straight bracket (#120): the parts do not depend on the TV's top-edge
+distance.
 
 | Item | Part number | Qty | Notes | Source |
 |---|---|---|---|---|
