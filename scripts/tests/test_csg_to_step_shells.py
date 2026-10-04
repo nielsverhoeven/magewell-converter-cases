@@ -67,3 +67,11 @@ def test_real_shells_are_kept():
     assert dropped == 0
     assert len(_shells(fixed)) == 2
     assert c.shell_defects(fixed) == []
+
+
+def test_zero_area_face_is_a_defect():
+    from OCP.BRepBuilderAPI import BRepBuilderAPI_MakeFace
+    from OCP.gp import gp_Pln
+    tiny = BRepBuilderAPI_MakeFace(gp_Pln(), 0.0, 1e-5, 0.0, 1e-5).Face()
+    assert c.shell_defects(tiny) == ["zero-area face"]
+    assert c.shell_defects(_solid(_box_shell(0, 10))) == []
