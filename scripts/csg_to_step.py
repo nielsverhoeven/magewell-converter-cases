@@ -45,6 +45,7 @@ FN_ANALYTIC_MIN = 16     # fragments at/above which a circle/cylinder/sphere bec
 ARC_FIT_MIN_PTS = 5      # a polygon run needs this many vertices on one circle to become an arc
 ARC_FIT_TOL = 2e-3       # mm, max vertex distance from the fitted circle
 VOLUME_TOL = 0.01        # 1 % — B-rep vs rendered mesh
+SHELL_VOL_MIN = 1e-3     # mm3; a shell enclosing less is an empty sheet, not material (issue #119)
 EPS = 1e-9
 
 
@@ -180,7 +181,7 @@ def parse_csg(text: str) -> list[Node]:
 # OpenCascade builders
 # -----------------------------------------------------------------------------------------
 
-from OCP.BRep import BRep_Tool  # noqa: E402
+from OCP.BRep import BRep_Builder, BRep_Tool  # noqa: E402
 from OCP.BRepAlgoAPI import BRepAlgoAPI_Common, BRepAlgoAPI_Cut, BRepAlgoAPI_Fuse  # noqa: E402
 from OCP.BRepBuilderAPI import (  # noqa: E402
     BRepBuilderAPI_GTransform, BRepBuilderAPI_MakeEdge, BRepBuilderAPI_MakeFace,
@@ -206,7 +207,6 @@ from OCP.STEPControl import STEPControl_AsIs, STEPControl_Writer  # noqa: E402
 from OCP.TopAbs import TopAbs_FACE, TopAbs_SHELL, TopAbs_SOLID, TopAbs_VERTEX  # noqa: E402
 from OCP.TopExp import TopExp_Explorer  # noqa: E402
 from OCP.TopoDS import TopoDS, TopoDS_Compound, TopoDS_Shape  # noqa: E402
-from OCP.BRep import BRep_Builder  # noqa: E402
 try:  # OCP >= 8 moved the NCollection lists to OCP.collections
     from OCP.TopTools import TopTools_ListOfShape  # noqa: E402
 except ImportError:  # pragma: no cover - depends on the OCP build
@@ -806,6 +806,59 @@ class Converter:
         raise ConversionError(f"unsupported CSG node '{name}'")
 
 
+def _shell_volume(shell) -> float:
+    props = GProp_GProps()
+    BRepGProp.VolumeProperties_s(BRepBuilderAPI_MakeSolid(shell).Solid(), props)
+    return props.Mass()
+
+
+def drop_empty_shells(shape: TopoDS_Shape) -> tuple[TopoDS_Shape, int]:
+    """(shape, dropped): every SOLID rebuilt from only the shells that enclose material (issue #119,
+    D119.1). The pairwise fuse of a boss standing on a coplanar face can leave a zero-thickness sheet
+    shell inside the solid -- BRepCheck accepts it, but a CAD tool tessellating the solid turns it into
+    open and non-manifold edges. Such a shell is closed (each edge used twice) and encloses no volume;
+    separate real bodies (insert-boss, tolerance-ladder) keep all their shells."""
+    solids, dropped = [], 0
+    exp = TopExp_Explorer(shape, TopAbs_SOLID)
+    while exp.More():
+        solid = TopoDS.Solid(exp.Current())
+        keep, sub = [], TopExp_Explorer(solid, TopAbs_SHELL)
+        while sub.More():
+            shell = TopoDS.Shell(sub.Current())
+            if abs(_shell_volume(shell)) > SHELL_VOL_MIN:
+                keep.append(shell)
+            else:
+                dropped += 1
+            sub.Next()
+        mk = BRepBuilderAPI_MakeSolid()
+        for shell in keep:
+            mk.Add(shell)
+        solids.append(mk.Solid() if keep else solid)
+        exp.Next()
+    if dropped == 0:
+        return shape, 0
+    if len(solids) == 1:
+        return solids[0], dropped
+    comp, builder = TopoDS_Compound(), BRep_Builder()
+    builder.MakeCompound(comp)
+    for solid in solids:
+        builder.Add(comp, solid)
+    return comp, dropped
+
+
+def shell_defects(shape: TopoDS_Shape) -> list[str]:
+    """[] when every shell of every SOLID is closed and encloses material (D119.1)."""
+    out, exp = [], TopExp_Explorer(shape, TopAbs_SHELL)
+    while exp.More():
+        shell = TopoDS.Shell(exp.Current())
+        if not BRep_Tool.IsClosed_s(shell):
+            out.append("open shell")
+        elif abs(_shell_volume(shell)) <= SHELL_VOL_MIN:
+            out.append("empty shell")
+        exp.Next()
+    return out
+
+
 def _first_face(shape):
     exp = TopExp_Explorer(shape, TopAbs_FACE)
     return exp.Current()
@@ -845,7 +898,8 @@ def convert(csg_path: Path, step_path: Path, product: str, mesh_path: Path | Non
         shape = up.Shape()
         fix = ShapeFix_Shape(shape)
         fix.Perform()
-        shape = fix.Shape()
+        shape, dropped = drop_empty_shells(fix.Shape())
+        conv.stats["dropped_empty_shells"] = dropped
     except ConversionError as exc:
         return Result(ok=False, error=str(exc), seconds=time.time() - t0)
 
@@ -869,6 +923,11 @@ def convert(csg_path: Path, step_path: Path, product: str, mesh_path: Path | Non
     if not res.valid:
         res.ok = False
         res.error = "the B-rep does not pass BRepCheck (would import badly in CAD)"
+    defects = shell_defects(shape)
+    if res.ok and defects:
+        res.ok = False
+        res.error = (f"{len(defects)} {defects[0]}(s) in the B-rep -- a CAD tool would tessellate open "
+                     f"or non-manifold edges (D119.1)")
 
     if mesh_path is not None and mesh_path.is_file():
         import trimesh
