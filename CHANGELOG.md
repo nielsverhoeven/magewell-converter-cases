@@ -12,6 +12,16 @@ Releases are GitHub Releases built from annotated `vX.Y.Z` tags on `main` — se
 
 ## [Unreleased]
 
+### Changed (2026-10-04, issue #120, user decision) — MAJOR: printed arch-bracket arms and centres do not mate with the new ones
+
+- **The arch TV bracket is straight** (#120, architecture.md D120.1, D120.2, D120.3): rise 0 in direct and
+  sandwich mode, both arms lie along the top VESA 400 row and the rail centre sits on the screw line;
+  same five parts, the case still hangs patch-wall down. `arm` and `arm_sandwich` are 140 mm long
+  (was 167.2), `centre` and `centre_sandwich` are 220 mm wide (was 238.1) with straight tabs. Old arms
+  (lap at 132.2 mm) do not fit the new centre. The arm/centre goldens change, the spacer's does not.
+  The parts no longer depend on `TV_TOP_CLEAR`; T1-49 and T1-50 are retired, T1-48 is the validity
+  gate and T1-120.1 checks the arm axis.
+
 ### Changed (2026-09-29, issues #63–#65, user decisions) — MAJOR: printed bases and brackets are not interchangeable
 
 - **The rail lock moves on top of the dovetail** (#63, architecture.md D63.1): two rigid 0.6 mm strips on

@@ -27,7 +27,7 @@
 //       the assembly frame above.
 //     - Arm print frame: pad centre at the origin, arm axis = local +X, TV face on the bed (Z=0).
 //     - Centre print frame: origin = the rail centre projected onto the centre's own bottom face
-//       (assembly (0, rise, ARCH_PLATE_T)); bottom face (TV-facing, but 11 mm standing off the TV --
+//       (assembly (0, 0, ARCH_PLATE_T)); bottom face (TV-facing, but 11 mm standing off the TV --
 //       PLAN-ASSUMPTION-3, forced by the +X slide-on sweep, §1.3) on the bed.
 //
 //   Z stack (TV back = 0; plan §1.3, re-derived for D44 -- the case floor now sits FLUSH on the
@@ -51,7 +51,8 @@
 //   against the keep-out rectangle on every render.
 //
 //   Assert ids: T1-47 ... T1-60 (architect-assigned per B4; the highest T1 id before this file was
-//   T1-46). Risk/measurement ids (R30-R38, M18a-d, D26) are recorded by the architect in
+//   T1-46; T1-49 and T1-50 are retired, never reused) plus T1-120.1 (arm axis on the top VESA row).
+//   Risk/measurement ids (R30-R38, M18a-d, D26) are recorded by the architect in
 //   .claude/knowledge/architecture.md after merge (§12.5 bottom) -- this file cites the PROPOSED
 //   ids in comments only. Sandwich mode (issue #56, D51) adds T1-86 ... T1-90 on top -- T1-47 ...
 //   T1-60 hold in BOTH modes (D-vesa-400x300-bracket.VERDICT-rev2.md, "Ids for rev 18").
@@ -59,8 +60,7 @@
 //   PRINT GATE (B10; same gate as models/brackets/README.md): do not print this bracket FOR USE
 //   before M15 (the rail-lock coupon, models/coupons/rail-lock.scad), M18/M20 (the TV / TV-lift
 //   measurements) and M22 (the sandwich tilt/preload check, sandwich parts only) are closed. The
-//   released STL is rendered for the PLACEHOLDER TV_TOP_CLEAR=150; a measured TV needs
-//   `render brackets/arch-tv-bracket -D TV_TOP_CLEAR=<mm>`.
+//   Geometry does not depend on TV_TOP_CLEAR; it only feeds the T1-48 validity assert.
 //
 //   SANDWICH MODE (issue #56, plan D rev 2, D51 -- architect verdict D-vesa-400x300-bracket.
 //   VERDICT-rev2.md, DB8-DB12): a TV whose own mount (a TV lift) already uses all four VESA holes
@@ -68,8 +68,7 @@
 //   mount. Sandwich mode ships as its OWN exported parts -- `arm_sandwich`, `centre_sandwich` and
 //   `spacer` -- beside the unchanged `arm`/`centre` direct-mode parts (the `base_fan` precedent,
 //   DB8): the exported part name fixes the mode, never a `-D MOUNT_MODE=...` switch alone (that
-//   survives only as the "assembly"/"assembly_sweep" preview selector). Direct-mode geometry and
-//   goldens are BYTE-IDENTICAL to before this mode existed -- confirmed with `git diff`.
+//   survives only as the "assembly"/"assembly_sweep" preview selector).
 //   - The arm's own M8 pad becomes a FLAT clamp face (no counterbore, no washer seat -- R42) at
 //     Z=ARCH_PLATE_T, the same flush philosophy as `vertical-tv-bracket.scad`'s own pad (DB7); its
 //     ribs start at `rib_pad_gap` instead of the pad centre, so they clear the TV lift's own rail
@@ -132,12 +131,9 @@ VESA_TOP_PITCH = 400; // mm. User decision 2026-09-27 (#47); VESA MIS-F 400x400 
                        // pattern (https://en.wikipedia.org/wiki/VESA_mount).
 HALF_PITCH = VESA_TOP_PITCH / 2; // = 200. derived.
 
-TV_TOP_CLEAR = 150; // mm. `unknown` -> placeholder, assumed (PLAN-ASSUMPTION-2, RATIFIED as
-                     // assumed, §12.5). Distance from the top-screw CENTRELINE up to the TV's top
-                     // outer edge. User bound: < TV_TOP_CLEAR_MAX (#47). Measurement M18a (§9).
-                     // Override per TV with `-D TV_TOP_CLEAR=<mm>`, or measure and edit + re-golden
-                     // (B10 -- do not print for use at the placeholder).
-TV_TOP_CLEAR_MAX = 185; // mm. user decision 2026-09-27 ("less than 185 mm") -- an assert bound only.
+TV_TOP_CLEAR = 150; // mm. `unknown` -> placeholder, assumed (M18a). Distance from the top-screw
+                     // centreline up to the TV's top outer edge; validity input only, must be
+                     // >= case_top_above_rail + TV_TOP_MARGIN (69.675 at current constants).
 TV_TOP_MARGIN = 10.0; // mm. assumed -- case top stays this far below the TV top edge (bezel,
                        // measurement error, sight line over the edge).
 
@@ -171,10 +167,8 @@ XJ = 95.0; // mm. assumed -- |x| of each lap centre in the assembly frame (plan 
 LAP_L = 30.0; // mm. assumed -- lap length along the arm axis.
 JOINT_S = 14.0; // mm. assumed -- joint hole pitch along the arm axis (2x2 pattern).
 JOINT_P = 20.0; // mm. assumed -- joint hole pitch across the arm axis.
-LAP_RIB_GAP = 3.0; // mm. arm ribs stop this far short of the lap. D44: 3.0 (was 1.0) -- with the
-                    // 92 mm centre body the rib end's outer corner lies inside the body's Y band at large
-                    // TV_TOP_CLEAR, so T1-55's X clearance alone governs: 1.0 left 0.994 mm at
-                    // TV_TOP_CLEAR=184.9 (limit 1.0, passing only on the assert's EPS); 3.0 leaves 2.34.
+LAP_RIB_GAP = 3.0; // mm. arm ribs stop this far short of the lap; spaces the rib end from the
+                    // centre tab.
 ARCH_KEEPOUT_CLR = 1.0; // mm. assumed -- clearance used by the hole-vs-rail and rib-vs-centre
                          // asserts.
 
@@ -280,11 +274,10 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "direct") =
         // CASE_TOP_ABOVE_RAIL = W_max/2 + MCC_RAIL_Y (MCC_RAIL_Y is negative -- the rail sits under
         // the device, not free-standing -- constants.scad's own R2 comment).
         case_top_above_rail = w_max / 2 + MCC_RAIL_Y,
-        // rise: the rail sits as high on the arch as the TV allows (plan §1.4).
-        rise = tv_top_clear - TV_TOP_MARGIN - case_top_above_rail,
+        case_bottom_below_rail = w_max / 2 - MCC_RAIL_Y,
 
-        alpha   = atan2(rise, HALF_PITCH - XJ),
-        arm_len = sqrt(pow(HALF_PITCH - XJ, 2) + pow(rise, 2)),
+        // The arms lie along the top VESA row: the arm axis is the row itself.
+        arm_len = HALF_PITCH - XJ,
 
         // Sandwich mode (issue #56, DB8/DB12 §7.1-§7.2): the +X sweep crosses the right-hand column,
         // so the centre must rise enough to clear the TV lift's own rail + bolt head there. Direct
@@ -304,10 +297,9 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "direct") =
 
         // DB10: where arm_sandwich's own ribs may start (arm-local x), clear of the TV lift's rail
         // band along the crossed column -- same derivation as vertical-tv-bracket.scad's own
-        // RIB_PAD_GAP (DB2), using this file's own `alpha` (varies with tv_top_clear). Computed
-        // unconditionally (cheap, alpha/ARM_W are mode-independent); only consumed when
+        // RIB_PAD_GAP (DB2). Computed unconditionally (cheap); only consumed when
         // mount_mode=="sandwich" (direct mode's ribs still start at the pad, DB10).
-        rib_pad_gap = (W_LIFT_RAIL / 2 + ARCH_KEEPOUT_CLR + (ARM_W / 2) * sin(alpha)) / cos(alpha),
+        rib_pad_gap = W_LIFT_RAIL / 2 + ARCH_KEEPOUT_CLR,
 
         // B6: the case can only engage once its leading (+X) end wall passes the rail's own open
         // (+X, per this file's rotate([0,0,180]) rail placement) end, at case centre
@@ -320,20 +312,11 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "direct") =
         arm_bbox = [arm_len + LAP_L / 2 + ARM_W / 2, ARM_W, arm_top_z],
 
         // Centre print bbox (§1.5): body [-C_HALF,C_HALF] x [-CENTRE_W/2,CENTRE_W/2], unioned with
-        // both tabs -- each tab is the arm's own lap rectangle (arm-local corners
-        // (arm_len +/- LAP_L/2, +/-ARM_W/2)) carried through the SAME rotate+translate transform
-        // that places the whole arm (_mcc_arch_tv_xform()/_mcc_arch_tv_place(), below). Right and
-        // left tabs are mirror images of each other by construction (theta = 180-alpha vs. alpha),
-        // so only the right-side extremes need computing (closed-form corner search: cos(alpha)>0,
-        // sin(alpha)>=0 for the whole valid rise range [0, TV_TOP_CLEAR_MAX), so the extremal corner
-        // is always (arm_len-LAP_L/2, -ARM_W/2) for +X reach / (arm_len+-LAP_L/2, +-ARM_W/2) for
-        // the Y extremes -- see this file's own PR notes for the by-hand corner-search derivation).
-        tab_x_max = HALF_PITCH - (arm_len - LAP_L / 2) * cos(alpha) + (ARM_W / 2) * sin(alpha),
-        centre_x_max = max(C_HALF, tab_x_max),
-        tab_y_max = -rise + (arm_len + LAP_L / 2) * sin(alpha) + (ARM_W / 2) * cos(alpha),
-        tab_y_min = -rise + (arm_len - LAP_L / 2) * sin(alpha) - (ARM_W / 2) * cos(alpha),
-        centre_y_max = max(CENTRE_W / 2, tab_y_max),
-        centre_y_min = min(-CENTRE_W / 2, tab_y_min),
+        // both tabs -- each tab is the arm's own lap rectangle, a straight bar of width ARM_W
+        // centred on the arm axis at |x| in [XJ - LAP_L/2, XJ + LAP_L/2].
+        centre_x_max = max(C_HALF, XJ + LAP_L / 2),
+        centre_y_max = max(CENTRE_W / 2, ARM_W / 2),
+        centre_y_min = -max(CENTRE_W / 2, ARM_W / 2),
         centre_z_max = centre_t + MCC_RAIL_MALE_H, // = 14.5 in direct mode (the male rises
             // MCC_RAIL_MALE_H above its own foot at Z_RAIL -- D44); taller in sandwich mode since
             // centre_t is (DB8: "every formula that assumed the centre is ARCH_PLATE_T thick reads
@@ -343,13 +326,12 @@ function mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "direct") =
     [
         ["mount_mode", mount_mode],
         ["tv_top_clear", tv_top_clear],
-        ["rise", rise],
-        ["alpha", alpha],
         ["arm_len", arm_len],
         ["centre_t", centre_t],
         ["z_rail", z_rail],
         ["arm_top_z", arm_top_z],
         ["case_top_above_rail", case_top_above_rail],
+        ["case_bottom_below_rail", case_bottom_below_rail],
         ["l_max", l_max],
         ["w_max", w_max],
         ["h_max", h_max],
@@ -385,10 +367,11 @@ function _mcc_arch_tv_joint_holes(g) =
 
 // Function: _mcc_arch_tv_theta()
 // Description:
-//   Private, pure. The in-plane rotation (degrees) that carries an arm-local point to the centre's
-//   own local frame for the given `side` (+1 = right, -1 = left) -- plan §1.5.
-function _mcc_arch_tv_theta(g, side) =
-    side > 0 ? 180 - struct_val(g, "alpha") : struct_val(g, "alpha");
+//   Private, pure. The in-plane rotation (degrees) that carries an arm-local point to the
+//   assembly/centre frame (the same frame) for the given `side` (+1 = right, -1 = left): the right
+//   arm is the left one turned 180 degrees.
+function _mcc_arch_tv_theta(side) =
+    side > 0 ? 180 : 0;
 
 // Function: _mcc_arch_tv_rotate2()
 // Description:
@@ -398,32 +381,21 @@ function _mcc_arch_tv_rotate2(p, theta) =
 
 // Function: _mcc_arch_tv_xform()
 // Description:
-//   Private, pure. Arm-local point `p` -> centre-local [x,y], for `side` in {-1,+1}. Used by both
-//   the assert module (A8/T1-54, A9/T1-55) and, as the geometric mirror of module
-//   _mcc_arch_tv_place() below, to build the tab/hole geometry -- the SAME rotate+translate
+//   Private, pure. Arm-local point `p` -> assembly/centre-frame [x,y] (same frame), for `side` in
+//   {-1,+1}. Used by both the assert module (A8/T1-54, A9/T1-55) and, as the geometric mirror of
+//   module _mcc_arch_tv_place() below, to build the tab/hole geometry -- the SAME rotate+translate
 //   applied twice (once as an OpenSCAD transform stack for geometry, once as plain arithmetic for
 //   the asserts), not two independently-derived formulas.
-function _mcc_arch_tv_xform(p, side, g) =
-    [side * HALF_PITCH, -struct_val(g, "rise")] + _mcc_arch_tv_rotate2(p, _mcc_arch_tv_theta(g, side));
+function _mcc_arch_tv_xform(p, side) =
+    [side * HALF_PITCH, 0] + _mcc_arch_tv_rotate2(p, _mcc_arch_tv_theta(side));
 
 // Module: _mcc_arch_tv_place()
 // Description:
-//   Private. Places `children()` (authored in the ARM's own local frame) into the CENTRE's own
-//   local frame, for the given `side`. Geometric mirror of _mcc_arch_tv_xform() above.
-module _mcc_arch_tv_place(g, side) {
-    translate([side * HALF_PITCH, -struct_val(g, "rise"), 0])
-        rotate([0, 0, _mcc_arch_tv_theta(g, side)])
-            children();
-}
-
-// Module: _mcc_arch_tv_place_assembly()
-// Description:
-//   Private, preview-only (§6). Places `children()` (arm-local frame) into the ASSEMBLY frame --
-//   same rotation as _mcc_arch_tv_place(), but no rise-shift (the assembly frame's own Y=0 IS the
-//   TV-screw line the arms sit on; only the centre's own local frame is shifted by `rise`).
-module _mcc_arch_tv_place_assembly(g, side) {
+//   Private. Places `children()` (authored in the ARM's own local frame) into the assembly/centre
+//   frame (the same frame), for the given `side`. Geometric mirror of _mcc_arch_tv_xform() above.
+module _mcc_arch_tv_place(side) {
     translate([side * HALF_PITCH, 0, 0])
-        rotate([0, 0, _mcc_arch_tv_theta(g, side)])
+        rotate([0, 0, _mcc_arch_tv_theta(side)])
             children();
 }
 
@@ -454,8 +426,7 @@ function _mcc_arch_tv_circle_rect_gap(center, r, rect_x, rect_y) =
 module mcc_arch_tv_assert(g) {
     mode                = struct_val(g, "mount_mode");
     tv_top_clear        = struct_val(g, "tv_top_clear");
-    rise                = struct_val(g, "rise");
-    arm_len             = struct_val(g, "arm_len");
+    arm_len            = struct_val(g, "arm_len");
     centre_t            = struct_val(g, "centre_t");
     z_rail              = struct_val(g, "z_rail");
     arm_top_z           = struct_val(g, "arm_top_z");
@@ -486,25 +457,14 @@ module mcc_arch_tv_assert(g) {
             str("mcc: arch-tv-bracket T1-47 centre bbox axis ", i, "=", centre_bbox[i],
                 " exceeds MCC_BUILD-2*MCC_BED_MARGIN=", max_axis, " (D26)"));
 
-    // T1-48 (A2): the case stays fully behind the TV -- both the defining rise equation (a
-    // tautology unless a future edit breaks it) and the centre's own top edge.
-    assert(rise + case_top_above_rail + TV_TOP_MARGIN <= tv_top_clear + MCC_EPS,
-        str("mcc: arch-tv-bracket T1-48 case top ", rise + case_top_above_rail + TV_TOP_MARGIN,
-            " exceeds tv_top_clear=", tv_top_clear));
-    assert(rise + centre_y_max <= tv_top_clear - TV_TOP_MARGIN + MCC_EPS,
-        str("mcc: arch-tv-bracket T1-48 centre top edge ", rise + centre_y_max,
+    // T1-48 (A2): the case stays fully behind the TV -- the case top and the centre's own top edge
+    // both stay TV_TOP_MARGIN below the TV's top edge. (T1-49 and T1-50 are retired.)
+    assert(case_top_above_rail + TV_TOP_MARGIN <= tv_top_clear + MCC_EPS,
+        str("mcc: arch-tv-bracket T1-48 TV too short above the screws: needs TV_TOP_CLEAR >= ",
+            case_top_above_rail + TV_TOP_MARGIN, " (tv_top_clear=", tv_top_clear, ")"));
+    assert(centre_y_max <= tv_top_clear - TV_TOP_MARGIN + MCC_EPS,
+        str("mcc: arch-tv-bracket T1-48 centre top edge ", centre_y_max,
             " exceeds tv_top_clear-TV_TOP_MARGIN=", tv_top_clear - TV_TOP_MARGIN));
-
-    // T1-49 (A3): an arch, not a V.
-    assert(rise >= -MCC_EPS,
-        str("mcc: arch-tv-bracket T1-49 TV too short above the screws: needs TV_TOP_CLEAR >= ",
-            TV_TOP_MARGIN + case_top_above_rail,
-            "; a V variant is a new user decision (tv_top_clear=", tv_top_clear, ", rise=", rise, ")"));
-
-    // T1-50 (A4): catches a typo past the user's own upper bound.
-    assert(tv_top_clear < TV_TOP_CLEAR_MAX,
-        str("mcc: arch-tv-bracket T1-50 tv_top_clear=", tv_top_clear,
-            " must be < TV_TOP_CLEAR_MAX=", TV_TOP_CLEAR_MAX));
 
     // T1-51 (A5): the +X slide-on sweep clears the right arm's pad (§1.3). D44: the case floor rides
     // flush at z_rail (no pedestal), so there is no MCC_FLOOR_T term any more.
@@ -534,7 +494,7 @@ module mcc_arch_tv_assert(g) {
     // under-checked this).
     m3_counterbore_r = (M3_HEAD_D + 2 * MCC_CLR_SLIDE) / 2;
     for (side = [-1, 1], h = _mcc_arch_tv_joint_holes(g)) {
-        p   = _mcc_arch_tv_xform(h, side, g);
+        p   = _mcc_arch_tv_xform(h, side);
         gap = _mcc_arch_tv_circle_rect_gap(p, m3_counterbore_r, RAIL_KEEPOUT_X, RAIL_KEEPOUT_Y);
         assert(gap >= ARCH_KEEPOUT_CLR - MCC_EPS,
             str("mcc: arch-tv-bracket T1-54 M3 counterbore at ", p, " (side=", side,
@@ -552,17 +512,16 @@ module mcc_arch_tv_assert(g) {
     for (side = [-1, 1], sy = [-1, 1], edge = [0, 1], i = [0:n_samples - 1]) {
         x      = rib_start + (rib_end - rib_start) * i / (n_samples - 1);
         y_line = sy * (edge == 0 ? ARM_W / 2 : ARM_W / 2 - RIB_T);
-        p      = _mcc_arch_tv_xform([x, y_line], side, g);
+        p      = _mcc_arch_tv_xform([x, y_line], side);
         gap    = _mcc_arch_tv_circle_rect_gap(p, 0, [-C_HALF, C_HALF], [-CENTRE_W / 2, CENTRE_W / 2]);
         assert(gap >= ARCH_KEEPOUT_CLR - MCC_EPS,
             str("mcc: arch-tv-bracket T1-55 rib edge sample at ", p, " (side=", side,
                 ") clears the centre body by ", gap, ", below ARCH_KEEPOUT_CLR=", ARCH_KEEPOUT_CLR));
 
         // T1-89 (DB10, new): arm_sandwich only -- the same rib edge sample must also clear the TV
-        // lift's own rail band along the crossed column. The centre plate's own assembly placement
-        // is translate([0, rise, ARCH_PLATE_T]) -- an X/Y-frame origin shift of exactly [0, rise], no
-        // X term -- so _mcc_arch_tv_xform's own X component (p[0]) already equals assembly-frame X
-        // directly. The column sits at assembly X=side*HALF_PITCH.
+        // lift's own rail band along the crossed column. The centre's frame origin is the assembly
+        // origin in X/Y, so _mcc_arch_tv_xform's own X component (p[0]) already equals assembly-frame
+        // X directly. The column sits at assembly X=side*HALF_PITCH.
         if (mode == "sandwich") {
             col_dist = abs(p[0] - side * HALF_PITCH);
             assert(col_dist >= W_LIFT_RAIL / 2 + ARCH_KEEPOUT_CLR - MCC_EPS,
@@ -570,6 +529,15 @@ module mcc_arch_tv_assert(g) {
                     " (side=", side, ") clears the TV lift's rail band by ",
                     col_dist - W_LIFT_RAIL / 2, ", below ARCH_KEEPOUT_CLR=", ARCH_KEEPOUT_CLR));
         }
+    }
+
+    // T1-120.1: the bracket is straight -- each arm's pad sits on its top VESA screw and its lap on
+    // the centre's axis, so the arm axis lies along the top VESA row (y = 0).
+    for (side = [-1, 1]) {
+        pad = _mcc_arch_tv_xform([0, 0], side);
+        lap = _mcc_arch_tv_xform([arm_len, 0], side);
+        assert(norm(pad - [side * HALF_PITCH, 0]) <= MCC_EPS && norm(lap - [side * XJ, 0]) <= MCC_EPS,
+            str("mcc: arch-tv-bracket T1-120.1 arm axis not along the top VESA row: pad=", pad, " lap=", lap));
     }
 
     // T1-56 (A10): insert-bore depth + skin, and hole edge distances
@@ -729,8 +697,8 @@ module mcc_arch_tv_arm(g) {
 //   mcc_arch_tv_centre(g);
 // Description:
 //   The exported "centre" part, for either mode (DB8): a flat body of thickness `centre_t` (11 mm
-//   direct, unchanged; taller in sandwich mode -- §7.1/§7.2) carrying two angled tabs (the arms' own
-//   lap footprint, keying the assembly to one orientation -- §3.1) and the male mount rail on top,
+//   direct, unchanged; taller in sandwich mode -- §7.1/§7.2) carrying two tabs (the arms' own
+//   lap footprint) and the male mount rail on top,
 //   with 4 M3 counterbored clearance holes per tab and a cosmetic "UP" arrow deboss (§3.5, B3).
 //   Bottom (TV-facing, standing off the TV by `centre_t`) face on the bed (local Z=0). Every formula
 //   below that used to assume the centre is ARCH_PLATE_T thick reads `centre_t` instead (DB8) -- in
@@ -747,17 +715,16 @@ module mcc_arch_tv_centre(g) {
         union() {
             cuboid([2 * C_HALF, CENTRE_W, centre_t], anchor = BOTTOM);
             // Two tabs = the arm laps' own footprint, same transform as the arms themselves
-            // (_mcc_arch_tv_place(), re-expressed in centre-local coordinates) -- the angled tabs
-            // are what gives the "boomerang" outline, and key the centre to one orientation only
-            // (it cannot be flipped: the rail would then face the TV).
+            // (_mcc_arch_tv_place(), re-expressed in centre-local coordinates); the centre has
+            // to be keyed to one orientation (it cannot be flipped: the rail would then face the TV).
             for (side = [-1, 1])
-                _mcc_arch_tv_place(g, side)
+                _mcc_arch_tv_place(side)
                     translate([struct_val(g, "arm_len"), 0, 0])
                         cuboid([LAP_L, ARM_W, centre_t], anchor = BOTTOM);
         }
         // 4 M3 counterbored clearance holes per tab, same placement transform as the tabs above.
         for (side = [-1, 1], h = _mcc_arch_tv_joint_holes(g)) {
-            p = _mcc_arch_tv_xform(h, side, g);
+            p = _mcc_arch_tv_xform(h, side);
             translate([p[0], p[1], -MCC_EPS])
                 cyl(h = centre_t + 2 * MCC_EPS, d = MCC_M3_CLR_D, anchor = BOTTOM, $fn = 64, circum = true);
             translate([p[0], p[1], centre_t + MCC_EPS])
@@ -811,8 +778,10 @@ G_SANDWICH = mcc_arch_tv_geom(tv_top_clear = TV_TOP_CLEAR, mount_mode = "sandwic
 mcc_arch_tv_assert(G_SANDWICH);
 
 echo(str("arch-tv-bracket: tv_top_clear=", struct_val(G, "tv_top_clear"), " (assumed unless measured, M18a)",
-    " rise=", struct_val(G, "rise"), " alpha=", struct_val(G, "alpha"), " arm_len=", struct_val(G, "arm_len"),
+    " arm_len=", struct_val(G, "arm_len"),
     " arm_bbox=", struct_val(G, "arm_bbox"), " centre_bbox=", struct_val(G, "centre_bbox"),
+    " case_top_above_rail=", struct_val(G, "case_top_above_rail"),
+    " case_bottom_below_rail=", struct_val(G, "case_bottom_below_rail"),
     " pad_clamp_t=", struct_val(G, "pad_clamp_t"), " slide_clear=", struct_val(G, "slide_clear")));
 echo(str("arch-tv-bracket sandwich: centre_t=", struct_val(G_SANDWICH, "centre_t"),
     " z_rail=", struct_val(G_SANDWICH, "z_rail"), " m3_joint_screw_l=", struct_val(G_SANDWICH, "m3_joint_screw_l"),
@@ -845,22 +814,21 @@ if (part == "arm") {
 
 } else if (part == "assembly" || part == "assembly_sweep") {
     Gp = (MOUNT_MODE == "sandwich") ? G_SANDWICH : G;
-    rise = struct_val(Gp, "rise");
     z_rail = struct_val(Gp, "z_rail");
     l_max = struct_val(Gp, "l_max");
 
     // Both arms, TV face on Z=0 (the assembly frame's own TV back plane).
     for (side = [-1, 1])
-        color("Silver") _mcc_arch_tv_place_assembly(Gp, side) mcc_arch_tv_arm(Gp);
+        color("Silver") _mcc_arch_tv_place(side) mcc_arch_tv_arm(Gp);
 
     // Centre, stacked on the arms' laps.
-    translate([0, rise, ARCH_PLATE_T])
+    translate([0, 0, ARCH_PLATE_T])
         color("LightSteelBlue") mcc_arch_tv_centre(Gp);
 
     // Translucent ghost TV-back slab (z in [-3,0]) + a thin red line at the TV's own top edge
     // (y = tv_top_clear) -- verify-by-picture (#26's own rule): confirm the case top stays below
     // the red line, and (assembly_sweep only) the case floor clears the right arm's pad.
-    %translate([0, -HALF_PITCH, -3]) cuboid([2 * HALF_PITCH + 100, 2 * HALF_PITCH + TV_TOP_CLEAR_MAX, 3], anchor = BOTTOM);
+    %translate([0, (TV_TOP_CLEAR - HALF_PITCH - 100) / 2, -3]) cuboid([2 * HALF_PITCH + 100, TV_TOP_CLEAR + HALF_PITCH + 100, 3], anchor = BOTTOM);
     color("Red") translate([0, struct_val(Gp, "tv_top_clear"), 0]) cuboid([2 * HALF_PITCH + 100, 1, 1]);
 
     // Grey ghost M8 heads, seated in each pad's counterbore (direct mode only -- sandwich mode's pad
@@ -887,7 +855,7 @@ if (part == "arm") {
     layout = mcc_case_layout(dev, variant);
     x_shift = (part == "assembly_sweep") ? struct_val(Gp, "slide_clear") : 0;
 
-    translate([x_shift, rise + MCC_RAIL_Y, z_rail]) rotate([0, 0, 180]) { // D44: flush
+    translate([x_shift, MCC_RAIL_Y, z_rail]) rotate([0, 0, 180]) { // D44: flush
         color("SlateGray") mcc_shell_base(dev = dev, cfg = variant);
         color("LightSteelBlue", 0.6) mcc_shell_lid(dev = dev, cfg = variant);
         translate([struct_val(layout, "x_dev_c"), struct_val(layout, "y_dev_c"),

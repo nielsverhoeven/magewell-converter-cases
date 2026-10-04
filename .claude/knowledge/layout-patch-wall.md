@@ -1,5 +1,9 @@
 # Patch-wall layout contract
 
+Status: **issue #120, 2026-10-04** (aligned with `architecture.md` — D120.1 to D120.3: the arch TV
+bracket is straight, rise 0). **§9**: **T1-120.1** added (the arm axis lies along the top VESA row),
+T1-49 and T1-50 retired, T1-48 reworded. No case-side change, no envelope figure moves.
+
 Status: **issues #63–#66, 2026-09-29** (aligned with `architecture.md` — D63.1, D64.1, D65.1, D66.1,
 plan H). §7.1's floor keep-out table: the mount-rail row carries the 136 mm rail, the closed −X end wall
 and the top lock; the tie-down row is struck. **§9**: T1-17 implemented, T1-38 and T1-62 extended to
@@ -1400,7 +1404,7 @@ intro), appended at the end of this table.
 | ~~**T1-42a**~~ | ~~printed thread pad has enough wall~~ | **RETIRED rev 15 (2026-09-28, D41)** — no printed thread; `mcc_thread_pad()` is deleted |
 | ~~**T1-42b**~~ | ~~printed thread has enough engagement (≥ 3 turns; D36 applied it to the 5 mm wall)~~ | **RETIRED rev 15 (D41)** — the bore is threaded outside the print (`architecture.md` §12 Q20) |
 | ~~**T1-42c**~~ | ~~`$slop` has not erased the thread~~ | **RETIRED rev 15 (D41).** The lesson stays in `architecture.md` rev 10: a BOSL2 internal thread grows by `4·$slop` in diameter |
-| **T1-47 … T1-60** | owned by `models/brackets/arch-tv-bracket.scad` (its A1 … A13 plus B3; e.g. T1-48 = "the case stays fully behind the TV") | **assigned 2026-09-27** by the arch-tv-bracket gate (`docs/plans/2026-09-27-arch-tv-bracket.md` B4), recorded here only in rev 15 (`architecture.md` §13 D42). They live in that file; do not reuse these ids |
+| **T1-47 … T1-60** | owned by `models/brackets/arch-tv-bracket.scad` (its A1 … A13 plus B3; e.g. T1-48 = "the case stays fully behind the TV"; **T1-49 and T1-50 retired by #120 (D120.2), T1-48 reworded to a validity gate on `TV_TOP_CLEAR`**) | **assigned 2026-09-27** by the arch-tv-bracket gate (`docs/plans/2026-09-27-arch-tv-bracket.md` B4), recorded here only in rev 15 (`architecture.md` §13 D42). They live in that file; do not reuse these ids |
 | **T1-61** | *the connector fixing bores leave wall* — for each of the two bores at the Neutrik diagonal (`MCC_D_SCREW_PITCH/2`): distance from the bore axis to the seat-hole circle and to the window circle, minus `MCC_FIXING_BORE_D/2`, ≥ `MCC_WALL_BORE_WEB_MIN` (1.2, `assumed`) | **new rev 14 (D36) as "T1-48"; renumbered rev 15 (D42) and re-scoped to the plain bore (D41).** 24-class window (⌀24.8): `2.91 − 1.25 = 1.66 ≥ 1.2` ✓; 23.6-class (⌀24.4): `3.11 − 1.25 = 1.86` ✓. Evaluated in `mcc_neutrik_d_wall_cut()`. **The next free id is T1-62** |
 | **T1-62** | *the rail joint keeps its clearance* — `MCC_RAIL_CLR_HORIZ·sin(MCC_RAIL_FLANK_ANGLE) ≥ MCC_RAIL_MATE_CLR` (0.5, normal to the flanks) **and** `MCC_RAIL_DEPTH − MCC_RAIL_MALE_H ≥ MCC_RAIL_MATE_CLR` (roof) | **new rev 16** (D44, user decision: ≥ 0.5 mm on every non-bearing face). Evaluated in `mcc_rail_female_cut()` and in `tests/test_rail.scad`. The geometry-level mate (no interference at full insertion, the end stop works, only the lock strips overlap while sliding, the ride they need stays inside the Z-play (T1-63.1), and the roof slot keeps 0.5 mm around them) is checked by `scripts/rail_fit.py` against a real base |
 | **T1-63** | *the opt-in case insert and the rail are mutually exclusive* — `!(cfg["tripod_insert"] && rail_on)`, with `"rail"` defaulting to true | **new rev 16** (D44). The wide rail covers the floor centre the insert boss needs, and its keep-out row is gone. Evaluated in `mcc_cradle()`. **The next free id is T1-64** |
@@ -1415,6 +1419,7 @@ intro), appended at the end of this table.
 | **T1-63.2** | *the strips are well-formed and sit on the rail* — entry chamfer `MCC_RAIL_LOCK_RAMP_IN` 30–60° and shorter than the strip; `STRIP_Y_IN < STRIP_Y_OUT ≤` the male's top half-width − 1; the strips inside `(−len/2 + 5, len/2 − 1)` | **new, #63** (D63.1). Evaluated in `mcc_rail_male()` and `tests/test_rail.scad` |
 | **T1-63.3** | *the roof lead-in meets the strips with a ramp* — `MCC_RAIL_LOCK_ENGAGE < MCC_RAIL_LEADIN ≤ MCC_WALL` | **new, #63** (D63.1). Evaluated in `mcc_rail_female_cut()` and `tests/test_rail.scad` |
 | **T1-64.1** | *the groove's closed −X end keeps a full wall* — `MCC_RAIL_END_WALL ≥ MCC_WALL` | **new, #64** (D64.1). Evaluated in `mcc_floor_features_add()` and `tests/test_rail.scad`; `scripts/rail_fit.py` checks the geometry with rays from inside the groove |
+| **T1-120.1** | *the arch TV bracket is straight* — each arm's pad sits on its top VESA screw (`side · HALF_PITCH`, 0) and its lap on the centre axis (`side · XJ`, 0), so the arm axis lies along the top VESA row | **new, #120** (D120.2). In `mcc_arch_tv_assert()` in `models/brackets/arch-tv-bracket.scad`, both modes |
 
 ---
 
