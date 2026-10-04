@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion",
+	"type":	"script",
+	"author":	"magewell-converter-cases",
+	"description":	{
+		"":	"Opens every case, bracket and coupon of the repository's current STEP exports, one unsaved document each."
+	},
+	"version": "1.0",
+	"supportedOS":	"windows|mac"
+}
