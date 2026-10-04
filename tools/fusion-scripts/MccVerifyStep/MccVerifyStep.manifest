@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion",
+	"type":	"script",
+	"author":	"magewell-converter-cases",
+	"description":	{
+		"":	"Imports the regenerated NDI-to-HDMI fan base STEP, exports it to STL the way Fusion hands it to a slicer, and reports the mesh edges (issue #119)."
+	},
+	"version": "1.0",
+	"supportedOS":	"windows|mac"
+}

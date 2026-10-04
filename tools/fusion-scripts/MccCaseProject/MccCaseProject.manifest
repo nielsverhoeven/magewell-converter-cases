@@ -1,0 +1,10 @@
+{
+	"autodeskProduct":	"Fusion",
+	"type":	"script",
+	"author":	"magewell-converter-cases",
+	"description":	{
+		"":	"Creates the Fusion project 'Magewell converter cases' with one design holding every case variant (base + lid) from the repository's exact STEP exports."
+	},
+	"version": "1.0",
+	"supportedOS":	"windows|mac"
+}
