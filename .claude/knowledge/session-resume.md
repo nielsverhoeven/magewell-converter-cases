@@ -9,14 +9,13 @@ records numbered per GitHub issue) and `layout-patch-wall.md`.
 | Area | State |
 |---|---|
 | OpenSCAD tree (`lib/mcc/**`, `models/**`, `tests/*.scad`, goldens) | All 8 cases, 6 coupons, `arch-tv-bracket` (now **straight**, #120/#122) and `vertical-tv-bracket`; every part print-ready, zero Bambu Studio warnings (CI slicer gate). **Frozen as the parity oracle** for the Fusion migration (R76.2/Q75.4); a change that cannot wait takes the exception path and lands in OpenSCAD and `cad/` together (D120.3). |
-| Exact STEP export (`scripts/csg_to_step.py`) | #119: case base STEPs carried empty sheet shells and zero-area faces at the lid-boss bases; Fusion turned them into open/non-manifold edges (user's Bambu import: 77 / 30). #121 (merged) drops empty shells; **PR #123 (open)** fuzzy 1e-4 booleans + zero-area-face guard. Verified in Fusion: fan base 0 open / 0 non-manifold, clean Bambu import. Records D119.1, D119.2, M119.1. |
+| Exact STEP export (`scripts/csg_to_step.py`) | #119: case base STEPs carried empty sheet shells and zero-area faces at the lid-boss bases; Fusion turned them into open/non-manifold edges (user's Bambu import: 77 / 30). #121 drops empty shells and #123 adds fuzzy 1e-4 booleans + a zero-area-face guard (both merged 2026-10-04). Verified in Fusion: fan base 0 open / 0 non-manifold, clean Bambu import. Records D119.1, D119.2, M119.1. |
 | Fusion migration (#75) | Done: #76 data (`cad/params.py`, constants, devices), #77 layout solver, #81 case master C1–C9 (kit `cad/fusion/gen/core`, shared builders `gen/shared`, `gen/case`, OCP replay `cad/fusion/replay`, committed inventory, parity tooling, cad-gates CI job). Open: #78 design rules, #79 runtime (host + probes merged in #103; the live **probe sitting PR-79.3** with the user has not happened yet), #80 CI import path, #82 other seven cases, #83 coupons, #84 brackets (comparison baseline = #122's merge commit `5a885cc`; the plan's `V_ARCH_RISE`/`V_ARCH_ALPHA`/`tv_max` are void), #85 fillets/threads/review loop, #86 cutover. |
 | Renders (#74) | PR1 merged (per-case showcase PNGs in releases). PR2/PR3 (GitHub Pages viewer, semi-transparent lid) wait for the user. |
 | Fusion helper scripts | `tools/fusion-scripts/` (MccShowAll, MccVerifyStep, MccCaseProject) — manual, see its README. The user's hub project holds the design "MCC case variants" (9 variants). |
 
 ## Open with the user
 
-- **PR #123**: merge when CI is green (STEP tooling only; no OpenSCAD tree).
 - **Duplicate Fusion hub project**: the user already had "Magewell **C**onverter cases"; `MccCaseProject`
   (before its name match ignored case) created "Magewell **c**onverter cases" and saved the design there.
   Ask: move the design into the user's own project? Never delete a hub project without the user's yes.
@@ -33,7 +32,7 @@ records numbered per GitHub issue) and `layout-patch-wall.md`.
 
 ## Next steps
 
-1. Merge #123; refresh `exports/` (render or CI artefacts) so local STEPs carry the fix.
+1. Refresh `exports/` (render or CI artefacts of the latest `main`) so local STEPs carry the #119 fix and the bracket exports the straight geometry.
 2. Physical **Tier 4**: test-print the NDI-to-HDMI case (user, 2026-10-04 — print from the `.3mf`
    projects, not via Fusion), the six coupons, then measurements M1–M6, M15, M63.1, M100.1 (countersunk
    lid screws), M119.1, M120.1 into `lib/mcc/constants.scad` with `confidence: measured`.
