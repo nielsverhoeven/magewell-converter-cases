@@ -46,6 +46,8 @@ ARC_FIT_MIN_PTS = 5      # a polygon run needs this many vertices on one circle 
 ARC_FIT_TOL = 2e-3       # mm, max vertex distance from the fitted circle
 VOLUME_TOL = 0.01        # 1 % — B-rep vs rendered mesh
 SHELL_VOL_MIN = 1e-3     # mm3; a shell enclosing less is an empty sheet, not material (issue #119)
+FACE_AREA_MIN = 1e-7     # mm2; a face smaller than this is degenerate (zero height), not a sliver (issue #119)
+FUZZY = 1e-4             # mm; boolean fuzzy value -- 1e-6 left zero-area faces where a boss meets a coplanar floor (D119.2)
 EPS = 1e-9
 
 
@@ -244,7 +246,7 @@ def _bool(op, a: TopoDS_Shape, tools: list[TopoDS_Shape]) -> TopoDS_Shape:
     b = op()
     b.SetArguments(args)
     b.SetTools(tl)
-    b.SetFuzzyValue(1e-6)
+    b.SetFuzzyValue(FUZZY)
     b.SetRunParallel(True)
     b.Build()
     if not b.IsDone():
@@ -847,8 +849,16 @@ def drop_empty_shells(shape: TopoDS_Shape) -> tuple[TopoDS_Shape, int]:
 
 
 def shell_defects(shape: TopoDS_Shape) -> list[str]:
-    """[] when every shell of every SOLID is closed and encloses material (D119.1)."""
-    out, exp = [], TopExp_Explorer(shape, TopAbs_SHELL)
+    """[] when every shell of every SOLID is closed and encloses material (D119.1) and no face is
+    degenerate (D119.2: a zero-area face tessellates into open and non-manifold edges in CAD)."""
+    out, exp = [], TopExp_Explorer(shape, TopAbs_FACE)
+    while exp.More():
+        props = GProp_GProps()
+        BRepGProp.SurfaceProperties_s(exp.Current(), props)
+        if props.Mass() < FACE_AREA_MIN:
+            out.append("zero-area face")
+        exp.Next()
+    exp = TopExp_Explorer(shape, TopAbs_SHELL)
     while exp.More():
         shell = TopoDS.Shell(exp.Current())
         if not BRep_Tool.IsClosed_s(shell):
@@ -926,8 +936,8 @@ def convert(csg_path: Path, step_path: Path, product: str, mesh_path: Path | Non
     defects = shell_defects(shape)
     if res.ok and defects:
         res.ok = False
-        res.error = (f"{len(defects)} {defects[0]}(s) in the B-rep -- a CAD tool would tessellate open "
-                     f"or non-manifold edges (D119.1)")
+        res.error = (f"{len(defects)} defect(s) in the B-rep, first: {defects[0]} -- a CAD tool would "
+                     f"tessellate open or non-manifold edges (D119.1, D119.2)")
 
     if mesh_path is not None and mesh_path.is_file():
         import trimesh
