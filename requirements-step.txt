@@ -8,4 +8,7 @@
 # Confirmed available as a prebuilt wheel for this repo's pinned local venv (Windows, Python
 # 3.14, cp314-win_amd64) and for CI (ubuntu-latest, Python 3.12, manylinux_2_28_x86_64) as of
 # 2026-09-08.
-cadquery-ocp>=8.0.1
+# Pinned EXACTLY (not >=): the DATA bytes of every STEP feed the PR gate scripts/fusion_archive.py (D125.2,
+# ARCH-1); a new OCP could change them and turn every PR "stale". Bumping it is an expected archive/fusion
+# refresh trigger (R125.1).
+cadquery-ocp==8.0.1

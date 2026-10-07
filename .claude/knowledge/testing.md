@@ -60,6 +60,10 @@ reference: `../../scripts/README.md`. Tier semantics and file layout: `../../tes
 - `golden`: every rendered target matches its committed golden within tolerance (bbox ±0.1 mm/axis,
   volume ±0.5%, area ±1%; facet-count differences are printed but never fail the comparison —
   they can shift for reasons unrelated to intended geometry change).
+- `python scripts/fusion_archive.py check` (CI job "Fusion snapshots up to date", a `render` aggregator
+  need; architecture.md D125.2): `archive/fusion/manifest.json` carries the fingerprint of every STEP
+  export of the run and the `brackets.json` hash. Locally pass `--repo`/`--exports` to point at downloaded
+  CI exports. Its pytest suite is `scripts/tests/test_fusion_archive.py`.
 - `all` (`smoke` → `render --all` → `check --all` → `golden` → `review`) exits 0. This is exactly what CI
   (`.github/workflows/render.yml`) runs on every push/PR; `all --release` (which additionally
   fails on any `WARNING: unmeasured` in OpenSCAD's output — a port below `measured` confidence

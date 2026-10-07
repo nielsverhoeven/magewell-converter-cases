@@ -3,19 +3,28 @@
 # project 'Magewell converter cases' (folder HUB_FOLDER) and writes each as a Fusion archive into the
 # repository (issue #125, D125.1) -- the committed .f3d snapshots under archive\fusion\. They are dumb
 # STEP solids without a feature tree: viewing snapshots, not the Fusion masters of #81-#86 and never a
-# parity input (R125.1). A manual script outside the Fusion runtime, so D79.5's "never saves" does not
+# parity input (R125.1). Each part's `fingerprint` (DATA-section sha256) and the manifest's `placements_sha256`
+# are what the PR gate scripts/fusion_archive.py checks (D125.2). A manual script outside the Fusion runtime, so D79.5's "never saves" does not
 # apply. Reads only exports\ and brackets.json; writes only under ARCHIVE_ROOT.
 import hashlib
 import json
 import math
 import os
 import subprocess
+import sys
 import traceback
 
 import adsk.core
 import adsk.fusion
 
 REPO = r'C:\repos-github\magewell-converter-cases'
+# One fingerprint implementation, shared with the CI gate scripts/fusion_archive.py (stdlib only, no
+# work at import time -- D125.2).
+sys.path.insert(0, os.path.join(REPO, 'scripts'))
+# ... and the checkout this script file itself sits in (a worktree before the PR is merged).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'scripts'))
+from fusion_archive import placements_hash, step_fingerprint  # noqa: E402
+
 EXPORTS = os.path.join(REPO, 'exports')
 ARCHIVE_ROOT = os.path.join(REPO, 'archive', 'fusion')
 PROJECT = 'Magewell converter cases'
@@ -95,6 +104,15 @@ def _step_source(path):
         return 'unknown'
 
 
+def _ci_run():
+    """The CI run id the exports came from: one line in exports/ci-run.txt (written after `gh run download`), else None."""
+    try:
+        with open(os.path.join(EXPORTS, 'ci-run.txt'), encoding='utf-8') as f:
+            return f.read().strip() or None
+    except Exception:
+        return None
+
+
 def _checkout():
     try:
         return subprocess.run(['git', '-C', REPO, 'rev-parse', '--short', 'HEAD'], capture_output=True,
@@ -132,12 +150,14 @@ def run(context):
                     'file': f'{group}/{stem}.f3d', 'design': name, 'configuration': config,
                     'parts': [{'component': c, 'step': os.path.relpath(p, REPO).replace(os.sep, '/'),
                                'source_sha': _step_source(p), 'sha256': _sha256(p),
+                               'fingerprint': step_fingerprint(p),
                                'placement_mm_deg': pl and {k: pl[k] for k in ('x', 'y', 'z', 'rz')}}
                               for c, p, pl in parts]})
             except Exception:
                 failed.append(f'{name}: {traceback.format_exc().splitlines()[-1]}')
         with open(os.path.join(ARCHIVE_ROOT, 'manifest.json'), 'w', encoding='utf-8', newline='\n') as f:
-            json.dump({'script_checkout': _checkout(), 'hub': f'{proj.name}/{HUB_FOLDER}' if proj else None,
+            json.dump({'script_checkout': _checkout(), 'ci_run': _ci_run(), 'placements_sha256': placements_hash(BRACKETS),
+                       'hub': f'{proj.name}/{HUB_FOLDER}' if proj else None,
                        'archives': archives, 'failed': failed}, f, indent=2)
             f.write('\n')
         where = f'saved to "{proj.name}/{HUB_FOLDER}" and ' if proj else ''

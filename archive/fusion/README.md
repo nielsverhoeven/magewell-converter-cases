@@ -10,11 +10,21 @@ designs travel with the repository (issue #125, `architecture.md` D125.1). Open 
 - Cases: one design per variant, base + lid in the assembled position. Brackets: one design per
   assembly; spacers have no assembly position in the model and lie beside the bracket, marked loose.
 - Built by `tools/fusion-scripts/MccFusionArchive` (script checkout `abc10de`) from the CI
-  exports of `main` abc10de. Full provenance, including every STEP's sha256 and the bracket
-  part placements: `manifest.json`.
-- **Refresh** after any case or bracket geometry change: download the CI exports of the new `main`
-  commit into `exports/`, run `MccFusionArchive` in Fusion, commit `archive/fusion/` with the source SHA
-  in the commit message.
+  exports of `main` abc10de. Full provenance, including every STEP's sha256 and `fingerprint`, the
+  CI run id and the bracket part placements: `manifest.json`.
+- **PR gate** (`architecture.md` D125.2): the CI job "Fusion snapshots up to date" runs
+  `python scripts/fusion_archive.py check`. A STEP's `fingerprint` is the sha256 of its bytes from the
+  first `DATA;` line to the end (the HEADER timestamp differs between CI runs, the DATA section does not).
+  A PR that changes a case or bracket STEP, or the placements in `brackets.json`, fails until it also
+  carries regenerated snapshots. Bumping `cadquery-ocp` (pinned in `requirements-step.txt`) can change
+  the STEP bytes and needs a refresh too.
+- **Refresh** in the PR that changes case or bracket geometry, once its CI run has finished:
+  1. `gh run download <run-id> --pattern 'exports-part-group-*'` and merge the result into `exports/`
+     (see the `bambu-studio` skill, section 5);
+  2. write the run id, one line, to `exports/ci-run.txt`;
+  3. run `MccFusionArchive` in Fusion (it records the `ci_run`, the fingerprints and `placements_sha256`);
+  4. check with `python scripts/fusion_archive.py check`, then commit `archive/fusion/`.
+  The fingerprint, not the PR head SHA, is the provenance: a squash merge drops that SHA from `main`.
 
 | File | Design | Configuration | Source `main` | STEP inputs (sha256 prefix) |
 |---|---|---|---|---|

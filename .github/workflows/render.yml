@@ -17,8 +17,12 @@ name: render
 #   "Showcase renders"                 informational (issue #74): PNGs of every case and bracket from the
 #                                       model-frame STLs of the part groups, uploaded as the artifact
 #                                       `showcase-renders`. Not part of the `render` aggregator.
+#   "Fusion snapshots up to date"      scripts/fusion_archive.py check: the committed archive/fusion/*.f3d
+#                                       must carry the fingerprints of this run's STEP exports (#125,
+#                                       D125.2); a PR that changes a case or bracket STEP must also
+#                                       regenerate the snapshots locally (MccFusionArchive).
 #   "render"                            aggregator — green only when the asserts, all six part
-#                                       groups and the CAD gates are green. Its name is the required
+#                                       groups, the CAD gates and the Fusion snapshot gate are green. Its name is the required
 #                                       status check on protected `main`, so it must stay `render`.
 #
 # On a v* tag the part groups also run the release gate (fail on any WARNING: unmeasured port).
@@ -131,6 +135,40 @@ jobs:
     name: CAD gates (pytest)
     uses: ./.github/workflows/cad-gates.yml
 
+  fusion-archive:
+    # PR gate (#125, D125.2): archive/fusion/manifest.json holds a fingerprint (sha256 of the STEP DATA
+    # section, stable across CI runs) of every STEP the .f3d snapshots were built from. No Fusion here:
+    # the snapshots are regenerated locally from this PR's CI exports (see archive/fusion/README.md).
+    name: Fusion snapshots up to date (archive/fusion)
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download the exports of all six part groups
+        uses: actions/download-artifact@v4
+        with:
+          pattern: exports-part-group-*
+          merge-multiple: true
+          path: downloaded-exports
+
+      - name: Put the exports in exports/
+        # upload-artifact stores `exports/**` relative to exports/; accept both layouts.
+        run: |
+          if [ -d downloaded-exports/exports ]; then src=downloaded-exports/exports; else src=downloaded-exports; fi
+          mkdir -p exports
+          cp -a "$src"/. exports/
+
+      - name: Check the snapshots against the STEP fingerprints
+        run: python scripts/fusion_archive.py check
+
   showcase:
     # Informational (issue #74): showcase PNGs of every case and bracket, made from the model-frame STLs
     # the part groups just exported. NOT in the `render` aggregator's needs, so the required check and its
@@ -187,12 +225,12 @@ jobs:
 
   render:
     # Aggregator = the required status check (keep the name `render`). Fails unless the OpenSCAD
-    # asserts, all six part groups and the CAD gates succeeded.
+    # asserts, all six part groups, the CAD gates and the Fusion snapshot gate succeeded.
     runs-on: ubuntu-latest
-    needs: [smoke, validate, cad-gates]
+    needs: [smoke, validate, cad-gates, fusion-archive]
     if: ${{ always() }}
     steps:
-      - name: All gates green? (OpenSCAD asserts + all 6 part groups + CAD gates)
+      - name: All gates green? (OpenSCAD asserts + all 6 part groups + CAD gates + Fusion snapshots)
         run: |
-          echo "OpenSCAD asserts: ${{ needs.smoke.result }}  part groups: ${{ needs.validate.result }}  CAD gates: ${{ needs.cad-gates.result }}"
-          test "${{ needs.smoke.result }}" = "success" && test "${{ needs.validate.result }}" = "success" && test "${{ needs.cad-gates.result }}" = "success"
+          echo "OpenSCAD asserts: ${{ needs.smoke.result }}  part groups: ${{ needs.validate.result }}  CAD gates: ${{ needs.cad-gates.result }}  Fusion snapshots: ${{ needs.fusion-archive.result }}"
+          test "${{ needs.smoke.result }}" = "success" && test "${{ needs.validate.result }}" = "success" && test "${{ needs.cad-gates.result }}" = "success" && test "${{ needs.fusion-archive.result }}" = "success"
