@@ -8,6 +8,7 @@
 # Binary/large formats — never diffed as text.
 *.stl  binary
 *.3mf  binary
+*.f3d  binary
 *.pdf  binary
 
 # Vector/CAD text formats — keep them diffable text, not binary.

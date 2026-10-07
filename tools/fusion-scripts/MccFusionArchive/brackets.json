@@ -1,0 +1,21 @@
+{
+  "_doc": "Bracket assemblies for MccFusionArchive. Each part STEP is exported in its own part frame (manifest print_pose as-modelled); these placements put it into the bracket's assembly frame exactly as the OpenSCAD 'assembly' preview does. x/y/z in mm, rz in degrees about +Z. Sources: arch-tv-bracket.scad _mcc_arch_tv_place() (translate [side*HALF_PITCH, 0, 0], rotate 0 left / 180 right; HALF_PITCH = 200) and the centre at [0, 0, ARCH_PLATE_T = 11]; vertical-tv-bracket.scad _mcc_vert_tv_place_assembly() (translate [0, side*HALF_PITCH_V, 0], rotate +alpha left / -alpha right) and the centre at [reach, 0, VTV_PLATE_T], with reach = 136.75, alpha = 36.5146, HALF_PITCH_V = 150, VTV_PLATE_T = 11 echoed by OpenSCAD from main abc10de. Spacers have no assembly position in the model (they fill the bracket's own unused VESA row); they are laid beside the bracket, marked loose. Re-echo these values whenever a bracket's geometry changes.",
+  "brackets": [
+    {"design": "arch-tv-bracket (direct)", "stem": "arch-tv-bracket-direct", "dir": "arch-tv-bracket", "parts": [
+      {"name": "arm left", "step": "arm", "x": -200, "y": 0, "z": 0, "rz": 0},
+      {"name": "arm right", "step": "arm", "x": 200, "y": 0, "z": 0, "rz": 180},
+      {"name": "centre", "step": "centre", "x": 0, "y": 0, "z": 11, "rz": 0}]},
+    {"design": "arch-tv-bracket (sandwich)", "stem": "arch-tv-bracket-sandwich", "dir": "arch-tv-bracket", "parts": [
+      {"name": "arm left", "step": "arm_sandwich", "x": -200, "y": 0, "z": 0, "rz": 0},
+      {"name": "arm right", "step": "arm_sandwich", "x": 200, "y": 0, "z": 0, "rz": 180},
+      {"name": "centre", "step": "centre_sandwich", "x": 0, "y": 0, "z": 11, "rz": 0},
+      {"name": "spacer 1 (loose)", "step": "spacer", "x": -60, "y": -100, "z": 0, "rz": 0},
+      {"name": "spacer 2 (loose)", "step": "spacer", "x": 60, "y": -100, "z": 0, "rz": 0}]},
+    {"design": "vertical-tv-bracket", "stem": "vertical-tv-bracket", "dir": "vertical-tv-bracket", "parts": [
+      {"name": "arm bottom", "step": "arm", "x": 0, "y": -150, "z": 0, "rz": 36.5146},
+      {"name": "arm top", "step": "arm", "x": 0, "y": 150, "z": 0, "rz": -36.5146},
+      {"name": "centre", "step": "centre", "x": 136.75, "y": 0, "z": 11, "rz": 0},
+      {"name": "spacer 1 (loose)", "step": "spacer", "x": -80, "y": -60, "z": 0, "rz": 0},
+      {"name": "spacer 2 (loose)", "step": "spacer", "x": -80, "y": 60, "z": 0, "rz": 0}]}
+  ]
+}

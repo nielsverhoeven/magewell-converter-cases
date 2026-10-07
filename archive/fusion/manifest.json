@@ -1,0 +1,373 @@
+{
+  "script_checkout": "abc10de",
+  "hub": null,
+  "archives": [
+    {
+      "file": "cases/pro-convert-for-ndi-to-aio.f3d",
+      "design": "pro-convert-for-ndi-to-aio",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-for-ndi-to-aio base",
+          "step": "exports/pro-convert-for-ndi-to-aio/base.step",
+          "source_sha": "abc10de",
+          "sha256": "8b1d807ea9b862eb6c76cc5d3757b6c2647730d9b72bb96382c4c83cb4fdc0c9",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-for-ndi-to-aio lid",
+          "step": "exports/pro-convert-for-ndi-to-aio/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "032dd3f8153982242325952729b77789b95b3b7a02075b2db49a180accf2eaea",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-for-ndi-to-hdmi.f3d",
+      "design": "pro-convert-for-ndi-to-hdmi",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-for-ndi-to-hdmi base",
+          "step": "exports/pro-convert-for-ndi-to-hdmi/base.step",
+          "source_sha": "abc10de",
+          "sha256": "d67a6a8e854cd4c111b6f43d934e1589fad158fd5c09e56e277c2d5d2407e277",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-for-ndi-to-hdmi lid",
+          "step": "exports/pro-convert-for-ndi-to-hdmi/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "40f365a3a44dbf5609269d3bbf0802b620a79b946656c2cbef778a27559de351",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-for-ndi-to-hdmi-fan.f3d",
+      "design": "pro-convert-for-ndi-to-hdmi (fan)",
+      "configuration": "base_fan",
+      "parts": [
+        {
+          "component": "pro-convert-for-ndi-to-hdmi (fan) base_fan",
+          "step": "exports/pro-convert-for-ndi-to-hdmi/base_fan.step",
+          "source_sha": "abc10de",
+          "sha256": "35fa838b161804f160c8fbc8638291d826d779d98e84d5c671ab05677c35fdb3",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-for-ndi-to-hdmi (fan) lid",
+          "step": "exports/pro-convert-for-ndi-to-hdmi/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "40f365a3a44dbf5609269d3bbf0802b620a79b946656c2cbef778a27559de351",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-for-ndi-to-hdmi-4k.f3d",
+      "design": "pro-convert-for-ndi-to-hdmi-4k",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-for-ndi-to-hdmi-4k base",
+          "step": "exports/pro-convert-for-ndi-to-hdmi-4k/base.step",
+          "source_sha": "abc10de",
+          "sha256": "eb8d459a89f52994545970840f4875ee85bc4c79795c1050f4f894222d781ab2",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-for-ndi-to-hdmi-4k lid",
+          "step": "exports/pro-convert-for-ndi-to-hdmi-4k/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "2f5e4e1d0b0cc9f9a97f32f1d7530930ac2975cec3dae7a52fbfd4c2a240402b",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-for-ndi-to-sdi.f3d",
+      "design": "pro-convert-for-ndi-to-sdi",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-for-ndi-to-sdi base",
+          "step": "exports/pro-convert-for-ndi-to-sdi/base.step",
+          "source_sha": "abc10de",
+          "sha256": "d3a9d8029204e732c943e23009863d77cdca1b11bb5b8e611c19e7130ff82312",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-for-ndi-to-sdi lid",
+          "step": "exports/pro-convert-for-ndi-to-sdi/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "1bda9ebe281a758bca74413b237e00bad6973b1e60bed90b6214299fc06e74e7",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-hdmi-plus.f3d",
+      "design": "pro-convert-hdmi-plus",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-hdmi-plus base",
+          "step": "exports/pro-convert-hdmi-plus/base.step",
+          "source_sha": "abc10de",
+          "sha256": "46d25bf9f57a69120bca4a5401f80ed5083838de8e57e44f8aa8f4556e777dd8",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-hdmi-plus lid",
+          "step": "exports/pro-convert-hdmi-plus/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "46ad936b4dbfd73582deedfbff9237a430a5e256e554940b2fb0287f7b34225d",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-hdmi-tx.f3d",
+      "design": "pro-convert-hdmi-tx",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-hdmi-tx base",
+          "step": "exports/pro-convert-hdmi-tx/base.step",
+          "source_sha": "abc10de",
+          "sha256": "3f7c9001b624367ac6c10f54c67e228fb2663348cf22e89489f036a5d7c94f2e",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-hdmi-tx lid",
+          "step": "exports/pro-convert-hdmi-tx/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "618871a61d04417b52b6df6c7e70f66e3dc348a33a9872c54620b5606d586af5",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-sdi-plus.f3d",
+      "design": "pro-convert-sdi-plus",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-sdi-plus base",
+          "step": "exports/pro-convert-sdi-plus/base.step",
+          "source_sha": "abc10de",
+          "sha256": "a361449e02a54e2ca049756b59542818b835e848b753e8c6a18078984951e70b",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-sdi-plus lid",
+          "step": "exports/pro-convert-sdi-plus/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "67f3ae80cfa1259a2a1a4800ee014980356ef6fe444ddfbc0266b7f0ba647946",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "cases/pro-convert-sdi-tx.f3d",
+      "design": "pro-convert-sdi-tx",
+      "configuration": "default",
+      "parts": [
+        {
+          "component": "pro-convert-sdi-tx base",
+          "step": "exports/pro-convert-sdi-tx/base.step",
+          "source_sha": "abc10de",
+          "sha256": "ad20d6db8368c47c35283e790153379653f30b842ccfa585e29abad50c443f01",
+          "placement_mm_deg": null
+        },
+        {
+          "component": "pro-convert-sdi-tx lid",
+          "step": "exports/pro-convert-sdi-tx/lid.step",
+          "source_sha": "abc10de",
+          "sha256": "10208533208e73fafd84d55171f575b18585e9240e6447f041c04b8787409f5b",
+          "placement_mm_deg": null
+        }
+      ]
+    },
+    {
+      "file": "brackets/arch-tv-bracket-direct.f3d",
+      "design": "arch-tv-bracket (direct)",
+      "configuration": "assembly",
+      "parts": [
+        {
+          "component": "arch-tv-bracket (direct) arm left",
+          "step": "exports/brackets/arch-tv-bracket/arm.step",
+          "source_sha": "abc10de",
+          "sha256": "a002e6e5420863f37cfae8007df89b8672e610715d54579ed20100c245a4f2ff",
+          "placement_mm_deg": {
+            "x": -200,
+            "y": 0,
+            "z": 0,
+            "rz": 0
+          }
+        },
+        {
+          "component": "arch-tv-bracket (direct) arm right",
+          "step": "exports/brackets/arch-tv-bracket/arm.step",
+          "source_sha": "abc10de",
+          "sha256": "a002e6e5420863f37cfae8007df89b8672e610715d54579ed20100c245a4f2ff",
+          "placement_mm_deg": {
+            "x": 200,
+            "y": 0,
+            "z": 0,
+            "rz": 180
+          }
+        },
+        {
+          "component": "arch-tv-bracket (direct) centre",
+          "step": "exports/brackets/arch-tv-bracket/centre.step",
+          "source_sha": "abc10de",
+          "sha256": "0497888fca4f89af5f948ec86e16021012281cf0376f9b401225b6cff4160f7f",
+          "placement_mm_deg": {
+            "x": 0,
+            "y": 0,
+            "z": 11,
+            "rz": 0
+          }
+        }
+      ]
+    },
+    {
+      "file": "brackets/arch-tv-bracket-sandwich.f3d",
+      "design": "arch-tv-bracket (sandwich)",
+      "configuration": "assembly",
+      "parts": [
+        {
+          "component": "arch-tv-bracket (sandwich) arm left",
+          "step": "exports/brackets/arch-tv-bracket/arm_sandwich.step",
+          "source_sha": "abc10de",
+          "sha256": "0d8762610875d75c4eaedb3d387c43179d1b1b8361bd8d25f50515caf6091586",
+          "placement_mm_deg": {
+            "x": -200,
+            "y": 0,
+            "z": 0,
+            "rz": 0
+          }
+        },
+        {
+          "component": "arch-tv-bracket (sandwich) arm right",
+          "step": "exports/brackets/arch-tv-bracket/arm_sandwich.step",
+          "source_sha": "abc10de",
+          "sha256": "0d8762610875d75c4eaedb3d387c43179d1b1b8361bd8d25f50515caf6091586",
+          "placement_mm_deg": {
+            "x": 200,
+            "y": 0,
+            "z": 0,
+            "rz": 180
+          }
+        },
+        {
+          "component": "arch-tv-bracket (sandwich) centre",
+          "step": "exports/brackets/arch-tv-bracket/centre_sandwich.step",
+          "source_sha": "abc10de",
+          "sha256": "4d97e6443c92df255d6fef017724e12154a5ef111a53b62c30b11d223e647fe9",
+          "placement_mm_deg": {
+            "x": 0,
+            "y": 0,
+            "z": 11,
+            "rz": 0
+          }
+        },
+        {
+          "component": "arch-tv-bracket (sandwich) spacer 1 (loose)",
+          "step": "exports/brackets/arch-tv-bracket/spacer.step",
+          "source_sha": "abc10de",
+          "sha256": "d76bc7a38cd4ac55644364d6d7207eab8de034ac39394b014e7d43f28a6621be",
+          "placement_mm_deg": {
+            "x": -60,
+            "y": -100,
+            "z": 0,
+            "rz": 0
+          }
+        },
+        {
+          "component": "arch-tv-bracket (sandwich) spacer 2 (loose)",
+          "step": "exports/brackets/arch-tv-bracket/spacer.step",
+          "source_sha": "abc10de",
+          "sha256": "d76bc7a38cd4ac55644364d6d7207eab8de034ac39394b014e7d43f28a6621be",
+          "placement_mm_deg": {
+            "x": 60,
+            "y": -100,
+            "z": 0,
+            "rz": 0
+          }
+        }
+      ]
+    },
+    {
+      "file": "brackets/vertical-tv-bracket.f3d",
+      "design": "vertical-tv-bracket",
+      "configuration": "assembly",
+      "parts": [
+        {
+          "component": "vertical-tv-bracket arm bottom",
+          "step": "exports/brackets/vertical-tv-bracket/arm.step",
+          "source_sha": "abc10de",
+          "sha256": "fcc16c728bee231f6b761d9b79ecb3be616c0f1d9aff1c7ff533cab7c86fb48c",
+          "placement_mm_deg": {
+            "x": 0,
+            "y": -150,
+            "z": 0,
+            "rz": 36.5146
+          }
+        },
+        {
+          "component": "vertical-tv-bracket arm top",
+          "step": "exports/brackets/vertical-tv-bracket/arm.step",
+          "source_sha": "abc10de",
+          "sha256": "fcc16c728bee231f6b761d9b79ecb3be616c0f1d9aff1c7ff533cab7c86fb48c",
+          "placement_mm_deg": {
+            "x": 0,
+            "y": 150,
+            "z": 0,
+            "rz": -36.5146
+          }
+        },
+        {
+          "component": "vertical-tv-bracket centre",
+          "step": "exports/brackets/vertical-tv-bracket/centre.step",
+          "source_sha": "abc10de",
+          "sha256": "6035c7478a17091509b0ed633d0ea8068577a79be3b1f952713af63c36967b6e",
+          "placement_mm_deg": {
+            "x": 136.75,
+            "y": 0,
+            "z": 11,
+            "rz": 0
+          }
+        },
+        {
+          "component": "vertical-tv-bracket spacer 1 (loose)",
+          "step": "exports/brackets/vertical-tv-bracket/spacer.step",
+          "source_sha": "abc10de",
+          "sha256": "5d123d116044d3d5e7bdd3e5f590ffa7c0e56b5c8489f345300fc9ec17770878",
+          "placement_mm_deg": {
+            "x": -80,
+            "y": -60,
+            "z": 0,
+            "rz": 0
+          }
+        },
+        {
+          "component": "vertical-tv-bracket spacer 2 (loose)",
+          "step": "exports/brackets/vertical-tv-bracket/spacer.step",
+          "source_sha": "abc10de",
+          "sha256": "5d123d116044d3d5e7bdd3e5f590ffa7c0e56b5c8489f345300fc9ec17770878",
+          "placement_mm_deg": {
+            "x": -80,
+            "y": 60,
+            "z": 0,
+            "rz": 0
+          }
+        }
+      ]
+    }
+  ],
+  "failed": []
+}

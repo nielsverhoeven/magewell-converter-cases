@@ -3,7 +3,7 @@
 	"type":	"script",
 	"author":	"magewell-converter-cases",
 	"description":	{
-		"":	"Creates the Fusion project 'Magewell converter cases' with one design holding every case variant (base + lid) from the repository's exact STEP exports."
+		"":	"One design per case variant and per TV-bracket assembly from the exact STEP exports, each written as an .f3d archive under archive/fusion/ (issue #125)."
 	},
 	"version": "1.0",
 	"supportedOS":	"windows|mac"

@@ -112,7 +112,8 @@ assert, `T1-62.1` is issue #62's first. Full rule: `architecture.md` §13 intro.
 - Every port position carries a `confidence` field (`measured|drawing|manual|photo|assumed`).
 - Always the black `-B` Neutrik variant — no exceptions, no "just for the prototype."
 - No `$fn` set globally — see `openscad-authoring`. Functional clearance holes get local `$fn≥64` + `circum=true` (or a diameter that already carries `MCC_HOLE_COMP`); a hole that is a CAD input — the connector's Ø2.5 tap-drill bore — is modelled at its nominal diameter, no `circum` (architecture.md §3 rev 15).
-- STL/3MF are **never** committed — `exports/` is gitignored; CI renders on tag. Small text goldens
+- STL/3MF are **never** committed — `exports/` is gitignored; CI renders on tag (one exception: the Fusion
+  `.f3d` viewing snapshots in `archive/fusion/`, D125.1). Small text goldens
   (`tests/golden/*.json`) *are* committed. That includes the Bambu review project: only its
   generator (`build.py review`) lives in git (user decision 2026-09-27).
 - Every exported STL/3MF is **print-ready**: print pose, on the X1C bed, `.3mf` = a real Bambu Studio
